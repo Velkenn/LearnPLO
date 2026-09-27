@@ -2,6 +2,11 @@
 /* header */
 .top{display:flex;align-items:center;gap:8px;margin:4px 0 6px}
 .top h1{flex:1;margin:0;font-family:var(--fd);font-weight:700;font-size:28px;line-height:1;white-space:nowrap}
+.brand{display:flex;align-items:center;gap:8px;min-width:0}
+.brand .logo{width:30px;height:30px;flex:none}
+.brand .wm{letter-spacing:.01em}
+.brand .wm span{color:var(--brand-ink)}
+.brand .game{font:600 12px var(--fb);letter-spacing:.04em;color:var(--muted);border:1px solid var(--line);border-radius:6px;padding:2px 6px}
 .scores{display:grid;grid-template-columns:repeat(4,1fr);margin:0 0 6px;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
 .sc{padding:6px 0 5px 10px;border-left:1px solid var(--line)}
 .sc:first-child{border-left:0;padding-left:2px}

@@ -1,6 +1,6 @@
-# LearnPLO: notes for coding sessions
+# FeltReady (repo LearnPLO): notes for coding sessions
 
-Pot limit Omaha dealer trainer. Vite + TypeScript, no framework. See README.md for the layout.
+FeltReady (feltready.com) is a casino dealer trainer; pot limit Omaha is the first game. Vite + TypeScript, no framework. See README.md for the layout.
 
 ## Rules for changes
 

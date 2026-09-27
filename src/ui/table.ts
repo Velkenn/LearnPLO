@@ -52,9 +52,17 @@ function shownPlay(S: Hand): { holeBy: Record<number, number[]>; board: number[]
   return null;
 }
 
+// Printed on the felt near the dealer, curved along the rail like a casino's name.
+// The viewBox matches the table box (100 wide, 120 tall), so % positions map to x and 1.2 × y.
+const PRINT = `<svg class="print" viewBox="0 0 100 120" aria-hidden="true">
+  <defs><path id="printArc1" d="M17 60A33 41 0 0 0 83 60"/><path id="printArc2" d="M11 60A39 47 0 0 0 89 60"/></defs>
+  <text class="print-brand"><textPath href="#printArc1" startOffset="50%" text-anchor="middle">FeltReady</textPath></text>
+  <text class="print-game"><textPath href="#printArc2" startOffset="50%" text-anchor="middle">Pot limit Omaha</textPath></text>
+</svg>`;
+
 export function renderTable(): void {
   const S = app.S, settings = app.settings, t = $('#table');
-  let h = `<div class="rail"><div class="felt"></div></div><div class="printed">Pot limit Omaha</div><div class="dealer">Dealer</div>`;
+  let h = `<div class="rail"><div class="felt"></div></div>${PRINT}<div class="dealer">Dealer</div>`;
   if (!S) {
     SEAT_XY.forEach(([x, y], i) => { h += `<div class="seat idle" style="left:${x}%;top:${y}%"><div class="sn">Seat ${i + 1}</div></div>`; });
     h += `<div class="board">${'<span class="slot"></span>'.repeat(5)}</div>`;

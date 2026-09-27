@@ -5,7 +5,10 @@
 .felt{position:absolute;inset:13px;border-radius:50%;background:radial-gradient(ellipse at 50% 45%, var(--felt-hi) 0%, var(--felt) 55%, var(--felt-2) 100%);box-shadow:inset 0 10px 30px rgba(0,0,0,.35)}
 .felt::before{content:"";position:absolute;inset:0;border-radius:50%;background:repeating-radial-gradient(circle at 30% 20%,rgba(255,255,255,.018) 0 1px,transparent 1px 3px);pointer-events:none}
 .felt::after{content:"";position:absolute;inset:16%;border-radius:50%;border:1.5px solid rgba(233,214,160,.22)}
-.printed{position:absolute;left:50%;top:88%;transform:translate(-50%,-50%);font:600 11px var(--fd);letter-spacing:.32em;color:rgba(233,214,160,.34);white-space:nowrap;text-transform:uppercase}
+.print{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;overflow:visible}
+.print text{font-family:var(--fd);fill:rgba(233,214,160,.36)}
+.print-brand{font-size:6.2px;font-weight:700;letter-spacing:.05em}
+.print .print-game{font-size:2.9px;font-weight:600;letter-spacing:.22em;fill:rgba(233,214,160,.3)}
 .dealer{position:absolute;left:50%;top:96%;transform:translate(-50%,-50%);font:500 13px var(--fb);color:var(--muted);white-space:nowrap}
 
 .seat{position:absolute;transform:translate(-50%,-50%);width:76px;padding:5px 4px 6px;border-radius:12px;background:#231811;color:#F2E8D8;border:1px solid #4B3423;text-align:center;transition:opacity .25s, box-shadow .2s;z-index:2}

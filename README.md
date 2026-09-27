@@ -1,4 +1,6 @@
-# LearnPLO
+# FeltReady
+
+Live at https://feltready.com. (The repo is still named LearnPLO.)
 
 A pot limit Omaha dealer trainer. A six-handed hand plays out on its own, and you deal it:
 

@@ -90,7 +90,7 @@ export async function memberStore(id: string, email: string): Promise<Store> {
   // If either read failed (offline, server hiccup), run from this device's copy and don't
   // treat the account as new, so defaults never overwrite what's saved on the server.
   const loaded = !s.error && !t.error;
-  if (!loaded) console.warn('LearnPLO: could not load account data', s.error ?? t.error);
+  if (!loaded) console.warn('FeltReady: could not load account data', s.error ?? t.error);
   const remoteSettings = s.data ? (s.data as { data: unknown }).data : null;
   const remoteStats = t.data ? cleanStats((t.data as { data: unknown }).data) : null;
   let settings = pickMemberSettings(remoteSettings, read('local', K.memberSettings(id)) ?? read('local', K.settings));
@@ -100,7 +100,7 @@ export async function memberStore(id: string, email: string): Promise<Store> {
   // A failed push stays marked and is retried on the next change or when the connection returns.
   const upsert = async (table: 'user_settings' | 'user_stats', data: Settings | Stats): Promise<boolean> => {
     const { error } = await sb.from(table).upsert({ user_id: id, data, updated_at: new Date().toISOString() });
-    if (error) console.warn(`LearnPLO: saving ${table} failed`, error);
+    if (error) console.warn(`FeltReady: saving ${table} failed`, error);
     return !error;
   };
   let settingsDirty = false, statsDirty = false;
@@ -116,7 +116,7 @@ export async function memberStore(id: string, email: string): Promise<Store> {
     sending = true;
     const { error } = await sb.from('attempts').insert(q.map(r => ({ ...r, user_id: id })));
     sending = false;
-    if (error) { console.warn('LearnPLO: saving answers failed', error); return; }
+    if (error) { console.warn('FeltReady: saving answers failed', error); return; }
     const now = (read('local', K.queue(id)) as unknown[] | null) || [];
     write('local', K.queue(id), now.slice(q.length));
   }, 2000);

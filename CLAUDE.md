@@ -12,7 +12,11 @@ Pot limit Omaha dealer trainer. Vite + TypeScript, no framework. See README.md f
   the DOM belong in the engine (for example `gradePicks` in `engine/showdown.ts`).
 - Keep the dealer's language: "Pot is $X", "Ship it to Seat 3", "Chop it", "Cut the main pot".
   Sentence case, no all-caps labels.
-- Settings and stats go through `src/data/store.ts` so a Supabase store can replace localStorage.
+- Settings and stats go through `src/data/store.ts`. Three modes: `local` (no Supabase
+  configured), `guest` (signed out: default training settings, stats for the visit), and
+  `member` (synced to Supabase, answers logged to `attempts`). `app.settings` and `app.stats`
+  are replaced on sign-in/out, so never hold on to them in a closure; read them at use time.
+- Schema changes go in a new file under `supabase/migrations/`, with row-level security.
 
 ## Before you commit
 

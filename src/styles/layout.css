@@ -22,3 +22,24 @@ select{font:500 16px var(--fb);padding:6px 8px;border-radius:8px;border:1px soli
 .seg button+button{border-left:1px solid var(--line)}
 .seg button.on{background:var(--brass);color:var(--brass-ink)}
 input[type=checkbox]{width:22px;height:22px;accent-color:var(--brass)}
+
+/* account */
+.linkbtn{appearance:none;border:0;background:none;padding:6px 4px;font:600 15px var(--fb);color:var(--ink);text-decoration:underline;text-underline-offset:3px;cursor:pointer}
+.top .linkbtn{flex:none}
+.acct{padding:12px 0 14px;border-bottom:1px solid var(--line)}
+.acct p{margin:0 0 10px;line-height:1.45}
+.acct-lead{font-size:15px}
+.acct-form{display:flex;gap:8px;flex-wrap:wrap}
+.acct-form input{flex:1 1 180px;min-width:0;font:500 17px var(--fb);padding:10px 12px;border-radius:8px;border:1.5px solid var(--line);background:var(--surface-2);color:var(--ink)}
+.acct-form .btn{flex:none}
+.acct-row{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.acct-row p{margin:0;flex:1 1 200px;font-size:15px}
+.acct-msg{margin:10px 0 0!important;font-size:14px;color:var(--muted)}
+.acct-msg.err{color:var(--bad)}
+.training{border:0;margin:0;padding:0;min-width:0}
+.training:disabled .row{opacity:.5}
+.lockmsg{margin:10px 0 0;font-size:14px;color:var(--muted)}
+.intro-acct{font-size:15px;margin-top:12px!important}
+.intro-acct .linkbtn{padding:0;font-size:15px}
+.sr{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+.training .row:last-of-type{border-bottom:1px solid var(--line)}

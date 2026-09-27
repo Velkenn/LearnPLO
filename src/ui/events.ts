@@ -5,6 +5,7 @@ import { continueQuiz, gradeQuiz } from '../drills/potCall.ts';
 import { finishCuts, gradeCut, nextCut } from '../drills/cutPot.ts';
 import { gradeHand, nextPot, toggleSel } from '../drills/readHands.ts';
 import { $ } from './dom.ts';
+import { openAccount } from './account.ts';
 import { fitVV, renderModal, renderPanel, unpeek } from './render.ts';
 
 export function initEvents(): void {
@@ -12,6 +13,7 @@ export function initEvents(): void {
     const t = (e.target as HTMLElement).closest('button'); if (!t) return;
     if (t.id === 'deal') { startHand(); window.scrollTo({ top: 0, behavior: 'auto' }); return; }
     if (t.id === 'unpeek') { unpeek(); return; }
+    if (t.id === 'introSignin') { openAccount(); return; }
     if (t.id === 'gradeBtn') { gradeHand(false); return; }
     if (t.id === 'nextPot') { nextPot(); return; }
     const S = app.S;

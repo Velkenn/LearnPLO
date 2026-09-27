@@ -64,9 +64,10 @@ src/
     sound.ts          chip clicks and vibration
     cards.ts          card and chip HTML
     dom.ts            small DOM helpers
-  data/store.ts       where settings and stats are saved (this browser today, Supabase later)
+  data/               accounts and saving: Supabase client, sign-in, storage modes, stat merging
   styles/             CSS split by area, pulled together by main.css
 tests/                node:test unit tests and the simulation
+supabase/migrations/  database tables and row-level security
 e2e/drill.mjs         Playwright browser test
 ```
 
@@ -84,10 +85,39 @@ doesn't allow commercial SaaS, so move to one of those before charging for anyth
 After the first `npm install`, commit `package-lock.json` and switch the workflow's
 `npm install` to `npm ci` for repeatable builds.
 
+## Accounts (Supabase)
+
+Without Supabase settings the app runs device-only: everything saves in the browser.
+With them:
+
+- **Guests** play the full drill with default settings; stats last for the visit.
+- **Signed-in users** (email link or 6-digit code, no password) unlock the training
+  settings, and settings, stats, and every answer save to their account.
+  On first sign-in, the visit's stats (and any older stats on that device) carry over.
+
+Setup:
+
+1. Run `supabase/migrations/*.sql` in the Supabase SQL editor (or `supabase db push`).
+   It creates `profiles`, `user_settings`, `user_stats`, and `attempts`, each locked to
+   its owner with row-level security.
+2. Put the project URL and anon key in `.env.production` (and `.env.local` for `npm run dev`):
+   ```
+   VITE_SUPABASE_URL=https://<project>.supabase.co
+   VITE_SUPABASE_ANON_KEY=<anon public key>
+   ```
+   Both values are public by design; row-level security is what protects the data.
+3. In Supabase **Authentication → URL Configuration**, set the Site URL to the live site
+   and add it (plus `http://localhost:5173/**`) to Redirect URLs.
+4. In **Authentication → Emails → Magic Link**, include `{{ .Token }}` so the email has a
+   code as well as a link (handy when the link opens in a different browser).
+5. Before sharing widely, set up custom SMTP (for example Resend) under
+   **Authentication → SMTP**. Supabase's built-in email is for testing only.
+
+Code: `src/data/supabase.ts` (client), `auth.ts` (sign-in), `store.ts` (local, guest,
+and member storage), `merge.ts` (how device and account stats combine),
+`src/ui/account.ts` (the sign-in box).
+
 ## Next up
 
-1. Supabase sign-in (email magic link or Google). Signed-in users get the settings sheet
-   (timer, blinds, pot calls per hand, side-pot frequency) and stats saved across devices.
-   The seam is `src/data/store.ts`: add a Supabase store with the same interface.
-2. An `attempts` table (one row per answer) for averages and weak-spot tracking.
-3. Later: a daily challenge with server-side grading for a leaderboard.
+1. Weak-spot tracking from the `attempts` log (which spots you miss, average times).
+2. A daily challenge with server-side grading for a leaderboard.

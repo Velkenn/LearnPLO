@@ -14,11 +14,16 @@
 <div class="wrap">
   <header class="top">
     <h1>PLO Dealer Drill</h1>
+    <button class="linkbtn" id="signin" hidden>Sign in</button>
     <button class="iconbtn" id="gear" aria-label="Settings" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg></button>
   </header>
   <div class="scores" id="scores"></div>
 
   <section class="sheet" id="sheet" aria-label="Settings">
+    <div class="acct" id="acct" hidden></div>
+    <fieldset class="training" id="training">
+    <legend class="sr">Training settings</legend>
+    <p class="lockmsg" id="lockmsg" hidden>Sign in to change these.</p>
     <div class="row"><label for="stakes">Blinds</label>
       <select id="stakes"><option>1/2</option><option>2/5</option><option>5/10</option><option>25/50</option></select></div>
     <div class="row"><span>Action speed</span>
@@ -34,9 +39,10 @@
     <div class="row"><label for="showPot">Show the pot total on the table</label><input type="checkbox" id="showPot"></div>
     <div class="row"><label for="sbFull">Count the small blind as a full blind in the preflop pot</label><input type="checkbox" id="sbFull"></div>
     <div class="row"><label for="chipAmt">Label chip amounts (turn off to count chips yourself)</label><input type="checkbox" id="chipAmt"></div>
+    </fieldset>
     <div class="row"><label for="sound">Chip sounds and vibration</label><input type="checkbox" id="sound"></div>
     <div class="row"><label for="four">Four-color deck</label><input type="checkbox" id="four"></div>
-    <div class="row"><span class="muted">Scores are saved on this device.</span><button class="btn ghost" id="reset">Reset scores</button></div>
+    <div class="row"><span class="muted" id="scoreNote">Scores are saved on this device.</span><button class="btn ghost" id="reset">Reset scores</button></div>
   </section>
 
   <div class="table" id="table"></div>

@@ -22,10 +22,13 @@ page.on('pageerror', e => errors.push(String(e)));
 await page.goto(url);
 // Speed the table up: cap every delay at a few milliseconds.
 await page.evaluate(() => { const orig = window.setTimeout; window.setTimeout = (f, ms) => orig(f, Math.min(ms || 0, 4)); });
+// Training settings are locked for guests when accounts are on; use the defaults then.
 await page.click('#gear');
-await page.click('#speed button[data-v=fast]');
-await page.click('#sideFreq button[data-v=often]');
-await page.click('#potCount button[data-v="2"]');
+if (!await page.$eval('#training', f => f.disabled)) {
+  await page.click('#speed button[data-v=fast]');
+  await page.click('#sideFreq button[data-v=often]');
+  await page.click('#potCount button[data-v="2"]');
+}
 await page.click('#gear');
 
 const tally = { pot: 0, cut: 0, read: 0, chop: 0, missedChop: 0 };

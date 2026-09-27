@@ -1,5 +1,5 @@
 // Drill: a player says "Pot" and the dealer announces the raise.
-import { app, bump, recordTime } from '../app.ts';
+import { app, bump, logAttempt, recordTime } from '../app.ts';
 import type { Player, PotQ } from '../engine/types.ts';
 import { posOf, seatName } from '../engine/hand.ts';
 import { fmt } from '../util.ts';
@@ -30,6 +30,7 @@ export function gradeQuiz(timeout: boolean): void {
   Q.answered = true; Q.timeout = timeout; Q.val = v; Q.ok = !timeout && v === q.raiseTo;
   if (!timeout) { Q.ms = ms; recordTime('p', ms); }
   app.stats.pt++; if (Q.ok) app.stats.pr++; bump(Q.ok); buzz(Q.ok);
+  logAttempt({ kind: 'pot', correct: Q.ok, timedOut: timeout, ms: timeout ? null : ms, detail: { answer: timeout ? null : v, raiseTo: q.raiseTo, street: q.street, repot: !!q.repotOf, sbFull: S.sbFull } });
   Q.diag = Q.ok || timeout ? '' : diagnose(v, q);
   renderModal(); renderScores();
   $q('#cont')?.focus({ preventScroll: true });

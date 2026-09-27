@@ -2,12 +2,14 @@
 import { initSettings } from './ui/settings.ts';
 import { initEvents } from './ui/events.ts';
 import { initTimer } from './ui/timer.ts';
+import { initAccount } from './ui/account.ts';
 import { render } from './ui/render.ts';
 import { app } from './app.ts';
 
 initTimer();
 initSettings();
 initEvents();
+initAccount();
 render();
 
 // Browser tests read game state through this. Only exposed with ?e2e in the URL.

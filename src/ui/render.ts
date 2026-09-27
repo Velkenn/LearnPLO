@@ -1,5 +1,5 @@
 // Redraws everything from app state: scores, table, ticker, panel, popup, hand history.
-import { app } from '../app.ts';
+import { app, storeMode } from '../app.ts';
 import { STREETS } from '../config.ts';
 import { $, $q } from './dom.ts';
 import { renderTable } from './table.ts';
@@ -15,6 +15,7 @@ export function renderScores(): void {
 function introHTML(): string {
   return `<h2>You're in the box</h2><p>Six-handed pot limit Omaha. When a player says “Pot,” announce the raise. When someone's all in for less, cut the side pot at the end of that round. At showdown, ship each pot to the right hand, and chop it when hands tie.</p>
     <button class="btn wide" id="deal">Shuffle up and deal</button>
+    ${storeMode() === 'guest' ? `<p class="muted intro-acct">Want a timer, your own blinds, or stats that stick? <button class="linkbtn" id="introSignin">Sign in free</button></p>` : ''}
     <details class="howto"><summary>How to figure the pot</summary>
     <p>The player calls the bet first, then raises the size of the whole pot after that call. So the raise is the last bet plus the pot after the call.</p>
     <p>The 3× rule: three times the last bet, plus everything else out. Don't count the last bet twice, and leave out the raiser's own chips in front of them. ${app.settings.sbFull ? 'With the small blind counted as a full blind, $2/$5 first in is 3 × $5 + $5 = $20.' : 'At $2/$5 first in, that\'s 3 × $5 + $2 = $17.'}</p>

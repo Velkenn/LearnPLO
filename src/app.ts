@@ -1,6 +1,6 @@
 // Shared state for the running app: the current hand, settings, and stats.
 import type { Hand, Settings, Stats } from './engine/types.ts';
-import { store } from './data/store.ts';
+import { store, useStore, type Attempt, type Store } from './data/store.ts';
 import { DEFAULT_STATS } from './config.ts';
 
 export const app = {
@@ -30,3 +30,19 @@ export function recordTime(kind: 'p' | 'b' | 'r', ms: number | null): void {
 }
 
 export function resetStats(): void { app.stats = { ...DEFAULT_STATS }; saveStats(); }
+
+/** Log one answer (kept only for signed-in members). */
+export const logAttempt = (a: Attempt): void => store.recordAttempt(a);
+
+/** Guests play with default training settings; signing in unlocks them. */
+export const canCustomize = (): boolean => store.mode !== 'guest';
+export const storeMode = () => store.mode;
+export const memberEmail = (): string => store.email || '';
+
+/** Switch where settings and stats come from (sign-in, sign-out). */
+export function switchStore(next: Store): void {
+  if (next !== store) store.close?.();
+  useStore(next);
+  app.settings = next.loadSettings();
+  app.stats = next.loadStats();
+}

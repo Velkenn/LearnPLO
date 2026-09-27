@@ -1,7 +1,7 @@
 // The settings sheet: reflect current settings and save changes.
-import { app, resetStats, saveSettings } from '../app.ts';
+import { app, canCustomize, resetStats, saveSettings, storeMode } from '../app.ts';
 import { TIMERS } from '../config.ts';
-import type { SideFreq, Speed, Stakes, TimerLevel } from '../engine/types.ts';
+import type { Settings, SideFreq, Speed, Stakes, TimerLevel } from '../engine/types.ts';
 import { $ } from './dom.ts';
 import { chipClick } from './sound.ts';
 import { renderModal, renderPanel, renderScores } from './render.ts';
@@ -24,6 +24,12 @@ export function applySettings(): void {
   segOn('timerSeg', s.timer);
   segOn('potCount', String(+s.potCalls || 1));
   segOn('sideFreq', s.side);
+  const locked = !canCustomize();
+  $<HTMLFieldSetElement>('#training').disabled = locked;
+  $('#lockmsg').hidden = !locked;
+  const mode = storeMode();
+  $('#scoreNote').textContent = mode === 'member' ? 'Scores are saved to your account.'
+    : mode === 'guest' ? 'Scores last for this visit. Sign in to keep them.' : 'Scores are saved on this device.';
   const tc = TIMERS[s.timer];
   $('#thint').textContent = tc
     ? `Pot calls get ${tc.pot}s, side pots ${tc.build}s, and hand reads ${tc.read}s. Running out of time counts as a miss.`
@@ -41,21 +47,25 @@ function onCheck(id: string, set: (v: boolean) => void, after?: () => void): voi
 }
 
 export function initSettings(): void {
-  const s = app.settings;
+  // Always edit app.settings at event time: it's replaced when someone signs in or out.
+  const s = (): Settings => app.settings;
   $('#gear').addEventListener('click', () => {
     const open = $('#sheet').classList.toggle('open');
     $('#gear').setAttribute('aria-expanded', String(open));
   });
-  $<HTMLSelectElement>('#stakes').addEventListener('change', e => { s.stakes = (e.target as HTMLSelectElement).value as Stakes; saveSettings(); });
-  onCheck('showPot', v => { s.showPot = v; }, () => { if (app.S) { renderTable(); renderModal(); } });
-  onCheck('sbFull', v => { s.sbFull = v; }, () => { if (!app.S) renderPanel(); });
-  onCheck('chipAmt', v => { s.chipAmt = v; }, () => { if (app.S) { renderTable(); renderModal(); } });
-  onCheck('sound', v => { s.sound = v; }, () => { if (s.sound) chipClick(2); });
-  onCheck('four', v => { s.four = v; }, applySettings);
-  onSeg('speed', v => { s.speed = v as Speed; });
-  onSeg('timerSeg', v => { s.timer = v as TimerLevel; });
-  onSeg('potCount', v => { s.potCalls = +v; });
-  onSeg('sideFreq', v => { s.side = v as SideFreq; });
-  $('#reset').addEventListener('click', () => { resetStats(); renderScores(); });
+  $<HTMLSelectElement>('#stakes').addEventListener('change', e => { s().stakes = (e.target as HTMLSelectElement).value as Stakes; saveSettings(); });
+  onCheck('showPot', v => { s().showPot = v; }, () => { if (app.S) { renderTable(); renderModal(); } });
+  onCheck('sbFull', v => { s().sbFull = v; }, () => { if (!app.S) renderPanel(); });
+  onCheck('chipAmt', v => { s().chipAmt = v; }, () => { if (app.S) { renderTable(); renderModal(); } });
+  onCheck('sound', v => { s().sound = v; }, () => { if (s().sound) chipClick(2); });
+  onCheck('four', v => { s().four = v; }, applySettings);
+  onSeg('speed', v => { s().speed = v as Speed; });
+  onSeg('timerSeg', v => { s().timer = v as TimerLevel; });
+  onSeg('potCount', v => { s().potCalls = +v; });
+  onSeg('sideFreq', v => { s().side = v as SideFreq; });
+  $('#reset').addEventListener('click', () => {
+    if (storeMode() === 'member' && !confirm('Reset the scores on your account? This can’t be undone.')) return;
+    resetStats(); renderScores();
+  });
   applySettings();
 }

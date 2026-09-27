@@ -1,5 +1,5 @@
 // Drill: read the showdown. Pick the winning five (or each winner in a chop), side pots first.
-import { app, bump, recordTime } from '../app.ts';
+import { app, bump, logAttempt, recordTime } from '../app.ts';
 import type { Pot } from '../engine/types.ts';
 import { bestAny, cmp, describe } from '../engine/cards.ts';
 import { posOf } from '../engine/hand.ts';
@@ -77,6 +77,7 @@ export function gradeHand(timeout: boolean): void {
     sd.results[sd.order[sd.step]] = { picks: g.picks, ok, ms }; recordTime('r', ms);
   }
   app.stats.rt++; if (ok) app.stats.rr++; bump(ok); buzz(ok);
+  logAttempt({ kind: 'read', correct: ok, timedOut: timeout, ms: timeout ? null : ms, detail: { chop: pt.winners!.length > 1, hand: pt.top![0], pots: sd.pots.length, contenders: liveElig(sd, pt).length } });
   pay(pt); sd.phase = 'result';
   const rest = sd.order.slice(sd.step + 1);
   const gone = muckAfter(sd, pt);

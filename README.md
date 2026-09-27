@@ -73,14 +73,13 @@ e2e/drill.mjs         Playwright browser test
 
 ## Deploying
 
-Pushing to `main` runs the tests, builds, and publishes to GitHub Pages
-(`.github/workflows/deploy.yml`). One-time setup: in the repo on GitHub, open
-**Settings → Pages** and set **Source** to **GitHub Actions**. The site then lives at
-`https://<your-username>.github.io/LearnPLO/`.
+The live site is https://feltready.com, served by Cloudflare. Cloudflare watches `main`:
+each push runs `npm run build`, then `npx wrangler deploy`, which publishes `dist/` as
+described in `wrangler.jsonc`. The Worker in the Cloudflare dashboard is named `learnplo`;
+keep that name in `wrangler.jsonc` to match.
 
-The build uses relative paths, so the same `dist/` folder also works on Cloudflare Pages,
-Netlify, or Vercel (build command `npm run build`, output folder `dist`). GitHub Pages
-doesn't allow commercial SaaS, so move to one of those before charging for anything.
+GitHub Actions (`.github/workflows/deploy.yml`) runs the tests on every push and still
+publishes the older copy at `https://velkenn.github.io/LearnPLO/`.
 
 After the first `npm install`, commit `package-lock.json` and switch the workflow's
 `npm install` to `npm ci` for repeatable builds.

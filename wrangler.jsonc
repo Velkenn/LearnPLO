@@ -1,0 +1,9 @@
+// Cloudflare deploy: a static site. `npm run build` writes dist/, and `npx wrangler deploy`
+// publishes it as-is. No server code; the name must match the Worker in the Cloudflare dashboard.
+{
+  "name": "learnplo",
+  "compatibility_date": "2026-09-26",
+  "assets": {
+    "directory": "./dist"
+  }
+}

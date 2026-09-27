@@ -1,8 +1,11 @@
 // Cloudflare deploy: a static site. `npm run build` writes dist/, and `npx wrangler deploy`
 // publishes it as-is. No server code; the name must match the Worker in the Cloudflare dashboard.
+// The site is only served at feltready.com (www forwards there from index.html).
 {
   "name": "learnplo",
   "compatibility_date": "2026-09-26",
+  "workers_dev": false,
+  "preview_urls": false,
   "assets": {
     "directory": "./dist"
   }

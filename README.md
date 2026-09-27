@@ -78,8 +78,9 @@ each push runs `npm run build`, then `npx wrangler deploy`, which publishes `dis
 described in `wrangler.jsonc`. The Worker in the Cloudflare dashboard is named `learnplo`;
 keep that name in `wrangler.jsonc` to match.
 
-GitHub Actions (`.github/workflows/deploy.yml`) runs the tests on every push and still
-publishes the older copy at `https://velkenn.github.io/LearnPLO/`.
+GitHub Actions (`.github/workflows/deploy.yml`) runs the tests on every push. It also
+publishes `moved/index.html` to the old address, `https://velkenn.github.io/LearnPLO/`,
+so old links forward to feltready.com.
 
 After the first `npm install`, commit `package-lock.json` and switch the workflow's
 `npm install` to `npm ci` for repeatable builds.

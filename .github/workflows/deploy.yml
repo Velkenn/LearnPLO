@@ -1,4 +1,7 @@
-name: Test and deploy
+name: Test
+
+# The live site is on Cloudflare (see wrangler.jsonc). This workflow runs the checks on
+# every push, and keeps the old GitHub Pages address forwarding to feltready.com.
 
 on:
   push:
@@ -26,10 +29,12 @@ jobs:
       - run: npm install
       - run: npm test
       - run: npm run build
+      # Old address: every page forwards to feltready.com.
+      - run: mkdir -p moved-site && cp moved/index.html moved-site/index.html && cp moved/index.html moved-site/404.html
       - uses: actions/upload-pages-artifact@v4
         if: github.event_name != 'pull_request'
         with:
-          path: dist
+          path: moved-site
 
   deploy:
     if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'

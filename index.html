@@ -2,7 +2,12 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
+<script>
+  // One address only: a sign-in is remembered per address, so www would look signed out.
+  if (location.hostname === 'www.feltready.com') location.replace('https://feltready.com' + location.pathname + location.search + location.hash);
+</script>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="canonical" href="https://feltready.com/">
 <meta name="description" content="Practice dealing pot limit Omaha: call pot raises, cut side pots, and read showdowns.">
 <title>PLO Dealer Drill</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">

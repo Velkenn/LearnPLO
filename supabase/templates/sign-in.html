@@ -1,13 +1,16 @@
 <!-- Paste into Supabase: Authentication → Emails → "Magic link" and "Confirm signup".
-     Subject line for both: Your FeltReady sign-in -->
+     Subject line for both: Your FeltReady sign-in code
+     The code comes first: typing it into the page signs in the browser you're using, so you
+     stay signed in. On a phone the button can open in another app's browser (often the Google
+     app's), which doesn't keep the sign-in. -->
 <div style="margin:0;padding:32px 16px;background:#f4f1ea;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#1d2b24;">
   <div style="max-width:440px;margin:0 auto;background:#ffffff;border-radius:12px;padding:32px 28px;">
     <p style="margin:0 0 24px;font-size:15px;font-weight:700;letter-spacing:.02em;color:#1f5c43;">FeltReady</p>
-    <h1 style="margin:0 0 12px;font-size:22px;line-height:1.3;">Sign in to FeltReady</h1>
-    <p style="margin:0 0 24px;font-size:15px;line-height:1.5;">Tap the button to sign in. The link works once and expires in an hour.</p>
-    <a href="{{ .ConfirmationURL }}" style="display:inline-block;background:#1f5c43;color:#ffffff;text-decoration:none;font-size:16px;font-weight:600;padding:12px 22px;border-radius:8px;">Sign in</a>
-    <p style="margin:28px 0 8px;font-size:14px;line-height:1.5;color:#55635b;">Opening this on a different device or browser? Enter this code instead:</p>
-    <p style="margin:0 0 28px;font-size:28px;font-weight:700;letter-spacing:.18em;font-family:ui-monospace,Menlo,Consolas,monospace;">{{ .Token }}</p>
-    <p style="margin:0;font-size:13px;line-height:1.5;color:#7a857f;">If you didn't ask to sign in, you can ignore this email.</p>
+    <h1 style="margin:0 0 12px;font-size:22px;line-height:1.3;">Your sign-in code</h1>
+    <p style="margin:0 0 16px;font-size:15px;line-height:1.5;">Enter this code on FeltReady, in the same browser where you asked for it. That browser will stay signed in.</p>
+    <p style="margin:0 0 28px;font-size:32px;font-weight:700;letter-spacing:.18em;font-family:ui-monospace,Menlo,Consolas,monospace;">{{ .Token }}</p>
+    <p style="margin:0 0 12px;font-size:14px;line-height:1.5;color:#55635b;">Or sign in with this button. On a phone it may open in a different browser, which won't keep you signed in.</p>
+    <a href="{{ .ConfirmationURL }}" style="display:inline-block;background:#1f5c43;color:#ffffff;text-decoration:none;font-size:15px;font-weight:600;padding:10px 20px;border-radius:8px;">Sign in</a>
+    <p style="margin:28px 0 0;font-size:13px;line-height:1.5;color:#7a857f;">The code and button work once and expire in an hour. If you didn't ask to sign in, you can ignore this email.</p>
   </div>
 </div>

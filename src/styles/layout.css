@@ -113,3 +113,5 @@ input[type=checkbox]{width:22px;height:22px;accent-color:var(--brass)}
 .lboard li.me{background:var(--surface-2);border-radius:8px}
 .lboard li.me .b-rank{color:var(--brand-ink)}
 .lboard li.gap{display:block;text-align:center;color:var(--muted);border-bottom:0;padding:0}
+.acct-warn{background:var(--bad-bg);border-radius:8px;padding:8px 10px;font-size:14px!important}
+.acct-note{margin:10px 0 0!important;font-size:13px;color:var(--muted)}

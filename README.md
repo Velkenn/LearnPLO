@@ -143,8 +143,11 @@ Setup:
    Both values are public by design; row-level security is what protects the data.
 3. In Supabase **Authentication → URL Configuration**, set the Site URL to the live site
    and add it (plus `http://localhost:5173/**`) to Redirect URLs.
-4. In **Authentication → Emails → Magic Link**, include `{{ .Token }}` so the email has a
-   code as well as a link (handy when the link opens in a different browser).
+4. In **Authentication → Emails → Magic Link** (and Confirm signup), paste
+   `supabase/templates/sign-in.html`. It leads with the 6-digit code: the sign-in box asks for
+   it, because typing it in signs in the browser you're using. On phones the email's link often
+   opens in another app's browser (the Google app's, usually), which forgets the sign-in; the
+   page warns people who are in one (`src/data/browser.ts`).
 5. Before sharing widely, set up custom SMTP (for example Resend) under
    **Authentication → SMTP**. Supabase's built-in email is for testing only.
 

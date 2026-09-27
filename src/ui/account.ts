@@ -2,6 +2,7 @@
 import { memberEmail, storeMode, switchStore } from '../app.ts';
 import { accountsOn } from '../data/supabase.ts';
 import { sendLink, signOut, verifyCode, watchAuth } from '../data/auth.ts';
+import { inAppBrowser, regularBrowser } from '../data/browser.ts';
 import { clearGuestStats, guestStore, memberStore, store } from '../data/store.ts';
 import { $, $q, sheetOpen, showSheet } from './dom.ts';
 import { applySettings } from './settings.ts';
@@ -10,7 +11,7 @@ import { refreshSpots } from './weakSpots.ts';
 import { refreshDaily } from './daily.ts';
 
 type Step = 'email' | 'code';
-const ui = { step: 'email' as Step, email: '', busy: false, msg: '', err: false, loading: false, showCode: false };
+const ui = { step: 'email' as Step, email: '', busy: false, msg: '', err: false, loading: false };
 
 const esc = (t: string): string => t.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]!));
 
@@ -21,28 +22,32 @@ export function renderAccount(): void {
   const mode = storeMode();
   link.hidden = mode !== 'guest';
   const note = ui.msg ? `<p class="acct-msg${ui.err ? ' err' : ''}" role="status">${esc(ui.msg)}</p>` : '';
+  // In an app's built-in browser (the Google app, Facebook...) a sign-in doesn't stick. Say so.
+  const app = inAppBrowser(navigator.userAgent);
+  const warn = app ? `<p class="acct-warn">You’re in ${app}’s built-in browser, which forgets sign-ins. To stay signed in, open feltready.com in ${regularBrowser(navigator.userAgent)}. Look for “Open in browser” in the app’s menu.</p>` : '';
   if (ui.loading) { box.innerHTML = `<p class="muted">Loading your account…</p>`; return; }
   if (mode === 'member') {
-    box.innerHTML = `<div class="acct-row"><p>Signed in as <b>${esc(memberEmail())}</b>. Settings and stats save to your account.</p><button class="btn ghost" id="signout">Sign out</button></div>${note}`;
+    box.innerHTML = `${warn}<div class="acct-row"><p>Signed in as <b>${esc(memberEmail())}</b>. Settings and stats save to your account.</p><button class="btn ghost" id="signout">Sign out</button></div>${note}`;
     return;
   }
   if (ui.step === 'email') {
-    box.innerHTML = `<p class="acct-lead">Sign in to set a timer, pick your blinds, and keep your stats on any device. It's free, and there's no password.</p>
+    box.innerHTML = `${warn}<p class="acct-lead">Sign in to set a timer, pick your blinds, and keep your stats on any device. It's free, and there's no password: we email you a code.</p>
       <form class="acct-form" id="acctEmailForm" novalidate>
         <label class="sr" for="acctEmail">Email</label>
         <input type="email" id="acctEmail" autocomplete="email" inputmode="email" placeholder="you@example.com" value="${esc(ui.email)}" required>
-        <button class="btn" type="submit" ${ui.busy ? 'disabled' : ''}>${ui.busy ? 'Sending…' : 'Email me a sign-in link'}</button>
+        <button class="btn" type="submit" ${ui.busy ? 'disabled' : ''}>${ui.busy ? 'Sending…' : 'Email me a code'}</button>
       </form>${note}`;
   } else {
-    // The link always works. A code only appears if the email template includes one.
-    const codeForm = ui.showCode ? `
+    // The code signs in this browser, so it stays signed in. The emailed link can open in a
+    // different browser on a phone (often the Google app's), which is why it's the backup.
+    box.innerHTML = `${warn}<p class="acct-lead">We sent a 6-digit code to <b>${esc(ui.email)}</b>. Enter it here and this browser stays signed in. It can take a minute to arrive, so check spam too.</p>
       <form class="acct-form" id="acctCodeForm" novalidate>
         <label class="sr" for="acctCode">Code from the email</label>
-        <input id="acctCode" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]*" maxlength="10" placeholder="Code">
+        <input id="acctCode" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]*" maxlength="10" placeholder="6-digit code">
         <button class="btn" type="submit" ${ui.busy ? 'disabled' : ''}>${ui.busy ? 'Checking…' : 'Sign in'}</button>
-      </form>` : '';
-    box.innerHTML = `<p class="acct-lead">We sent a sign-in link to <b>${esc(ui.email)}</b>. Open it on this device and you're in. It can take a minute to arrive, so check spam too.</p>${codeForm}
-      <p class="acct-alt">${ui.showCode ? '' : '<button class="linkbtn" id="acctShowCode">Have a code?</button> '}<button class="linkbtn" id="acctBack">Use a different email</button></p>${note}`;
+      </form>${note}
+      <p class="acct-alt"><button class="linkbtn" id="acctBack">Use a different email</button></p>
+      <p class="acct-note">The email has a sign-in link too. On a phone it can open in another app’s browser, which won’t keep you signed in here.</p>`;
   }
 }
 
@@ -89,8 +94,7 @@ export function initAccount(): void {
   });
   box.addEventListener('click', e => {
     const t = (e.target as HTMLElement).closest('button'); if (!t) return;
-    if (t.id === 'acctBack') { ui.step = 'email'; ui.showCode = false; say(''); }
-    if (t.id === 'acctShowCode') { ui.showCode = true; say(''); $q<HTMLInputElement>('#acctCode')?.focus(); }
+    if (t.id === 'acctBack') { ui.step = 'email'; say(''); }
     if (t.id === 'signout') {
       store.close?.();
       void signOut();

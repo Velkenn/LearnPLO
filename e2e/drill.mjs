@@ -38,7 +38,7 @@ const shots = new Set();
 const once = async name => { if (!shots.has(name)) { shots.add(name); await shot(name); } };
 
 for (let hand = 0; hand < HANDS; hand++) {
-  await page.click('#deal');
+  await page.click('[data-deal]'); // the button on the felt
   let done = false;
   for (let tick = 0; tick < 8000 && !done; tick++) {
     await page.waitForTimeout(8);
@@ -91,8 +91,9 @@ for (let hand = 0; hand < HANDS; hand++) {
       if (await page.$('#nextPot')) { await page.click('#nextPot'); continue; }
       done = true; continue;
     }
-    if (await page.$('#deal') && await page.evaluate(() => window.__app.S.mode === 'done')) done = true;
+    if (await page.$('[data-deal]') && await page.evaluate(() => window.__app.S.mode === 'done')) done = true;
   }
+  if (done) await once('hand-done');
   if (!done) { bad.push(['stuck', hand, await page.evaluate(() => ({ m: window.__app.S.mode, c: window.__app.S.caption }))]); break; }
 }
 

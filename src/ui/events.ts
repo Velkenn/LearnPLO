@@ -8,10 +8,16 @@ import { $ } from './dom.ts';
 import { openAccount } from './account.ts';
 import { fitVV, renderModal, renderPanel, unpeek } from './render.ts';
 
+function deal(): void { startHand(); window.scrollTo({ top: 0, behavior: 'auto' }); }
+
 export function initEvents(): void {
+  $('#table').addEventListener('click', e => {
+    if ((e.target as HTMLElement).closest('[data-deal]')) deal();
+  });
+
   $('#panel').addEventListener('click', e => {
     const t = (e.target as HTMLElement).closest('button'); if (!t) return;
-    if (t.id === 'deal') { startHand(); window.scrollTo({ top: 0, behavior: 'auto' }); return; }
+    if (t.id === 'deal') { deal(); return; }
     if (t.id === 'unpeek') { unpeek(); return; }
     if (t.id === 'introSignin') { openAccount(); return; }
     if (t.id === 'gradeBtn') { gradeHand(false); return; }

@@ -36,3 +36,4 @@
 .puck{position:absolute;transform:translate(-50%,-50%);width:23px;height:23px;border-radius:50%;background:radial-gradient(circle at 40% 35%,#FFFFFF,#E4DDCF 75%);box-shadow:0 2px 3px rgba(0,0,0,.5),inset 0 0 0 2px #D5CCBA;display:grid;place-items:center;font:700 12px Georgia,'Times New Roman',serif;color:#2A2420;z-index:3}
 .board{position:absolute;left:50%;top:56%;transform:translate(-50%,-50%);display:flex;gap:4px}
 .slot{width:var(--cw);height:calc(var(--cw)*1.4);border-radius:calc(var(--cw)*.1);border:1px solid rgba(233,214,160,.14)}
+.tdeal{position:absolute;left:50%;top:41%;transform:translate(-50%,-50%);z-index:4;white-space:nowrap;box-shadow:0 4px 12px rgba(0,0,0,.4)}

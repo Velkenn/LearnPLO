@@ -65,7 +65,7 @@ export function renderTable(): void {
   let h = `<div class="rail"><div class="felt"></div></div>${PRINT}<div class="dealer">Dealer</div>`;
   if (!S) {
     SEAT_XY.forEach(([x, y], i) => { h += `<div class="seat idle" style="left:${x}%;top:${y}%"><div class="sn">Seat ${i + 1}</div></div>`; });
-    h += `<div class="board">${'<span class="slot"></span>'.repeat(5)}</div>`;
+    h += `<div class="board">${'<span class="slot"></span>'.repeat(5)}</div>${dealButton('Deal a hand')}`;
     t.innerHTML = h; return;
   }
   const lbl = settings.chipAmt !== false;
@@ -114,5 +114,9 @@ export function renderTable(): void {
   h += `<div class="board${play ? ' reading' : ''}">${[0, 1, 2, 3, 4].map(k => S.board[k]
     ? cardHTML(S.board[k], (fresh.includes(k) ? 'deal' : '') + (play ? (play.board.includes(k) ? ' plays' : ' sits') : ''), fresh.includes(k) ? `style="animation-delay:${fresh.indexOf(k) * 90}ms"` : '')
     : '<span class="slot"></span>').join('')}</div>`;
+  if (S.mode === 'done') h += dealButton('Next hand');
   t.innerHTML = h;
 }
+
+/** The deal button sits on the felt under the board, so starting a hand never needs a scroll. */
+const dealButton = (label: string): string => `<button class="btn tdeal" data-deal>${label}</button>`;

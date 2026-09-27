@@ -29,8 +29,11 @@ FeltReady (feltready.com) is a casino dealer trainer; pot limit Omaha is the fir
   `src/config.ts`, so keep those free of browser APIs. If a change alters how a hand plays out
   (deal, betting, pots, showdown order), bump `CHALLENGE_VERSION`, redeploy the function, and
   check `?action=selftest` returns the fingerprint `npm test` prints (see README).
-- New tables that only the server uses (like `daily_*`) get RLS on, no policies, and grants
-  to `service_role` only.
+- New tables that only the server uses (like `daily_*`, `admins`) get RLS on, no policies, and
+  grants to `service_role` only. Owner-only reads go through a `security definer` function
+  that checks `public.is_admin()` (see `admin_stats()`).
+- `worker/` is the Cloudflare Worker. It only sees paths with no file in `dist/` (`/share`
+  and 404s), so it never slows normal page loads. Keep it that way.
 
 ## Before you commit
 

@@ -5,6 +5,9 @@ import { initTimer } from './ui/timer.ts';
 import { initAccount } from './ui/account.ts';
 import { initSpots } from './ui/weakSpots.ts';
 import { initDaily } from './ui/daily.ts';
+import { initFeedback } from './ui/feedback.ts';
+import { initStats } from './ui/stats.ts';
+import { initWelcome } from './ui/welcome.ts';
 import { render } from './ui/render.ts';
 import { app } from './app.ts';
 
@@ -14,6 +17,9 @@ initEvents();
 initAccount();
 initSpots();
 initDaily();
+initFeedback();
+initStats();
+initWelcome();
 render();
 
 // Browser tests read game state through this. Only exposed with ?e2e in the URL.

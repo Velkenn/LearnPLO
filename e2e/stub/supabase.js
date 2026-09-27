@@ -16,7 +16,8 @@ function signIn() {
   sessionStorage.setItem('stub-signed-in', '1');
   listeners.forEach(cb => cb('SIGNED_IN', session));
 }
-window.__inserted = [];
+window.__inserted = [];   // attempts rows sent
+window.__feedback = [];   // feedback rows sent
 
 // ---- sample answers for the weak spots page ----
 function rows() {
@@ -48,7 +49,7 @@ function query(table) {
     eq() { return q; }, order() { return q; }, limit() { return q; },
     maybeSingle() { result = { data: null, error: null }; return q; },
     upsert() { return q; },
-    insert(v) { window.__inserted.push(...v); return q; },
+    insert(v) { (table === 'feedback' ? window.__feedback : window.__inserted).push(...[].concat(v)); return q; },
     then(res, rej) { return new Promise(r => setTimeout(() => r(result), 150)).then(res, rej); },
   };
   return q;
@@ -126,6 +127,23 @@ export function createClient() {
       passkey: { list: async () => ({ data: session ? passkeys.slice() : null, error: session ? null : { message: 'no session' } }) },
     },
     from: query,
+    // The stand-in member is an admin, so the stats dashboard can be tested.
+    rpc: async name => {
+      await new Promise(r => setTimeout(r, 100));
+      if (!session) return { data: null, error: { code: '42501', message: 'not allowed' } };
+      if (name === 'is_admin') return { data: true, error: null };
+      if (name === 'admin_stats') {
+        const today = '2026-09-27';
+        const days = Array.from({ length: 14 }, (_, i) => {
+          const d = new Date(Date.UTC(2026, 8, 27 - i)).toISOString().slice(0, 10);
+          return { day: d, new_members: i < 3 ? 3 - i : 0, active: i < 5 ? 6 - i : 0, answers: i < 5 ? 240 - i * 40 : 0, daily_players: i < 2 ? 5 - i : 0, daily_avg: i < 2 ? 84 : null };
+        });
+        const feedback = [...window.__feedback].reverse().map(f => ({ at: new Date().toISOString(), message: f.message, email: f.email ?? user.email, member: !!session, context: f.context }))
+          .concat([{ at: '2026-09-27T20:15:00Z', message: 'At my room the small blind counts as a full blind preflop. Glad that is a setting!', email: 'lupe@example.com', member: true, context: { mode: 'member', hand: 'done', width: 390 } }]);
+        return { data: { today, members: 14, members_7d: 6, answers: 1480, daily_runs: 9, days, feedback }, error: null };
+      }
+      return { data: null, error: { message: 'unknown rpc' } };
+    },
     functions: { invoke: async (name, { body }) => name === 'daily' ? daily(body) : fail(404, 'missing', 'No such function.') },
   };
 }

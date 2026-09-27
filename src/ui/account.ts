@@ -9,6 +9,9 @@ import { applySettings } from './settings.ts';
 import { render } from './render.ts';
 import { refreshSpots } from './weakSpots.ts';
 import { refreshDaily } from './daily.ts';
+import { renderFeedback } from './feedback.ts';
+import { openStats } from './stats.ts';
+import { isAdmin } from '../data/admin.ts';
 
 type Step = 'email' | 'code';
 const ui = {
@@ -17,6 +20,8 @@ const ui = {
   passkeys: false,
   /** The member's passkeys (null until loaded, or if they couldn't be). */
   keys: null as PasskeyInfo[] | null,
+  /** The member can see the stats dashboard. */
+  admin: false,
 };
 const shortDate = (iso: string): string => new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 
@@ -45,7 +50,7 @@ export function renderAccount(): void {
   const warn = app ? `<p class="acct-warn">You’re in ${app}’s built-in browser, which forgets sign-ins. To stay signed in, open feltready.com in ${regularBrowser(navigator.userAgent)}. Look for “Open in browser” in the app’s menu.</p>` : '';
   if (ui.loading) { box.innerHTML = `<p class="muted">Loading your account…</p>`; return; }
   if (mode === 'member') {
-    box.innerHTML = `${warn}<div class="acct-row"><p>Signed in as <b>${esc(memberEmail())}</b>. Settings and stats save to your account.</p><button class="btn ghost" id="signout">Sign out</button></div>${passkeyHTML()}${note}`;
+    box.innerHTML = `${warn}<div class="acct-row"><p>Signed in as <b>${esc(memberEmail())}</b>. Settings and stats save to your account.</p><button class="btn ghost" id="signout">Sign out</button></div>${passkeyHTML()}${ui.admin ? '<p class="acct-note"><button class="linkbtn" id="acctStats">Open the stats dashboard</button></p>' : ''}${note}`;
     return;
   }
   if (ui.step === 'email') {
@@ -142,6 +147,7 @@ export function initAccount(): void {
     if (t.id === 'acctBack') { ui.step = 'email'; say(''); }
     if (t.id === 'acctPasskey') void onPasskeySignIn();
     if (t.id === 'acctAddPasskey') void onAddPasskey();
+    if (t.id === 'acctStats') openStats();
     if (t.id === 'signout') {
       store.close?.();
       void signOut();
@@ -165,7 +171,9 @@ export function initAccount(): void {
       ui.step = 'email'; ui.msg = 'Signed out.'; ui.err = false;
     }
     // A hand in progress keeps going; new settings apply from the next deal.
-    applySettings(); render(); renderAccount(); refreshSpots(); refreshDaily();
+    applySettings(); render(); renderAccount(); refreshSpots(); refreshDaily(); renderFeedback();
     void loadKeys();
+    ui.admin = false;
+    if (storeMode() === 'member') void isAdmin().then(a => { ui.admin = a; renderAccount(); });
   });
 }

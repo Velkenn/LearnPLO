@@ -10,9 +10,9 @@ export const readAmount = (el: HTMLInputElement | null): number =>
   el ? parseInt(String(el.value).replace(/[^0-9]/g, ''), 10) : NaN;
 
 /** The sheets that open under the header, and the header button for each. */
-const SHEETS: Record<string, string> = { sheet: 'gear', spots: 'spotsBtn', daily: 'dailyOpen' };
+const SHEETS: Record<string, string> = { sheet: 'gear', spots: 'spotsBtn', daily: 'dailyOpen', feedback: 'feedbackOpen', stats: 'acctStats' };
 export const sheetOpen = (id: string): boolean => !!document.getElementById(id)?.classList.contains('open');
-/** Open one sheet (settings, weak spots, daily challenge) and close the others. null closes them all. */
+/** Open one sheet (settings, weak spots, daily challenge, feedback, stats) and close the others. null closes them all. */
 export function showSheet(id: string | null): void {
   for (const [sheet, btn] of Object.entries(SHEETS)) {
     document.getElementById(sheet)?.classList.toggle('open', sheet === id);

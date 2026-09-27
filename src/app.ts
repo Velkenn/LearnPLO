@@ -1,6 +1,7 @@
 // Shared state for the running app: the current hand, settings, stats, and a daily challenge run.
 import type { Hand, Settings, Stats } from './engine/types.ts';
 import { store, useStore, type Attempt, type Store } from './data/store.ts';
+import { answered } from './data/merge.ts';
 import { DEFAULT_STATS } from './config.ts';
 import { CHALLENGE_HANDS, CHALLENGE_SETTINGS, type ChallengeAnswer } from './engine/challenge.ts';
 import { seed } from './engine/rng.ts';
@@ -96,6 +97,8 @@ export function nextHandLabel(): string {
 /** Guests play with default training settings; signing in unlocks them. Challenges use fixed ones. */
 export const canCustomize = (): boolean => store.mode !== 'guest' && !app.challenge;
 export const storeMode = () => store.mode;
+/** This device has answered questions before (so it isn't a first visit). */
+export const startedBefore = (): boolean => answered(app.stats) > 0;
 export const memberEmail = (): string => store.email || '';
 
 /** Switch where settings and stats come from (sign-in, sign-out). Ends any challenge run. */

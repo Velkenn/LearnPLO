@@ -57,6 +57,7 @@ npm run e2e -- "http://localhost:4174/?stub=member" --shots   # signed in
 npm run e2e -- http://localhost:4174/ --shots                 # guest
 node e2e/daily.mjs "http://localhost:4174/?stub=member" --shots   # the whole daily challenge
 node e2e/account.mjs http://localhost:4174/ --shots               # code sign-in and passkeys
+node e2e/launch.mjs http://localhost:4174/ --shots                # welcome, feedback, stats
 ```
 
 ## How the code is laid out
@@ -88,6 +89,9 @@ src/
     settings.ts       settings sheet
     weakSpots.ts      weak spots sheet
     daily.ts          daily challenge strip, sheet, and leaderboard
+    welcome.ts        first-visit welcome above the table
+    feedback.ts       "Send feedback" sheet
+    stats.ts          the owner's stats dashboard (admins only)
     events.ts         buttons and keyboard
     timer.ts          countdown per question
     sound.ts          chip clicks and vibration
@@ -103,15 +107,25 @@ supabase/functions/daily/  the daily challenge server (Edge Function)
 e2e/drill.mjs         Playwright browser test: hands and drills
 e2e/daily.mjs         Playwright browser test: the daily challenge
 e2e/account.mjs       Playwright browser test: sign-in, in-app browser notice, passkeys
+e2e/launch.mjs        Playwright browser test: first-visit welcome, feedback, stats dashboard
+worker/               the Cloudflare Worker: link previews for shared daily scores (/share)
 e2e/stub/             stand-in for supabase-js, and a build script that uses it
 ```
 
 ## Deploying
 
 The live site is https://feltready.com, served by Cloudflare. Cloudflare watches `main`:
-each push runs `npm run build`, then `npx wrangler deploy`, which publishes `dist/` as
-described in `wrangler.jsonc`. The Worker in the Cloudflare dashboard is named `learnplo`;
+each push runs `npm run build`, then `npx wrangler deploy`, which publishes `dist/` and the
+small Worker in `worker/` as described in `wrangler.jsonc`. Files are served straight from
+`dist/`; the Worker only runs for paths with no file. Today that's `/share`, which returns the
+page with a shared daily score in its link preview (iMessage, Reddit, and Facebook read these
+tags without running scripts). The Worker in the Cloudflare dashboard is named `learnplo`;
 keep that name in `wrangler.jsonc` to match.
+
+Visitor numbers: turn on **Cloudflare Web Analytics** for feltready.com in the Cloudflare
+dashboard (Analytics & Logs → Web Analytics, automatic setup). It's free and cookie-free,
+and needs no code here. Sign-ups, active members, answers, daily runs, and feedback are on the
+stats dashboard in the app (account box → "Open the stats dashboard", admins only).
 
 GitHub Actions (`.github/workflows/deploy.yml`) runs the tests on every push. It also
 publishes `moved/index.html` to the old address, `https://velkenn.github.io/LearnPLO/`,
@@ -156,7 +170,11 @@ Setup:
    to it. The page reads `passkeys_enabled` from the public auth settings and only shows
    passkey buttons when it's on (and never in an app's built-in browser). Members add a
    passkey from the account box after signing in once with a code.
-6. Before sharing widely, set up custom SMTP (for example Resend) under
+6. Feedback and the stats dashboard (migration `20260927000600`): anyone can send feedback,
+   nobody can read it through the API, and only members in `admins` see the dashboard. Add an
+   admin in the SQL editor:
+   `insert into public.admins select id from auth.users where email = 'you@example.com';`
+7. Before sharing widely, set up custom SMTP (for example Resend) under
    **Authentication → SMTP**. Supabase's built-in email is for testing only.
 
 Code: `src/data/supabase.ts` (client), `auth.ts` (sign-in), `store.ts` (local, guest,

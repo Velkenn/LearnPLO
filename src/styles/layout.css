@@ -120,3 +120,39 @@ input[type=checkbox]{width:22px;height:22px;accent-color:var(--brass)}
 .acct-pk-btn{width:100%}
 .acct-pk{background:var(--surface-2);border-radius:10px;padding:12px;margin-top:12px}
 .acct-pk p{margin:0 0 10px!important;font-size:15px}
+
+/* first visit */
+.welcome{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px 16px 16px;margin:4px 0 12px}
+.welcome h2{font:700 25px var(--fd);margin:0 0 6px;line-height:1.1}
+.welcome p{margin:0 0 8px;line-height:1.45}
+.welcome-list{margin:0 0 10px;padding-left:18px;line-height:1.45}
+.welcome-list li{margin-bottom:4px}
+.welcome-go{display:flex;gap:10px;flex-wrap:wrap;margin-top:4px}
+.welcome-go .btn{flex:1 1 150px}
+
+/* feedback */
+.fb-form{display:flex;flex-direction:column;gap:10px}
+.fb-form textarea,.fb-form input{font:400 16px var(--fb);padding:10px 12px;border-radius:8px;border:1.5px solid var(--line);background:var(--surface-2);color:var(--ink);width:100%;resize:vertical}
+.fb-form .btn{align-self:flex-start}
+.fb-who{margin:0!important;font-size:14px}
+.foot{display:flex;justify-content:center;padding:18px 0 4px}
+.foot .linkbtn{font-size:14px;color:var(--muted)}
+
+/* stats dashboard */
+.tiles{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin:6px 0 14px}
+.tile{background:var(--surface-2);border-radius:10px;padding:8px 12px}
+.tile span{display:block;font-size:13px;color:var(--muted)}
+.tile b{font:600 24px var(--fd);font-variant-numeric:tabular-nums}
+.stats-scroll{overflow-x:auto}
+table.stats{width:100%;border-collapse:collapse;font-size:14px;font-variant-numeric:tabular-nums;margin:6px 0 4px}
+table.stats th,table.stats td{padding:6px 4px;border-bottom:1px solid var(--line);text-align:right}
+table.stats th:first-child{text-align:left;font-weight:500;white-space:nowrap}
+table.stats thead th{font-size:12px;color:var(--muted);font-weight:500}
+table.stats tr.today th{font-weight:700}
+table.stats small{color:var(--muted)}
+.stats-note{font-size:13px;margin:6px 0 14px!important}
+#stats h3 small{font-weight:400;color:var(--muted);margin-left:4px}
+.fb-list{list-style:none;margin:6px 0 0;padding:0}
+.fb-list li{padding:8px 0;border-bottom:1px solid var(--line)}
+.fb-list p{margin:0 0 4px!important;white-space:normal}
+.fb-list small{color:var(--muted);font-size:12px;overflow-wrap:anywhere}

@@ -5,6 +5,9 @@
 <script>
   // One address only: a sign-in is remembered per address, so www would look signed out.
   if (location.hostname === 'www.feltready.com') location.replace('https://feltready.com' + location.pathname + location.search + location.hash);
+  // Shared daily-challenge scores come in as /share?... (the server fills in the link preview).
+  // Visitors land on the challenge.
+  else if (location.pathname === '/share') history.replaceState(null, '', '/?daily');
 </script>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <link rel="canonical" href="https://feltready.com/">
@@ -17,8 +20,11 @@
 <meta property="og:title" content="FeltReady: pot limit Omaha dealer training">
 <meta property="og:description" content="Call pot raises, cut side pots, and read showdowns on a live table. Free to practice.">
 <meta property="og:url" content="https://feltready.com/">
-<meta property="og:image" content="https://feltready.com/icon-512.png">
+<meta property="og:image" content="https://feltready.com/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
 <meta property="og:type" content="website">
+<meta name="twitter:card" content="summary_large_image">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@500;600;700&display=swap" rel="stylesheet">
@@ -67,12 +73,16 @@
 
   <section class="sheet spots" id="spots" aria-label="Your weak spots"></section>
   <section class="sheet spots daily" id="daily" aria-label="Daily challenge"></section>
+  <section class="sheet spots" id="feedback" aria-label="Send feedback"></section>
+  <section class="sheet spots" id="stats" aria-label="Stats"></section>
+  <section class="welcome" id="welcome" hidden></section>
 
   <div class="table" id="table"></div>
   <div class="ticker"><span class="street" id="street">Ready</span><strong id="caption">Waiting on a deal</strong></div>
   <section class="panel" id="panel"></section>
   <div class="modal" id="modal" role="dialog" aria-modal="true" aria-labelledby="qtitle"><div class="box" id="modalBox"></div></div>
   <details class="log" id="logwrap"><summary>Hand history</summary><ol id="log"></ol></details>
+  <footer class="foot"><button class="linkbtn" id="feedbackOpen" hidden>Send feedback</button></footer>
 </div>
 <script type="module" src="./src/main.ts"></script>
 </body>

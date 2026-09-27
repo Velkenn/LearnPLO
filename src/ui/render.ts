@@ -7,6 +7,7 @@ import { quizPanel } from '../drills/potCall.ts';
 import { cutPanel } from '../drills/cutPot.ts';
 import { readPanel } from '../drills/readHands.ts';
 import { renderStrip } from './daily.ts';
+import { renderWelcome } from './welcome.ts';
 
 export function renderScores(): void {
   const s = app.stats;
@@ -83,4 +84,5 @@ export function fitVV(): void {
 export function render(): void {
   renderScores(); renderTable(); renderTicker(); renderPanel(); renderModal(); renderLog();
   if (app.challenge) renderStrip();
+  renderWelcome();
 }

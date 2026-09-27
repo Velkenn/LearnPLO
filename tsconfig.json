@@ -15,5 +15,5 @@
     "verbatimModuleSyntax": true,
     "types": []
   },
-  "include": ["src"]
+  "include": ["src", "worker"]
 }

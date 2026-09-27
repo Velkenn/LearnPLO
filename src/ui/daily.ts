@@ -177,7 +177,12 @@ async function share(): Promise<void> {
   const r = myResult(); if (!r) return;
   const day = ui.board?.day ? dayLabel(ui.board.day) : 'today';
   const text = `FeltReady daily challenge, ${day}: ${r.right} of ${r.total} right in ${clock(r.ms)}${myRank() ? ` (${myRank()})` : ''}.`;
-  const url = 'https://feltready.com/?daily';
+  // /share puts the score in the link preview (worker/share.ts), then lands on the challenge.
+  const q = new URLSearchParams({ s: `${r.right}-${r.total}`, t: String(Math.round(r.ms / 1000)) });
+  if (ui.board?.day) q.set('d', ui.board.day);
+  if (ui.board?.me) q.set('r', `${ui.board.me.rank}-${ui.board.players}`);
+  const url = `https://feltready.com/share?${q}`;
+  (window as unknown as { __shared?: string }).__shared = url; // for the browser test
   try {
     if (navigator.share) { await navigator.share({ text, url }); return; }
     await navigator.clipboard.writeText(`${text} ${url}`);
@@ -187,6 +192,11 @@ async function share(): Promise<void> {
 
 function toggle(): void {
   if (sheetOpen('daily')) { showSheet(null); renderDaily(); return; }
+  openDaily();
+}
+
+/** Open the daily challenge sheet (or, right after a run, its results). */
+export function openDaily(): void {
   if (challengeComplete()) { showDailyResults(); return; }
   showSheet('daily');
   window.scrollTo({ top: 0, behavior: 'auto' });

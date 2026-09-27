@@ -1,12 +1,16 @@
-// Cloudflare deploy: a static site. `npm run build` writes dist/, and `npx wrangler deploy`
-// publishes it as-is. No server code; the name must match the Worker in the Cloudflare dashboard.
-// The site is only served at feltready.com (www forwards there from index.html).
+// Cloudflare deploy. `npm run build` writes dist/, and `npx wrangler deploy` publishes it with
+// the small Worker in worker/index.ts. Static files are served first, straight from dist/; the
+// Worker only sees paths with no file: /share (link previews for shared daily scores) and 404s.
+// The name must match the Worker in the Cloudflare dashboard. The site is only served at
+// feltready.com (www forwards there from index.html).
 {
   "name": "learnplo",
+  "main": "worker/index.ts",
   "compatibility_date": "2026-09-26",
   "workers_dev": false,
   "preview_urls": false,
   "assets": {
-    "directory": "./dist"
+    "directory": "./dist",
+    "binding": "ASSETS"
   }
 }

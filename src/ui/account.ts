@@ -8,7 +8,7 @@ import { applySettings } from './settings.ts';
 import { render } from './render.ts';
 
 type Step = 'email' | 'code';
-const ui = { step: 'email' as Step, email: '', busy: false, msg: '', err: false, loading: false };
+const ui = { step: 'email' as Step, email: '', busy: false, msg: '', err: false, loading: false, showCode: false };
 
 const esc = (t: string): string => t.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]!));
 
@@ -32,13 +32,15 @@ export function renderAccount(): void {
         <button class="btn" type="submit" ${ui.busy ? 'disabled' : ''}>${ui.busy ? 'Sending…' : 'Email me a sign-in link'}</button>
       </form>${note}`;
   } else {
-    box.innerHTML = `<p class="acct-lead">We sent a sign-in email to <b>${esc(ui.email)}</b>. Tap the link in it, or enter the code here.</p>
+    // The link always works. A code only appears if the email template includes one.
+    const codeForm = ui.showCode ? `
       <form class="acct-form" id="acctCodeForm" novalidate>
         <label class="sr" for="acctCode">Code from the email</label>
         <input id="acctCode" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]*" maxlength="10" placeholder="Code">
         <button class="btn" type="submit" ${ui.busy ? 'disabled' : ''}>${ui.busy ? 'Checking…' : 'Sign in'}</button>
-      </form>
-      <button class="linkbtn" id="acctBack">Use a different email</button>${note}`;
+      </form>` : '';
+    box.innerHTML = `<p class="acct-lead">We sent a sign-in link to <b>${esc(ui.email)}</b>. Open it on this device and you're in. It can take a minute to arrive, so check spam too.</p>${codeForm}
+      <p class="acct-alt">${ui.showCode ? '' : '<button class="linkbtn" id="acctShowCode">Have a code?</button> '}<button class="linkbtn" id="acctBack">Use a different email</button></p>${note}`;
   }
 }
 
@@ -86,7 +88,8 @@ export function initAccount(): void {
   });
   box.addEventListener('click', e => {
     const t = (e.target as HTMLElement).closest('button'); if (!t) return;
-    if (t.id === 'acctBack') { ui.step = 'email'; say(''); }
+    if (t.id === 'acctBack') { ui.step = 'email'; ui.showCode = false; say(''); }
+    if (t.id === 'acctShowCode') { ui.showCode = true; say(''); $q<HTMLInputElement>('#acctCode')?.focus(); }
     if (t.id === 'signout') {
       store.close?.();
       void signOut();

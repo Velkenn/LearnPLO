@@ -6,7 +6,7 @@
 import type { Settings, Stats } from '../engine/types.ts';
 import { DEFAULT_SETTINGS, DEFAULT_STATS } from '../config.ts';
 import { supabase } from './supabase.ts';
-import { cleanSettings, cleanStats, pickMemberSettings, pickMemberStats } from './merge.ts';
+import { answered, cleanSettings, cleanStats, pickMemberSettings, pickMemberStats } from './merge.ts';
 
 export type StoreMode = 'local' | 'guest' | 'member';
 
@@ -87,17 +87,25 @@ export async function memberStore(id: string, email: string): Promise<Store> {
     sb.from('user_settings').select('data').eq('user_id', id).maybeSingle(),
     sb.from('user_stats').select('data').eq('user_id', id).maybeSingle(),
   ]);
+  // If either read failed (offline, server hiccup), run from this device's copy and don't
+  // treat the account as new, so defaults never overwrite what's saved on the server.
+  const loaded = !s.error && !t.error;
+  if (!loaded) console.warn('LearnPLO: could not load account data', s.error ?? t.error);
   const remoteSettings = s.data ? (s.data as { data: unknown }).data : null;
   const remoteStats = t.data ? cleanStats((t.data as { data: unknown }).data) : null;
   let settings = pickMemberSettings(remoteSettings, read('local', K.memberSettings(id)) ?? read('local', K.settings));
   let stats = pickMemberStats(remoteStats, read('local', K.memberStats(id)) as Stats | null, read('session', K.guestStats) as Stats | null, read('local', K.stats) as Stats | null);
 
-  const pushSettings = debounce(() => {
-    void sb.from('user_settings').upsert({ user_id: id, data: settings, updated_at: new Date().toISOString() });
-  }, 700);
-  const pushStats = debounce(() => {
-    void sb.from('user_stats').upsert({ user_id: id, data: stats, updated_at: new Date().toISOString() });
-  }, 1500);
+  // Supabase queries only run when awaited, so each push awaits its request.
+  // A failed push stays marked and is retried on the next change or when the connection returns.
+  const upsert = async (table: 'user_settings' | 'user_stats', data: Settings | Stats): Promise<boolean> => {
+    const { error } = await sb.from(table).upsert({ user_id: id, data, updated_at: new Date().toISOString() });
+    if (error) console.warn(`LearnPLO: saving ${table} failed`, error);
+    return !error;
+  };
+  let settingsDirty = false, statsDirty = false;
+  const pushSettings = debounce(async () => { settingsDirty = true; if (await upsert('user_settings', settings)) settingsDirty = false; }, 700);
+  const pushStats = debounce(async () => { statsDirty = true; if (await upsert('user_stats', stats)) statsDirty = false; }, 1500);
 
   // Answers wait in a small queue so nothing is lost offline; the queue is sent in batches.
   let sending = false;
@@ -108,23 +116,22 @@ export async function memberStore(id: string, email: string): Promise<Store> {
     sending = true;
     const { error } = await sb.from('attempts').insert(q.map(r => ({ ...r, user_id: id })));
     sending = false;
-    if (!error) {
-      const now = (read('local', K.queue(id)) as unknown[] | null) || [];
-      write('local', K.queue(id), now.slice(q.length));
-    }
+    if (error) { console.warn('LearnPLO: saving answers failed', error); return; }
+    const now = (read('local', K.queue(id)) as unknown[] | null) || [];
+    write('local', K.queue(id), now.slice(q.length));
   }, 2000);
 
   const flushAll = () => { pushSettings.flush(); pushStats.flush(); flushQueue.flush(); };
   const onHidden = () => { if (document.hidden) flushAll(); };
-  const onOnline = () => flushQueue.run();
+  const onOnline = () => { if (settingsDirty) pushSettings.run(); if (statsDirty) pushStats.run(); flushQueue.run(); };
   addEventListener('pagehide', flushAll);
   document.addEventListener('visibilitychange', onHidden);
   addEventListener('online', onOnline);
 
-  // First sign-in on this account: save what we picked right away.
-  if (!remoteSettings) pushSettings.run();
-  if (!remoteStats) pushStats.run();
-  flushQueue.run();
+  // New account, or this device has answers the server missed: save what we picked right away.
+  if (loaded && !remoteSettings) pushSettings.run();
+  if (loaded && (!remoteStats || answered(stats) > answered(remoteStats))) pushStats.run();
+  flushQueue.run(); // also sends answers left over from an earlier visit
 
   return {
     mode: 'member',

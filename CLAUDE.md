@@ -17,6 +17,10 @@ Pot limit Omaha dealer trainer. Vite + TypeScript, no framework. See README.md f
   `member` (synced to Supabase, answers logged to `attempts`). `app.settings` and `app.stats`
   are replaced on sign-in/out, so never hold on to them in a closure; read them at use time.
 - Schema changes go in a new file under `supabase/migrations/`, with row-level security.
+  This project doesn't expose new tables to the API automatically, so a new table also needs
+  explicit grants to `authenticated` (see `20260927000200_api_grants.sql`), or every request
+  fails with "permission denied for table".
+- supabase-js queries only run when awaited (or `.then` is called). Never fire one with `void`.
 
 ## Before you commit
 

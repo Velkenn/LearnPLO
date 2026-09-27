@@ -40,8 +40,8 @@ npm test && npm run typecheck && npm run build
 
 For UI changes, also run the browser test (`npm run e2e`, see README) and look at the
 screenshots in `e2e/out/` on a phone-sized viewport. For anything behind sign-in (weak spots,
-the daily challenge), build with `e2e/stub/build.sh` and run the tests signed in and signed
-out; `e2e/daily.mjs` plays a full challenge.
+the daily challenge, sign-in), build with `e2e/stub/build.sh` and run the tests signed in and
+signed out; `e2e/daily.mjs` plays a full challenge and `e2e/account.mjs` covers sign-in and passkeys.
 
 ## Poker rules the code relies on
 

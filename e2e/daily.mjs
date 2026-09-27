@@ -31,32 +31,7 @@ const shoot = async (page, name) => { if (SHOTS) { await page.waitForTimeout(300
   check(await page.isVisible('#dailySignin'), 'guest sees a sign-in button');
   check(!await page.isVisible('#dailyStart'), 'guest has no start button');
   await shoot(page, 'daily-guest');
-  // Signing in: the code box comes up right away, so the sign-in lands in this browser.
-  await page.click('#dailySignin');
-  await page.waitForSelector('#sheet.open #acctEmail');
-  check(!await page.isVisible('.acct-warn'), 'no in-app browser notice in a regular browser');
-  await page.fill('#acctEmail', 'dealer@example.com');
-  await page.click('#acctEmailForm button');
-  await page.waitForSelector('#acctCode');
-  check((await page.innerText('#acct')).includes('6-digit code'), 'asks for the emailed code');
-  await shoot(page, 'signin-code');
   await page.close();
-}
-
-// ---- the Google app's built-in browser: warn that the sign-in won't stick ----
-{
-  const gsa = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2,
-    userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 26_6_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) GSA/439.4.980558000 Mobile/15E148 Safari/604.1' });
-  const page = await gsa.newPage();
-  page.on('pageerror', e => errors.push(String(e)));
-  await page.goto(guestUrl.href);
-  await page.waitForSelector('#signin:not([hidden])');
-  await page.click('#signin');
-  await page.waitForSelector('#sheet.open .acct-warn');
-  const warn = await page.innerText('.acct-warn');
-  check(warn.includes('Google app') && warn.includes('Safari'), `Google app notice points to Safari (got "${warn}")`);
-  await shoot(page, 'signin-google-app');
-  await gsa.close();
 }
 
 // ---- member: play the whole challenge ----

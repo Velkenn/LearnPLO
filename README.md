@@ -56,6 +56,7 @@ python3 -m http.server 4174 -d e2e/stub/site &
 npm run e2e -- "http://localhost:4174/?stub=member" --shots   # signed in
 npm run e2e -- http://localhost:4174/ --shots                 # guest
 node e2e/daily.mjs "http://localhost:4174/?stub=member" --shots   # the whole daily challenge
+node e2e/account.mjs http://localhost:4174/ --shots               # code sign-in and passkeys
 ```
 
 ## How the code is laid out
@@ -101,6 +102,7 @@ supabase/migrations/  database tables and row-level security
 supabase/functions/daily/  the daily challenge server (Edge Function)
 e2e/drill.mjs         Playwright browser test: hands and drills
 e2e/daily.mjs         Playwright browser test: the daily challenge
+e2e/account.mjs       Playwright browser test: sign-in, in-app browser notice, passkeys
 e2e/stub/             stand-in for supabase-js, and a build script that uses it
 ```
 
@@ -124,7 +126,7 @@ Without Supabase settings the app runs device-only: everything saves in the brow
 With them:
 
 - **Guests** play the full drill with default settings; stats last for the visit.
-- **Signed-in users** (email link or 6-digit code, no password) unlock the training
+- **Signed-in users** (emailed 6-digit code, or a passkey; no passwords) unlock the training
   settings, and settings, stats, and every answer save to their account.
   On first sign-in, the visit's stats (and any older stats on that device) carry over.
 
@@ -148,7 +150,13 @@ Setup:
    it, because typing it in signs in the browser you're using. On phones the email's link often
    opens in another app's browser (the Google app's, usually), which forgets the sign-in; the
    page warns people who are in one (`src/data/browser.ts`).
-5. Before sharing widely, set up custom SMTP (for example Resend) under
+5. Passkeys: **Authentication → Passkeys**, turn on passkey authentication with
+   display name `FeltReady`, relying party ID `feltready.com`, and origin
+   `https://feltready.com`. Don't change the relying party ID later: every passkey is tied
+   to it. The page reads `passkeys_enabled` from the public auth settings and only shows
+   passkey buttons when it's on (and never in an app's built-in browser). Members add a
+   passkey from the account box after signing in once with a code.
+6. Before sharing widely, set up custom SMTP (for example Resend) under
    **Authentication → SMTP**. Supabase's built-in email is for testing only.
 
 Code: `src/data/supabase.ts` (client), `auth.ts` (sign-in), `store.ts` (local, guest,

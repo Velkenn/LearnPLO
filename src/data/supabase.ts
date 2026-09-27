@@ -13,8 +13,14 @@ export const supabase: SupabaseClient | null = url && key
       persistSession: true,
       autoRefreshToken: true,
       detectSessionInUrl: true,
+      // Passkeys: needed on supabase-js 2.105 to 2.10x; later versions have them on and ignore this.
+      experimental: { passkey: true },
     },
   })
   : null;
 
 export const accountsOn = !!supabase;
+
+/** Project URL and publishable key, for the few calls supabase-js doesn't wrap (auth settings). */
+export const supabaseUrl: string = url || '';
+export const supabaseKey: string = key || '';

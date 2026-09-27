@@ -1,13 +1,21 @@
 // Stand-in for @supabase/supabase-js, for browser tests without a network or a real account.
 // e2e/stub/build.sh swaps it in. The URL picks who you are:
 //   ?stub=member   signed in as a member with ~330 sample answers and a daily challenge server
-//   (anything else) signed out
+//   (anything else) signed out; a passkey sign-in then signs you in as that member
+// Passkeys only show when /auth/v1/settings says they're on; tests fake that with page.route.
 // The daily challenge grades with the real engine, like supabase/functions/daily does.
 import { CHALLENGE_HANDS, CHALLENGE_VERSION, pickDaySeed, replayChallenge } from '../../src/engine/challenge.ts';
 
 const mode = new URLSearchParams(location.search).get('stub');
 const user = { id: '00000000-0000-0000-0000-000000000001', email: 'dealer@example.com' };
-const session = mode === 'member' ? { user, access_token: 'stub-token' } : null;
+let session = mode === 'member' || sessionStorage.getItem('stub-signed-in') ? { user, access_token: 'stub-token' } : null;
+const listeners = [];
+const passkeys = JSON.parse(sessionStorage.getItem('stub-passkeys') || '[]');
+function signIn() {
+  session = { user, access_token: 'stub-token' };
+  sessionStorage.setItem('stub-signed-in', '1');
+  listeners.forEach(cb => cb('SIGNED_IN', session));
+}
 window.__inserted = [];
 
 // ---- sample answers for the weak spots page ----
@@ -99,8 +107,23 @@ export function createClient() {
   return {
     auth: {
       getSession: async () => ({ data: { session } }),
-      onAuthStateChange: () => ({ data: { subscription: { unsubscribe() {} } } }),
-      signInWithOtp: async () => ({ error: null }), verifyOtp: async () => ({ error: null }), signOut: async () => ({ error: null }),
+      onAuthStateChange: cb => { listeners.push(cb); return { data: { subscription: { unsubscribe() {} } } }; },
+      signInWithOtp: async () => ({ error: null }), verifyOtp: async () => ({ error: null }),
+      signOut: async () => { session = null; sessionStorage.removeItem('stub-signed-in'); listeners.forEach(cb => cb('SIGNED_OUT', null)); return { error: null }; },
+      // Passkeys: no real WebAuthn ceremony, just the outcome. A passkey added earlier in the visit signs in.
+      signInWithPasskey: async () => {
+        await new Promise(r => setTimeout(r, 100));
+        if (!passkeys.length) return { data: null, error: { code: 'webauthn_credential_not_found', message: 'not found' } };
+        signIn(); return { data: { session, user }, error: null };
+      },
+      registerPasskey: async () => {
+        await new Promise(r => setTimeout(r, 100));
+        if (!session) return { data: null, error: { code: 'session_missing', message: 'no session' } };
+        const k = { id: `pk-${passkeys.length + 1}`, friendly_name: 'iCloud Keychain', created_at: new Date().toISOString() };
+        passkeys.push(k); sessionStorage.setItem('stub-passkeys', JSON.stringify(passkeys));
+        return { data: k, error: null };
+      },
+      passkey: { list: async () => ({ data: session ? passkeys.slice() : null, error: session ? null : { message: 'no session' } }) },
     },
     from: query,
     functions: { invoke: async (name, { body }) => name === 'daily' ? daily(body) : fail(404, 'missing', 'No such function.') },

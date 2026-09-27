@@ -2,7 +2,7 @@
 import { app, canCustomize, resetStats, saveSettings, storeMode } from '../app.ts';
 import { TIMERS } from '../config.ts';
 import type { Settings, SideFreq, Speed, Stakes, TimerLevel } from '../engine/types.ts';
-import { $ } from './dom.ts';
+import { $, sheetOpen, showSheet } from './dom.ts';
 import { chipClick } from './sound.ts';
 import { renderModal, renderPanel, renderScores } from './render.ts';
 import { renderTable } from './table.ts';
@@ -49,10 +49,7 @@ function onCheck(id: string, set: (v: boolean) => void, after?: () => void): voi
 export function initSettings(): void {
   // Always edit app.settings at event time: it's replaced when someone signs in or out.
   const s = (): Settings => app.settings;
-  $('#gear').addEventListener('click', () => {
-    const open = $('#sheet').classList.toggle('open');
-    $('#gear').setAttribute('aria-expanded', String(open));
-  });
+  $('#gear').addEventListener('click', () => showSheet(sheetOpen('sheet') ? null : 'sheet'));
   $<HTMLSelectElement>('#stakes').addEventListener('change', e => { s().stakes = (e.target as HTMLSelectElement).value as Stakes; saveSettings(); });
   onCheck('showPot', v => { s().showPot = v; }, () => { if (app.S) { renderTable(); renderModal(); } });
   onCheck('sbFull', v => { s().sbFull = v; }, () => { if (!app.S) renderPanel(); });

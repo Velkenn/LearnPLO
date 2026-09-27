@@ -4,7 +4,7 @@
 //  guest  – accounts are on, nobody is signed in: default settings, stats for this visit only.
 //  member – signed in: settings and stats sync to Supabase; every answer is logged.
 import type { Settings, Stats } from '../engine/types.ts';
-import { DEFAULT_SETTINGS, DEFAULT_STATS } from '../config.ts';
+import { DEFAULT_SETTINGS, DEFAULT_STATS, GAME } from '../config.ts';
 import { supabase } from './supabase.ts';
 import { answered, cleanSettings, cleanStats, pickMemberSettings, pickMemberStats } from './merge.ts';
 
@@ -18,6 +18,19 @@ export interface Attempt {
   detail?: Record<string, unknown>;
 }
 
+/** One logged answer as it comes back from the attempts table. */
+export interface AttemptRow {
+  kind: string;
+  correct: boolean;
+  timed_out: boolean;
+  ms: number | null;
+  detail: Record<string, unknown> | null;
+  created_at: string;
+}
+
+/** How many recent answers the weak spots page looks at. */
+export const ATTEMPTS_WINDOW = 1000;
+
 export interface Store {
   mode: StoreMode;
   email?: string;
@@ -26,6 +39,8 @@ export interface Store {
   loadStats(): Stats;
   saveStats(s: Stats): void;
   recordAttempt(a: Attempt): void;
+  /** Members only: this game's latest answers, newest first (answers not yet sent included). */
+  loadAttempts?(): Promise<AttemptRow[]>;
   /** Send anything pending and stop syncing (on sign-out). */
   close?(): void;
 }
@@ -108,18 +123,24 @@ export async function memberStore(id: string, email: string): Promise<Store> {
   const pushStats = debounce(async () => { statsDirty = true; if (await upsert('user_stats', stats)) statsDirty = false; }, 1500);
 
   // Answers wait in a small queue so nothing is lost offline; the queue is sent in batches.
-  let sending = false;
-  const flushQueue = debounce(async () => {
-    if (sending) return;
-    const q = (read('local', K.queue(id)) as Record<string, unknown>[] | null) || [];
+  // Rows queued before the game column existed get the table default ('plo').
+  const queued = (): Record<string, unknown>[] => (read('local', K.queue(id)) as Record<string, unknown>[] | null) || [];
+  const send = async (): Promise<void> => {
+    const q = queued();
     if (!q.length) return;
-    sending = true;
     const { error } = await sb.from('attempts').insert(q.map(r => ({ ...r, user_id: id })));
-    sending = false;
     if (error) { console.warn('FeltReady: saving answers failed', error); return; }
-    const now = (read('local', K.queue(id)) as unknown[] | null) || [];
-    write('local', K.queue(id), now.slice(q.length));
-  }, 2000);
+    write('local', K.queue(id), queued().slice(q.length));
+  };
+  // One send at a time; callers share the one in flight.
+  let sending: Promise<void> | null = null;
+  const sendQueue = (): Promise<void> => {
+    sending ??= send()
+      .catch(e => { console.warn('FeltReady: saving answers failed', e); })
+      .finally(() => { sending = null; });
+    return sending;
+  };
+  const flushQueue = debounce(sendQueue, 2000);
 
   const flushAll = () => { pushSettings.flush(); pushStats.flush(); flushQueue.flush(); };
   const onHidden = () => { if (document.hidden) flushAll(); };
@@ -142,9 +163,23 @@ export async function memberStore(id: string, email: string): Promise<Store> {
     saveStats: next => { stats = { ...next }; write('local', K.memberStats(id), stats); pushStats.run(); },
     recordAttempt: a => {
       const q = (read('local', K.queue(id)) as unknown[] | null) || [];
-      q.push({ kind: a.kind, correct: a.correct, timed_out: a.timedOut, ms: a.ms == null ? null : Math.round(a.ms), detail: a.detail ?? null, created_at: new Date().toISOString() });
+      q.push({ game: GAME, kind: a.kind, correct: a.correct, timed_out: a.timedOut, ms: a.ms == null ? null : Math.round(a.ms), detail: a.detail ?? null, created_at: new Date().toISOString() });
       write('local', K.queue(id), q.slice(-500));
       flushQueue.run();
+    },
+    loadAttempts: async () => {
+      // Send what's waiting first so the page counts the answers just given.
+      flushQueue.flush();
+      await sendQueue();
+      const { data, error } = await sb.from('attempts')
+        .select('kind, correct, timed_out, ms, detail, created_at')
+        .eq('game', GAME)
+        .order('created_at', { ascending: false })
+        .limit(ATTEMPTS_WINDOW);
+      if (error) throw error;
+      // Anything still queued (the send failed) counts too.
+      const pending = queued().filter(r => (r.game ?? GAME) === GAME).reverse() as unknown as AttemptRow[];
+      return [...pending, ...((data ?? []) as AttemptRow[])].slice(0, ATTEMPTS_WINDOW);
     },
     close: () => {
       flushAll();

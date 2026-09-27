@@ -9,7 +9,8 @@ import { chromium } from 'playwright';
 import { mkdirSync } from 'node:fs';
 
 const args = process.argv.slice(2);
-const url = (args.find(a => a.startsWith('http')) || 'http://localhost:4173/').replace(/\/?$/, '/') + '?e2e';
+const url = new URL(args.find(a => a.startsWith('http')) || 'http://localhost:4173/');
+url.searchParams.set('e2e', '');
 const HANDS = +(args[args.indexOf('--hands') + 1] || 0) || 40;
 const SHOTS = args.includes('--shots');
 const OUT = new URL('./out/', import.meta.url).pathname;
@@ -19,7 +20,7 @@ const browser = await chromium.launch();
 const page = await browser.newPage({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, colorScheme: args.includes('--dark') ? 'dark' : 'light' });
 const errors = [];
 page.on('pageerror', e => errors.push(String(e)));
-await page.goto(url);
+await page.goto(url.href);
 // Speed the table up: cap every delay at a few milliseconds.
 await page.evaluate(() => { const orig = window.setTimeout; window.setTimeout = (f, ms) => orig(f, Math.min(ms || 0, 4)); });
 // Training settings are locked for guests when accounts are on; use the defaults then.
@@ -95,6 +96,17 @@ for (let hand = 0; hand < HANDS; hand++) {
   }
   if (done) await once('hand-done');
   if (!done) { bad.push(['stuck', hand, await page.evaluate(() => ({ m: window.__app.S.mode, c: window.__app.S.caption }))]); break; }
+}
+
+// Weak spots sheet (only when accounts are on). Guests get a sign-in prompt; members get their numbers.
+if (await page.isVisible('#spotsBtn')) {
+  await page.click('#spotsBtn');
+  await page.waitForSelector('#spots.open h2');
+  await page.waitForFunction(() => !document.querySelector('#spots').textContent.includes('Loading'), null, { timeout: 10000 });
+  if (!await page.isVisible('#spotsSignin') && !await page.isVisible('#spots .drill') && !await page.isVisible('#spots .muted')) bad.push(['spots', await page.innerText('#spots')]);
+  await shot('weak-spots');
+  await page.click('#gear'); // opening settings closes weak spots
+  if (await page.isVisible('#spots')) bad.push(['spots', 'still open after opening settings']);
 }
 
 await browser.close();

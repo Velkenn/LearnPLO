@@ -1,7 +1,10 @@
 // Game constants and defaults. Change table stakes, speeds, and timer lengths here.
 import type { Settings, Stakes, Speed, Stats, TimerLevel } from './engine/types.ts';
 
-export const POS = ['BTN', 'SB', 'BB', 'UTG', 'HJ', 'CO'] as const;
+/** This game's id in the attempts log. */
+export const GAME = 'plo';
+
+export const POS =['BTN', 'SB', 'BB', 'UTG', 'HJ', 'CO'] as const;
 export const STREETS = ['Preflop', 'Flop', 'Turn', 'River'] as const;
 
 /** [small blind, big blind, smallest bet unit] */

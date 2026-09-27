@@ -1,7 +1,7 @@
 /* Header, score row, and settings sheet. */
 /* header */
-.top{display:flex;align-items:center;gap:8px;margin:4px 0 6px}
-.top h1{flex:1;margin:0;font-family:var(--fd);font-weight:700;font-size:28px;line-height:1;white-space:nowrap}
+.top{display:flex;align-items:center;gap:4px;margin:4px 0 6px}
+.top h1{flex:1;min-width:0;margin:0;font-family:var(--fd);font-weight:700;font-size:28px;line-height:1;white-space:nowrap}
 .brand{display:flex;align-items:center;gap:8px;min-width:0}
 .brand .logo{width:30px;height:30px;flex:none}
 .brand .wm{letter-spacing:.01em}
@@ -12,7 +12,7 @@
 .sc:first-child{border-left:0;padding-left:2px}
 .sc span{display:block;font:500 12px var(--fb);color:var(--muted)}
 .sc b{font:600 21px var(--fd);font-variant-numeric:tabular-nums;line-height:1.1}
-.iconbtn{appearance:none;border:0;background:none;color:var(--ink);width:40px;height:40px;border-radius:10px;cursor:pointer;flex:none;display:grid;place-items:center}
+.iconbtn{appearance:none;border:0;background:none;color:var(--ink);width:38px;height:40px;border-radius:10px;cursor:pointer;flex:none;display:grid;place-items:center}
 .iconbtn svg{width:22px;height:22px}
 
 /* settings */
@@ -30,7 +30,9 @@ input[type=checkbox]{width:22px;height:22px;accent-color:var(--brass)}
 
 /* account */
 .linkbtn{appearance:none;border:0;background:none;padding:6px 4px;font:600 15px var(--fb);color:var(--ink);text-decoration:underline;text-underline-offset:3px;cursor:pointer}
-.top .linkbtn{flex:none}
+.top .linkbtn{flex:none;margin-right:2px}
+/* Very narrow phones: drop the game tag before anything collides. */
+@media (max-width:359px){.brand .game{display:none}}
 .acct{padding:12px 0 14px;border-bottom:1px solid var(--line)}
 .acct p{margin:0 0 10px;line-height:1.45}
 .acct-lead{font-size:15px}
@@ -50,3 +52,39 @@ input[type=checkbox]{width:22px;height:22px;accent-color:var(--brass)}
 .training .row:last-of-type{border-bottom:1px solid var(--line)}
 .acct-alt{margin:8px 0 0!important;display:flex;gap:14px;flex-wrap:wrap}
 .acct-alt .linkbtn{padding:4px 0;font-size:14px}
+
+/* weak spots */
+.spots{padding-top:4px}
+.spots-head{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.spots h2{font:700 25px var(--fd);margin:6px 0 4px;line-height:1.1}
+.spots h3{font:600 15px var(--fb);margin:0}
+.spots p{margin:0 0 10px;line-height:1.45}
+.spots-sub{font-size:14px}
+.focus{background:var(--bad-bg);border-radius:10px;padding:10px 12px;margin:0 0 12px}
+.focus h3{color:var(--bad);margin-bottom:6px}
+.focus ol{margin:0;padding-left:20px}
+.focus li{margin:0 0 6px;line-height:1.35}
+.focus li:last-child{margin-bottom:0}
+.focus li b{display:block;font-weight:600}
+.focus li span{font-size:14px;color:var(--muted)}
+.focus.none{background:var(--good-bg);color:var(--ink);font-size:15px}
+.drill{padding:10px 0 8px;border-top:1px solid var(--line)}
+.dhead{display:flex;align-items:baseline;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:6px}
+.dhead span{font-size:14px;color:var(--muted);font-variant-numeric:tabular-nums}
+.dhead b{font:600 19px var(--fd);color:var(--ink)}
+.dhead b.good{color:var(--good)}
+.srow{display:grid;grid-template-columns:1fr 56px 44px 40px;gap:8px;align-items:center;padding:5px 0;font-size:15px;line-height:1.25}
+.srow.shead{padding:0;font-size:12px;color:var(--muted)}
+.srow .sv,.srow .st,.srow.shead span{text-align:right;font-variant-numeric:tabular-nums}
+.srow .st{color:var(--muted);font-size:14px}
+.srow .bar{height:8px;border-radius:99px;background:var(--surface-2);border:1px solid var(--line);overflow:hidden}
+.srow .bar i{display:block;height:100%;background:var(--brass);border-radius:99px}
+.srow.good .bar i{background:var(--good)}
+.srow.weak .bar i{background:var(--bad)}
+.srow.weak .sl,.srow.weak .sv{color:var(--bad);font-weight:600}
+.misses{padding:10px 0 0;border-top:1px solid var(--line)}
+.misses ul{list-style:none;margin:6px 0 0;padding:0}
+.misses li{display:flex;justify-content:space-between;gap:10px;padding:5px 0;font-size:15px;border-bottom:1px solid var(--line)}
+.misses li:last-child{border-bottom:0}
+.misses small{color:var(--muted);font-size:13px;margin-left:4px;white-space:nowrap}
+.misses b{font:600 18px var(--fd);font-variant-numeric:tabular-nums}

@@ -3,9 +3,10 @@ import { memberEmail, storeMode, switchStore } from '../app.ts';
 import { accountsOn } from '../data/supabase.ts';
 import { sendLink, signOut, verifyCode, watchAuth } from '../data/auth.ts';
 import { clearGuestStats, guestStore, memberStore, store } from '../data/store.ts';
-import { $, $q } from './dom.ts';
+import { $, $q, sheetOpen, showSheet } from './dom.ts';
 import { applySettings } from './settings.ts';
 import { render } from './render.ts';
+import { refreshSpots } from './weakSpots.ts';
 
 type Step = 'email' | 'code';
 const ui = { step: 'email' as Step, email: '', busy: false, msg: '', err: false, loading: false, showCode: false };
@@ -48,8 +49,7 @@ function say(msg: string, err = false): void { ui.msg = msg; ui.err = err; rende
 
 /** Open the settings sheet on the sign-in box. */
 export function openAccount(): void {
-  const sheet = $('#sheet');
-  if (!sheet.classList.contains('open')) { sheet.classList.add('open'); $('#gear').setAttribute('aria-expanded', 'true'); }
+  if (!sheetOpen('sheet')) showSheet('sheet');
   window.scrollTo({ top: 0, behavior: 'auto' });
   setTimeout(() => ($q<HTMLInputElement>('#acctEmail') || $q<HTMLInputElement>('#acctCode'))?.focus(), 30);
 }
@@ -113,6 +113,6 @@ export function initAccount(): void {
       ui.step = 'email'; ui.msg = 'Signed out.'; ui.err = false;
     }
     // A hand in progress keeps going; new settings apply from the next deal.
-    applySettings(); render(); renderAccount();
+    applySettings(); render(); renderAccount(); refreshSpots();
   });
 }

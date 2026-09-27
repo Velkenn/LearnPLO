@@ -1,6 +1,6 @@
 // Showdown: who can win each pot, who mucks, grading a read, and paying the pot.
 import type { Hand, Pot, Score, Showdown } from './types.ts';
-import { bestOmaha, bestWithPair, cmp, eval5, describe, cardTxt } from './cards.ts';
+import { bestAny, bestOmaha, bestWithPair, cmp, eval5, describe, cardTxt } from './cards.ts';
 import { active, seatName, logStreet } from './hand.ts';
 import { buildPots } from './pots.ts';
 import { fmt, seatList } from '../util.ts';
@@ -57,4 +57,26 @@ export function gradePicks(S: Hand, pt: Pot, holes: Record<number, number[]>, bo
   });
   const ok = picks.every(x => pt.winners!.includes(x.seat) && cmp(x.score, pt.top!) === 0) && pt.winners!.every(w => seats.includes(w));
   return { picks, ok };
+}
+
+export type ReadMiss = 'omaha-rule' | 'wrong-winner' | 'wrong-five' | 'missed-chop';
+
+/**
+ * Why a wrong read was wrong, and the seat it's about.
+ * omaha-rule: shipped to a losing hand that looks better than it is, because its best five out of
+ * all nine cards isn't a legal Omaha hand (exactly two hole cards). wrong-winner: shipped to any
+ * other losing hand. wrong-five: right player, cards that don't make their best hand.
+ * missed-chop: right hand, but not every winner was picked.
+ */
+export function readMiss(S: Hand, sd: Showdown, pt: Pot, picks: { seat: number; score: Score }[]): { miss: ReadMiss; seat: number } {
+  const winners = pt.winners!;
+  const bad = picks.find(x => !winners.includes(x.seat));
+  if (bad) {
+    const row = sd.rows.find(r => r.i === bad.seat)!;
+    const any = bestAny([...S.players[bad.seat].hole, ...S.board]);
+    return { miss: any[0] > row.best.score[0] ? 'omaha-rule' : 'wrong-winner', seat: bad.seat };
+  }
+  const wrong5 = picks.find(x => cmp(x.score, pt.top!) !== 0);
+  if (wrong5) return { miss: 'wrong-five', seat: wrong5.seat };
+  return { miss: 'missed-chop', seat: winners.find(w => !picks.some(x => x.seat === w))! };
 }

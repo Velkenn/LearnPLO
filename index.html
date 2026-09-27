@@ -33,6 +33,7 @@
       <span class="game">PLO</span>
     </h1>
     <button class="linkbtn" id="signin" hidden>Sign in</button>
+    <button class="iconbtn" id="spotsBtn" aria-label="Your weak spots" aria-expanded="false" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M5 20v-7M12 20V5M19 20v-10M3 20h18"/></svg></button>
     <button class="iconbtn" id="gear" aria-label="Settings" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg></button>
   </header>
   <div class="scores" id="scores"></div>
@@ -62,6 +63,8 @@
     <div class="row"><label for="four">Four-color deck</label><input type="checkbox" id="four"></div>
     <div class="row"><span class="muted" id="scoreNote">Scores are saved on this device.</span><button class="btn ghost" id="reset">Reset scores</button></div>
   </section>
+
+  <section class="sheet spots" id="spots" aria-label="Your weak spots"></section>
 
   <div class="table" id="table"></div>
   <div class="ticker"><span class="street" id="street">Ready</span><strong id="caption">Waiting on a deal</strong></div>

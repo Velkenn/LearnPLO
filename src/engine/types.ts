@@ -54,7 +54,7 @@ export interface QuizState {
   q: PotQ; answered: boolean; timeout?: boolean; val?: number; ok?: boolean; ms?: number | null; diag?: string;
 }
 
-export interface CutAnswer { v: number; ok: boolean; timeout: boolean; ms: number | null }
+export interface CutAnswer { v: number; ok: boolean; timeout: boolean; ms: number | null; diag?: string }
 export interface CutState { pots: Pot[]; j: number; ans: CutAnswer[] }
 
 export interface ShowdownRow { i: number; best: Best }

@@ -3,12 +3,12 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { newHand } from '../src/engine/hand.ts';
 import { playHand, type Hooks } from '../src/engine/loop.ts';
-import { awardPot, buildShowdown, curPot, gradePicks, liveElig, losersOf } from '../src/engine/showdown.ts';
+import { awardPot, buildShowdown, curPot, gradePicks, liveElig, losersOf, readMiss } from '../src/engine/showdown.ts';
 import { seed } from '../src/engine/rng.ts';
 import { DEFAULT_SETTINGS } from '../src/config.ts';
 import type { Hand, Settings } from '../src/engine/types.ts';
 
-interface Tally { hands: number; potCalls: number; repots: number; cuts: number; showdowns: number; multiPot: number; chops: number; mucks: number }
+interface Tally { hands: number; potCalls: number; repots: number; cuts: number; showdowns: number; multiPot: number; chops: number; mucks: number; misreads: number }
 
 async function run(settings: Settings, hands: number, firstSeed: number, t: Tally): Promise<void> {
   for (let n = 0; n < hands; n++) {
@@ -49,6 +49,21 @@ async function run(settings: Settings, hands: number, firstSeed: number, t: Tall
           pt.winners!.forEach(w => { holes[w] = sd.rows.find(r => r.i === w)!.best.hole; });
           const board = sd.rows.find(r => r.i === pt.winners![0])!.best.board;
           if (live.length > 1) assert.ok(gradePicks(S, pt, holes, board).ok, 'correct read grades right');
+          // Wrong reads get the right mistake type: a losing hand shipped, or only one side of a chop.
+          const loser = live.find(i => !pt.winners!.includes(i));
+          if (loser != null) {
+            const best = sd.rows.find(r => r.i === loser)!.best;
+            const g = gradePicks(S, pt, { [loser]: best.hole }, best.board);
+            assert.ok(!g.ok);
+            assert.match(readMiss(S, sd, pt, g.picks).miss, /^(wrong-winner|omaha-rule)$/);
+            t.misreads++;
+          }
+          if (pt.winners!.length > 1) {
+            const w = pt.winners![0];
+            const g = gradePicks(S, pt, { [w]: holes[w] }, board);
+            assert.ok(!g.ok, 'picking one winner of a chop is wrong');
+            assert.equal(readMiss(S, sd, pt, g.picks).miss, 'missed-chop');
+          }
           awardPot(S, sd, pt);
           const lost = losersOf(sd, pt); lost.forEach(i => sd.mucked.add(i)); t.mucks += lost.length;
         }
@@ -65,7 +80,7 @@ async function run(settings: Settings, hands: number, firstSeed: number, t: Tall
 }
 
 test('thousands of hands keep chips, pots, and cuts consistent', async () => {
-  const t: Tally = { hands: 0, potCalls: 0, repots: 0, cuts: 0, showdowns: 0, multiPot: 0, chops: 0, mucks: 0 };
+  const t: Tally = { hands: 0, potCalls: 0, repots: 0, cuts: 0, showdowns: 0, multiPot: 0, chops: 0, mucks: 0, misreads: 0 };
   const base = { ...DEFAULT_SETTINGS };
   await run({ ...base, side: 'off', potCalls: 1 }, 500, 1000, t);
   await run({ ...base, side: 'often', potCalls: 1 }, 800, 5000, t);
@@ -75,4 +90,5 @@ test('thousands of hands keep chips, pots, and cuts consistent', async () => {
   assert.ok(t.potCalls > 1000 && t.repots > 100, 'pot calls and re-pots happen');
   assert.ok(t.cuts > 200 && t.multiPot > 200, 'side pots happen');
   assert.ok(t.chops > 0 && t.mucks > 0, 'chops and mucks happen');
+  assert.ok(t.misreads > 100, 'wrong reads were classified');
 });

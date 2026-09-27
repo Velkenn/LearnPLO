@@ -3,6 +3,7 @@ import { app, bump, logAttempt, recordTime } from '../app.ts';
 import type { Player, PotQ } from '../engine/types.ts';
 import { posOf, seatName } from '../engine/hand.ts';
 import { fmt } from '../util.ts';
+import type { PotMiss } from '../data/weakSpots.ts';
 import { $q, readAmount } from '../ui/dom.ts';
 import { buzz } from '../ui/sound.ts';
 import { timeLine, timerHTML, timerStart, timerStop } from '../ui/timer.ts';
@@ -30,26 +31,27 @@ export function gradeQuiz(timeout: boolean): void {
   Q.answered = true; Q.timeout = timeout; Q.val = v; Q.ok = !timeout && v === q.raiseTo;
   if (!timeout) { Q.ms = ms; recordTime('p', ms); }
   app.stats.pt++; if (Q.ok) app.stats.pr++; bump(Q.ok); buzz(Q.ok);
-  logAttempt({ kind: 'pot', correct: Q.ok, timedOut: timeout, ms: timeout ? null : ms, detail: { answer: timeout ? null : v, raiseTo: q.raiseTo, street: q.street, repot: !!q.repotOf, sbFull: S.sbFull } });
-  Q.diag = Q.ok || timeout ? '' : diagnose(v, q);
+  const d = Q.ok || timeout ? null : diagnose(v, q);
+  Q.diag = d ? d.text : '';
+  logAttempt({ kind: 'pot', correct: Q.ok, timedOut: timeout, ms: timeout ? null : ms, detail: { answer: timeout ? null : v, raiseTo: q.raiseTo, street: q.street, repot: !!q.repotOf, sbFull: S.sbFull, ...(d && { miss: d.miss }) } });
   renderModal(); renderScores();
   $q('#cont')?.focus({ preventScroll: true });
 }
 
 export function continueQuiz(): void { app.S?.quizResolve?.(); render(); }
 
-/** Name the likely mistake behind a wrong answer. */
-export function diagnose(v: number, q: PotQ): string {
+/** Name the likely mistake behind a wrong answer, with a short code for the weak spots page. */
+export function diagnose(v: number, q: PotQ): { miss: PotMiss; text: string } {
   const S = app.S!, n = `Seat ${q.seat + 1}`;
-  if (q.sbAlt != null && v === q.sbAlt) return S.sbFull
+  if (q.sbAlt != null && v === q.sbAlt) return { miss: 'sb-rule', text: S.sbFull
     ? `That counts the small blind as ${fmt(S.sb)}. With the rounding rule on, it counts as a full ${fmt(S.bb)}.`
-    : `That counts the small blind as a full ${fmt(S.bb)}. With the rounding rule off, it counts as the ${fmt(S.sb)} actually posted.`;
-  if (q.mine > 0 && v === q.addNow) return `That's what ${n} adds. Announce the total.`;
-  if (v === q.total) return `That's the pot before the call. They call first, then raise the size of the new pot.`;
-  if (q.toCall > 0 && v === q.cb + q.total) return `You raised by the current pot but skipped adding the ${fmt(q.toCall)} call to the pot first.`;
-  if (v === q.after) return `That's the pot after the call. The raise goes on top of the ${fmt(q.cb)} they're matching.`;
-  if (v === 3 * q.cb + q.total) return `Close. With the 3× shortcut, "everything else" leaves out the last bet itself${q.mine ? ` and ${n}'s own ${fmt(q.mine)}` : ''}.`;
-  return v > q.raiseTo ? `Too high by ${fmt(v - q.raiseTo)}.` : `Too low by ${fmt(q.raiseTo - v)}.`;
+    : `That counts the small blind as a full ${fmt(S.bb)}. With the rounding rule off, it counts as the ${fmt(S.sb)} actually posted.` };
+  if (q.mine > 0 && v === q.addNow) return { miss: 'added-only', text: `That's what ${n} adds. Announce the total.` };
+  if (v === q.total) return { miss: 'before-call', text: `That's the pot before the call. They call first, then raise the size of the new pot.` };
+  if (q.toCall > 0 && v === q.cb + q.total) return { miss: 'skipped-call', text: `You raised by the current pot but skipped adding the ${fmt(q.toCall)} call to the pot first.` };
+  if (v === q.after) return { miss: 'after-call', text: `That's the pot after the call. The raise goes on top of the ${fmt(q.cb)} they're matching.` };
+  if (v === 3 * q.cb + q.total) return { miss: 'shortcut', text: `Close. With the 3× shortcut, "everything else" leaves out the last bet itself${q.mine ? ` and ${n}'s own ${fmt(q.mine)}` : ''}.` };
+  return v > q.raiseTo ? { miss: 'high', text: `Too high by ${fmt(v - q.raiseTo)}.` } : { miss: 'low', text: `Too low by ${fmt(q.raiseTo - v)}.` };
 }
 
 export function quizPanel(): string {

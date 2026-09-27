@@ -30,5 +30,6 @@
 }
 html{scroll-padding-top:env(safe-area-inset-top,0px)}
 *,*::before,*::after{box-sizing:border-box}
+[hidden]{display:none!important}
 body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--fb);font-size:16px;-webkit-text-size-adjust:100%}
 .wrap{max-width:520px;margin:0 auto;padding:10px 14px 36px}

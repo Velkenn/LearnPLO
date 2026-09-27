@@ -21,6 +21,10 @@ FeltReady (feltready.com) is a casino dealer trainer; pot limit Omaha is the fir
   explicit grants to `authenticated` (see `20260927000200_api_grants.sql`), or every request
   fails with "permission denied for table".
 - supabase-js queries only run when awaited (or `.then` is called). Never fire one with `void`.
+- Each logged answer carries `game` (`GAME` in `config.ts`) and a `detail` object. Wrong answers
+  add `detail.miss`, a mistake code from the drill's diagnose function (`readMiss` for reads).
+  The weak spots page (`data/weakSpots.ts`) reads these fields, so keep them when changing a drill,
+  and give any new mistake code a label in `MISS_LABELS`.
 
 ## Before you commit
 

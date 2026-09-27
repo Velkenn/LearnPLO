@@ -3,7 +3,7 @@ import { app, bump, logAttempt, recordTime } from '../app.ts';
 import type { Pot } from '../engine/types.ts';
 import { bestAny, cmp, describe } from '../engine/cards.ts';
 import { posOf } from '../engine/hand.ts';
-import { awardPot, buildShowdown, curPot, gradePicks, liveElig, losersOf, muckAfter } from '../engine/showdown.ts';
+import { awardPot, buildShowdown, curPot, gradePicks, liveElig, losersOf, muckAfter, readMiss, type ReadMiss } from '../engine/showdown.ts';
 import { capF, fmt, potRef, seatList } from '../util.ts';
 import { $q, reducedMotion } from '../ui/dom.ts';
 import { cardBtn, cardHTML } from '../ui/cards.ts';
@@ -70,14 +70,15 @@ export function gradeHand(timeout: boolean): void {
   const S = app.S, sd = S && S.sd; if (!S || !sd || S.mode !== 'showdown' || sd.phase !== 'read') return;
   const sel = S.sel, pt = curPot(sd), seats = Object.keys(sel.holes).map(Number);
   if (!timeout && (sel.board.length !== 3 || !seats.length || seats.some(s => sel.holes[s].length !== 2))) return;
-  const ms = timerStop(); let ok = false;
+  const ms = timerStop(); let ok = false, miss: ReadMiss | null = null;
   if (timeout) sd.results[sd.order[sd.step]] = { timeout: true, ok: false };
   else {
     const g = gradePicks(S, pt, sel.holes, sel.board); ok = g.ok;
+    if (!ok) miss = readMiss(S, sd, pt, g.picks).miss;
     sd.results[sd.order[sd.step]] = { picks: g.picks, ok, ms }; recordTime('r', ms);
   }
   app.stats.rt++; if (ok) app.stats.rr++; bump(ok); buzz(ok);
-  logAttempt({ kind: 'read', correct: ok, timedOut: timeout, ms: timeout ? null : ms, detail: { chop: pt.winners!.length > 1, hand: pt.top![0], pots: sd.pots.length, contenders: liveElig(sd, pt).length } });
+  logAttempt({ kind: 'read', correct: ok, timedOut: timeout, ms: timeout ? null : ms, detail: { chop: pt.winners!.length > 1, hand: pt.top![0], pots: sd.pots.length, contenders: liveElig(sd, pt).length, ...(miss && { miss }) } });
   pay(pt); sd.phase = 'result';
   const rest = sd.order.slice(sd.step + 1);
   const gone = muckAfter(sd, pt);
@@ -129,19 +130,17 @@ export function readPanel(): string {
   else if (res.ok) v = `<div class="verdict good">${split ? `Chop it.<span>${wn} ${both} have ${wd}.${odd}</span>` : `Ship it to ${wn}.<span>${capF(wd)}.</span>`}</div>`;
   else {
     const picks = res.picks || [];
-    const bad = picks.filter(x => !winners.includes(x.seat));
-    const wrong5 = picks.filter(x => winners.includes(x.seat) && cmp(x.score, pt.top!) !== 0);
+    const m = readMiss(S, sd, pt, picks);
     const missed = winners.filter(w => !picks.some(x => x.seat === w));
     let msg: string, why: string;
-    if (bad.length) {
-      const b = bad[0], pr = sd.rows.find(r => r.i === b.seat)!;
+    if (m.miss === 'omaha-rule' || m.miss === 'wrong-winner') {
+      const pr = sd.rows.find(r => r.i === m.seat)!;
       msg = split ? `Chop it between ${wn}.` : `It goes to ${wn}.`;
-      why = `${capF(wd)} beats Seat ${b.seat + 1}'s best, ${describe(pr.best.score)}.`;
-      const any = bestAny([...S.players[b.seat].hole, ...S.board]);
-      if (any[0] > pr.best.score[0]) why += ` It can look like ${describe(any)}, but in Omaha a player must use exactly two hole cards and three from the board.`;
+      why = `${capF(wd)} beats Seat ${m.seat + 1}'s best, ${describe(pr.best.score)}.`;
+      if (m.miss === 'omaha-rule') why += ` It can look like ${describe(bestAny([...S.players[m.seat].hole, ...S.board]))}, but in Omaha a player must use exactly two hole cards and three from the board.`;
       why += odd;
-    } else if (wrong5.length) {
-      const b = wrong5[0]; msg = 'Right player, wrong five.';
+    } else if (m.miss === 'wrong-five') {
+      const b = picks.find(x => x.seat === m.seat)!; msg = 'Right player, wrong five.';
       why = `Those cards make ${describe(b.score)}. Seat ${b.seat + 1}'s best five make ${wd}.`;
     } else {
       msg = `It's a chop.`;

@@ -5,6 +5,7 @@ import { STREETS } from '../config.ts';
 import { active, seatName } from '../engine/hand.ts';
 import { commitCuts, cutSum, outAbove, potName } from '../engine/pots.ts';
 import { fmt, potRef, seatList } from '../util.ts';
+import type { CutMiss } from '../data/weakSpots.ts';
 import { $q, readAmount } from '../ui/dom.ts';
 import { buzz } from '../ui/sound.ts';
 import { timeLine, timerHTML, timerStart, timerStop } from '../ui/timer.ts';
@@ -22,16 +23,16 @@ export function askCuts(pots: Pot[]): Promise<void> {
 
 const nextCardName = (): string => { const st = app.S!.street; return st < 3 ? `before the ${STREETS[st + 1].toLowerCase()}` : 'before the showdown'; };
 
-/** Name the likely mistake behind a wrong cut. */
-export function cutDiag(v: number, pt: Pot): string {
+/** Name the likely mistake behind a wrong cut, with a short code for the weak spots page. */
+export function cutDiag(v: number, pt: Pot): { miss: CutMiss; text: string } {
   const S = app.S!;
   const deadParts = pt.parts.filter(x => x.folded), dead = deadParts.reduce((a, x) => a + x.amt, 0);
   const everything = outAbove(S, pt.prev).reduce((a, x) => a + x.amt, 0);
   const share = pt.level - pt.prev;
-  if (dead > 0 && v === pt.amount - dead) return `You left out ${fmt(dead)} of dead money from the folded player${deadParts.length > 1 ? 's' : ''}.`;
-  if (v === everything) return `That's everything in the middle. This pot stops at the all-in.`;
-  if (v === share) return `That's one player's share. Take ${fmt(share)} from each player in the pot.`;
-  return v > pt.amount ? `Too high by ${fmt(v - pt.amount)}.` : `Too low by ${fmt(pt.amount - v)}.`;
+  if (dead > 0 && v === pt.amount - dead) return { miss: 'dead-money', text: `You left out ${fmt(dead)} of dead money from the folded player${deadParts.length > 1 ? 's' : ''}.` };
+  if (v === everything) return { miss: 'everything', text: `That's everything in the middle. This pot stops at the all-in.` };
+  if (v === share) return { miss: 'one-share', text: `That's one player's share. Take ${fmt(share)} from each player in the pot.` };
+  return v > pt.amount ? { miss: 'high', text: `Too high by ${fmt(v - pt.amount)}.` } : { miss: 'low', text: `Too low by ${fmt(pt.amount - v)}.` };
 }
 
 export function gradeCut(timeout: boolean): void {
@@ -40,9 +41,10 @@ export function gradeCut(timeout: boolean): void {
   const inp = $q<HTMLInputElement>('#bp'); const v = readAmount(inp);
   if (!timeout && isNaN(v)) { inp?.focus(); return; }
   const ms = timerStop(), ok = !timeout && v === pt.amount;
-  cq.ans[cq.j] = { v, ok, timeout, ms: timeout ? null : ms }; if (!timeout) recordTime('b', ms);
+  const d = ok || timeout ? null : cutDiag(v, pt);
+  cq.ans[cq.j] = { v, ok, timeout, ms: timeout ? null : ms, diag: d ? d.text : '' }; if (!timeout) recordTime('b', ms);
   app.stats.st++; if (ok) app.stats.sr++; bump(ok); buzz(ok);
-  logAttempt({ kind: 'cut', correct: ok, timedOut: timeout, ms: timeout ? null : ms, detail: { answer: timeout ? null : v, amount: pt.amount, pot: pt.name, street: S.street, dead: pt.parts.some(x => x.folded) } });
+  logAttempt({ kind: 'cut', correct: ok, timedOut: timeout, ms: timeout ? null : ms, detail: { answer: timeout ? null : v, amount: pt.amount, pot: pt.name, street: S.street, dead: pt.parts.some(x => x.folded), ...(d && { miss: d.miss }) } });
   commitCuts(S, [pt]); S.justCut = true;
   S.log.push({ t: `${pt.name} cut: ${fmt(pt.amount)} (${seatList(pt.elig)})` });
   S.caption = `${pt.name} is ${fmt(pt.amount)}`;
@@ -96,7 +98,7 @@ export function cutPanel(): string {
     return h;
   }
   h += a.ok ? `<div class="verdict good">Right. ${pt.name} is ${fmt(pt.amount)}.</div>`
-    : `<div class="verdict bad">${a.timeout ? 'Time. ' : ''}${pt.name} is ${fmt(pt.amount)}.${a.timeout ? '' : `<span>You had ${fmt(a.v)}. ${cutDiag(a.v, pt)}</span>`}</div>`;
+    : `<div class="verdict bad">${a.timeout ? 'Time. ' : ''}${pt.name} is ${fmt(pt.amount)}.${a.timeout ? '' : `<span>You had ${fmt(a.v)}. ${a.diag}</span>`}</div>`;
   h += timeLine('b', a.ms);
   h += `<p>${potExplain(pt, pt.idx!)}</p>`;
   const take = pt.level - pt.prev;

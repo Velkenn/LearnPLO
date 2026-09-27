@@ -9,6 +9,9 @@ A pot limit Omaha dealer trainer. A six-handed hand plays out on its own, and yo
 - **Showdown reads.** Pick the two hole cards and three board cards that play, side pots first. Chops, odd chips, and mucking losers are handled like a real table.
 
 Every answer is graded, wrong answers explain the mistake, and there is an optional timer.
+Signed-in dealers get a weak spots page (the chart button in the header): accuracy and average
+time per drill and per situation (re-pots, side pots with two or more all-ins, chops, and more),
+the three spots to work on, and their most common mistakes.
 
 ## Run it locally
 
@@ -34,6 +37,9 @@ npx playwright install chromium   # first time only
 npm run build && npx vite preview --port 4173 &
 npm run e2e -- http://localhost:4173/ --shots   # screenshots land in e2e/out/
 ```
+
+The URL can carry its own query string (for example a local build that signs in a stand-in
+account); the test adds `e2e` to it. When accounts are on, it also opens the weak spots page.
 
 ## How the code is laid out
 
@@ -61,12 +67,14 @@ src/
     table.ts          the felt, seats, chips, piles, animations
     render.ts         redraws the page from state
     settings.ts       settings sheet
+    weakSpots.ts      weak spots sheet
     events.ts         buttons and keyboard
     timer.ts          countdown per question
     sound.ts          chip clicks and vibration
     cards.ts          card and chip HTML
     dom.ts            small DOM helpers
-  data/               accounts and saving: Supabase client, sign-in, storage modes, stat merging
+  data/               accounts and saving: Supabase client, sign-in, storage modes, stat merging,
+                      weakSpots.ts (turns logged answers into the weak spots report)
   styles/             CSS split by area, pulled together by main.css
 tests/                node:test unit tests and the simulation
 supabase/migrations/  database tables and row-level security
@@ -101,7 +109,8 @@ Setup:
 
 1. Run `supabase/migrations/*.sql` in the Supabase SQL editor (or `supabase db push`).
    It creates `profiles`, `user_settings`, `user_stats`, and `attempts`, each locked to
-   its owner with row-level security.
+   its owner with row-level security. `attempts.game` says which game an answer came from
+   (`'plo'` for now; `GAME` in `src/config.ts`).
 2. Put the project URL and publishable key in `.env.production` (already done for the live
    project; copy it to `.env.local` for `npm run dev`):
    ```
@@ -122,5 +131,4 @@ and member storage), `merge.ts` (how device and account stats combine),
 
 ## Next up
 
-1. Weak-spot tracking from the `attempts` log (which spots you miss, average times).
-2. A daily challenge with server-side grading for a leaderboard.
+1. A daily challenge with server-side grading for a leaderboard.

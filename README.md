@@ -100,10 +100,11 @@ Setup:
 1. Run `supabase/migrations/*.sql` in the Supabase SQL editor (or `supabase db push`).
    It creates `profiles`, `user_settings`, `user_stats`, and `attempts`, each locked to
    its owner with row-level security.
-2. Put the project URL and anon key in `.env.production` (and `.env.local` for `npm run dev`):
+2. Put the project URL and publishable key in `.env.production` (already done for the live
+   project; copy it to `.env.local` for `npm run dev`):
    ```
    VITE_SUPABASE_URL=https://<project>.supabase.co
-   VITE_SUPABASE_ANON_KEY=<anon public key>
+   VITE_SUPABASE_KEY=<publishable key, sb_publishable_...>
    ```
    Both values are public by design; row-level security is what protects the data.
 3. In Supabase **Authentication → URL Configuration**, set the Site URL to the live site

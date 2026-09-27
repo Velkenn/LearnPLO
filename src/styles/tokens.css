@@ -1,0 +1,34 @@
+/* Colors, type, and base page styles. Dark mode redefines the same tokens. */
+:root{
+  --bg:#E3E9E5; --surface:#FFFFFF; --surface-2:#EFF3F0; --ink:#17211C; --muted:#56645D; --line:#CAD4CE;
+  --felt:#1E6045; --felt-2:#154A34; --felt-hi:#2B7757; --rail:#3A2518;
+  --brass:#C99B2F; --brass-ink:#1F1705;
+  --card:#FFFDF7; --card-line:#D8D1C0; --red:#C3262E; --blk:#1A1A1A;
+  --good:#1F7A48; --good-bg:#DDF1E5; --bad:#B0302A; --bad-bg:#F7E1DE;
+  --sel:#2C6BDB;
+  --cw:clamp(34px, 11.5vw, 46px);
+  --fd:'Barlow Condensed','Arial Narrow','Roboto Condensed',sans-serif;
+  --fb:'Barlow',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+  color-scheme:light;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#101915; --surface:#19251F; --surface-2:#213029; --ink:#E2EAE5; --muted:#9AA9A1; --line:#31433A;
+    --felt:#1A5840; --felt-2:#12402E; --felt-hi:#236B4E;
+    --good:#6FD39A; --good-bg:#15372A; --bad:#F08A80; --bad-bg:#3D1F1C; --sel:#6FA0FF;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#101915; --surface:#19251F; --surface-2:#213029; --ink:#E2EAE5; --muted:#9AA9A1; --line:#31433A;
+  --felt:#1A5840; --felt-2:#12402E; --felt-hi:#236B4E;
+  --good:#6FD39A; --good-bg:#15372A; --bad:#F08A80; --bad-bg:#3D1F1C; --sel:#6FA0FF;
+  color-scheme:dark;
+}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*,*::before,*::after{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--fb);font-size:16px;-webkit-text-size-adjust:100%}
+.wrap{max-width:520px;margin:0 auto;padding:10px 14px 36px}

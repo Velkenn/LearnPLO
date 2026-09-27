@@ -1,0 +1,19 @@
+/* Pot piles, showdown lift, chip sweep and ship animations. */
+.pot.pile.split{animation:fadein .35s ease-out both}
+@keyframes fadein{from{opacity:0}}
+.pot.pile .stacks{transform:scale(.72);transform-origin:50% 100%;margin-bottom:-3px}
+.pot.pile .amt{font-size:13px;padding:0 6px;white-space:nowrap}
+/* showdown on the felt */
+.board .card.plays{transform:translateY(-5px);box-shadow:0 0 0 2px var(--brass),0 6px 10px rgba(0,0,0,.35);animation:lift .3s ease-out both}
+.board .card.sits,.minis .card.sits{opacity:.42;animation:sit .3s ease-out both}
+.minis .card.plays{transform:translateY(-3px);box-shadow:0 0 0 1.5px var(--brass);animation:lift .3s ease-out both}
+@keyframes lift{from{transform:none;box-shadow:0 1px 2px rgba(0,0,0,.28)}}
+@keyframes sit{from{opacity:1}}
+/* table motion */
+.bet.sweep{animation:toPot .38s cubic-bezier(.4,.1,.3,1) both;z-index:2}
+@keyframes toPot{80%{opacity:1}to{left:var(--tx,50%);top:var(--ty,41%);opacity:0}}
+.pot.landing .stacks{animation:land .38s ease-out both}
+@keyframes land{0%,70%{opacity:0;transform:scale(.9)}to{opacity:1;transform:none}}
+.bet.ship{left:var(--fx,50%);top:var(--fy,41%);animation:ship .6s cubic-bezier(.35,.05,.25,1) both;z-index:4}
+@keyframes ship{85%{opacity:1}to{left:var(--x);top:var(--y);opacity:0}}
+@media (prefers-reduced-motion: reduce){*{transition:none!important;animation:none!important}.bet.sweep,.bet.ship{display:none}}

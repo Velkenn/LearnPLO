@@ -1,0 +1,24 @@
+/* Playing cards at every size, plus selection states. */
+/* cards */
+.card{--w:var(--cw);position:relative;width:var(--w);height:calc(var(--w)*1.4);border-radius:calc(var(--w)*.1);background:linear-gradient(160deg,#FFFFFF,#F7F3EA);border:1px solid #CFC7B4;box-shadow:0 1px 2px rgba(0,0,0,.28);color:var(--blk);font-family:var(--fd);user-select:none;-webkit-user-select:none;padding:0;flex:none;display:inline-block;overflow:hidden;text-align:left}
+.card .ix{position:absolute;left:9%;top:5%;display:flex;flex-direction:column;align-items:center;line-height:.9}
+.card .ix b{font-size:calc(var(--w)*.42);font-weight:700;letter-spacing:-.04em}
+.card .ix i{font-style:normal;font-size:calc(var(--w)*.3);margin-top:1px}
+.card .pip{position:absolute;right:8%;bottom:4%;font-size:calc(var(--w)*.56);line-height:1}
+.card.xs,.card.sm{box-shadow:none}
+.card.xs .pip,.card.sm .pip{display:none}
+.card.xs .ix,.card.sm .ix{left:0;right:0;top:50%;transform:translateY(-50%)}
+.card.xs{--w:15px;border-radius:2px}
+.card.xs .ix b{font-size:10px}.card.xs .ix i{font-size:8px}
+.card.sm{--w:26px}
+.card.sm .ix b{font-size:14px}.card.sm .ix i{font-size:11px}
+.card.md{--w:clamp(44px,13vw,54px)}
+.card.deal{animation:deal .32s cubic-bezier(.2,.8,.3,1) both}
+@keyframes deal{from{transform:translateY(60px) rotate(-8deg);opacity:0}}
+.s-h,.s-d{color:var(--red)}
+.four .s-d{color:#1F5FC7}
+.four .s-c{color:#1B7A39}
+button.card{appearance:none;cursor:pointer;transition:transform .12s}
+.card.on{outline:3px solid var(--sel);outline-offset:1px;transform:translateY(-5px)}
+.card.used{outline:3px solid var(--good);outline-offset:1px}
+.card.dim{opacity:.38}

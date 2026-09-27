@@ -1,0 +1,61 @@
+// The settings sheet: reflect current settings and save changes.
+import { app, resetStats, saveSettings } from '../app.ts';
+import { TIMERS } from '../config.ts';
+import type { SideFreq, Speed, Stakes, TimerLevel } from '../engine/types.ts';
+import { $ } from './dom.ts';
+import { chipClick } from './sound.ts';
+import { renderModal, renderPanel, renderScores } from './render.ts';
+import { renderTable } from './table.ts';
+
+const checkbox = (id: string): HTMLInputElement => $<HTMLInputElement>('#' + id);
+const segOn = (id: string, value: string): void =>
+  document.querySelectorAll<HTMLButtonElement>(`#${id} button`).forEach(b => b.classList.toggle('on', b.dataset.v === value));
+
+export function applySettings(): void {
+  const s = app.settings;
+  document.body.classList.toggle('four', !!s.four);
+  $<HTMLSelectElement>('#stakes').value = s.stakes;
+  checkbox('showPot').checked = !!s.showPot;
+  checkbox('sbFull').checked = !!s.sbFull;
+  checkbox('chipAmt').checked = s.chipAmt !== false;
+  checkbox('sound').checked = s.sound !== false;
+  checkbox('four').checked = !!s.four;
+  segOn('speed', s.speed);
+  segOn('timerSeg', s.timer);
+  segOn('potCount', String(+s.potCalls || 1));
+  segOn('sideFreq', s.side);
+  const tc = TIMERS[s.timer];
+  $('#thint').textContent = tc
+    ? `Pot calls get ${tc.pot}s, side pots ${tc.build}s, and hand reads ${tc.read}s. Running out of time counts as a miss.`
+    : 'Your answer times are still tracked with the timer off.';
+}
+
+function onSeg(id: string, set: (v: string) => void): void {
+  $('#' + id).addEventListener('click', e => {
+    const b = (e.target as HTMLElement).closest('button'); if (!b || !b.dataset.v) return;
+    set(b.dataset.v); saveSettings(); applySettings();
+  });
+}
+function onCheck(id: string, set: (v: boolean) => void, after?: () => void): void {
+  checkbox(id).addEventListener('change', e => { set((e.target as HTMLInputElement).checked); saveSettings(); after?.(); });
+}
+
+export function initSettings(): void {
+  const s = app.settings;
+  $('#gear').addEventListener('click', () => {
+    const open = $('#sheet').classList.toggle('open');
+    $('#gear').setAttribute('aria-expanded', String(open));
+  });
+  $<HTMLSelectElement>('#stakes').addEventListener('change', e => { s.stakes = (e.target as HTMLSelectElement).value as Stakes; saveSettings(); });
+  onCheck('showPot', v => { s.showPot = v; }, () => { if (app.S) { renderTable(); renderModal(); } });
+  onCheck('sbFull', v => { s.sbFull = v; }, () => { if (!app.S) renderPanel(); });
+  onCheck('chipAmt', v => { s.chipAmt = v; }, () => { if (app.S) { renderTable(); renderModal(); } });
+  onCheck('sound', v => { s.sound = v; }, () => { if (s.sound) chipClick(2); });
+  onCheck('four', v => { s.four = v; }, applySettings);
+  onSeg('speed', v => { s.speed = v as Speed; });
+  onSeg('timerSeg', v => { s.timer = v as TimerLevel; });
+  onSeg('potCount', v => { s.potCalls = +v; });
+  onSeg('sideFreq', v => { s.side = v as SideFreq; });
+  $('#reset').addEventListener('click', () => { resetStats(); renderScores(); });
+  applySettings();
+}

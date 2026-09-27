@@ -1,6 +1,7 @@
 // Link previews for shared daily-challenge scores. A shared link looks like
-//   https://feltready.com/share?d=2026-09-27&s=18-20&t=342&r=3-12
-// (day, right-total, seconds, rank-players). Link previews (iMessage, Reddit, Facebook) don't run
+//   https://feltready.com/share?score=18-20&time=342&day=2026-09-27&rank=3-12
+// (right-total, seconds, day, rank-players). Plain names on purpose: link cleaners strip short
+// parameters that look like tracking (a "t" never made it through). Link previews (iMessage, Reddit, Facebook) don't run
 // scripts, so the Worker puts the score into the page's preview tags before sending it.
 // Anyone can edit the numbers in a link; it's a brag card, not a record. Real scores are on
 // the leaderboard.
@@ -25,11 +26,11 @@ const clock = (s: number): string => `${Math.floor(s / 60)}:${String(s % 60).pad
 
 /** Preview text for a shared score. Anything malformed falls back to the generic challenge card. */
 export function sharePreview(q: URLSearchParams): Preview {
-  const score = pair(q.get('s'), 60);
+  const score = pair(q.get('score'), 60);
   if (!score) return GENERIC;
-  const day = /^\d{4}-\d{2}-\d{2}$/.test(q.get('d') || '') ? q.get('d')! : null;
-  const secs = /^\d{1,5}$/.test(q.get('t') || '') ? Number(q.get('t')) : null;
-  const rank = pair(q.get('r'), 100000);
+  const day = /^\d{4}-\d{2}-\d{2}$/.test(q.get('day') || '') ? q.get('day')! : null;
+  const secs = /^\d{1,5}$/.test(q.get('time') || '') ? Number(q.get('time')) : null;
+  const rank = pair(q.get('rank'), 100000);
   const date = day ? new Date(`${day}T12:00:00Z`).toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' }) : null;
   const bits = [secs != null && secs < 36000 ? `in ${clock(secs)}` : '', rank ? `#${rank[0]} of ${rank[1]}` : ''].filter(Boolean).join(' · ');
   return {

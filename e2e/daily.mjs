@@ -130,7 +130,7 @@ const logged = await page.evaluate(() => window.__inserted.filter(r => r.detail?
 check(logged === asked, `every challenge answer logged with the day (${logged} of ${asked})`);
 await page.click('#dailyShare');
 const shared = await page.evaluate(() => window.__shared || '');
-check(/^https:\/\/feltready\.com\/share\?s=\d+-\d+&t=\d+&d=\d{4}-\d{2}-\d{2}&r=\d+-\d+$/.test(shared), `share link carries the score (${shared})`);
+check(/^https:\/\/feltready\.com\/share\?score=\d+-\d+&time=\d+&day=\d{4}-\d{2}-\d{2}&rank=\d+-\d+$/.test(shared), `share link carries the score (${shared})`);
 await shoot(page, 'daily-results');
 
 // A reload keeps the result; starting again doesn't replay.

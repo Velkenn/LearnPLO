@@ -178,9 +178,9 @@ async function share(): Promise<void> {
   const day = ui.board?.day ? dayLabel(ui.board.day) : 'today';
   const text = `FeltReady daily challenge, ${day}: ${r.right} of ${r.total} right in ${clock(r.ms)}${myRank() ? ` (${myRank()})` : ''}.`;
   // /share puts the score in the link preview (worker/share.ts), then lands on the challenge.
-  const q = new URLSearchParams({ s: `${r.right}-${r.total}`, t: String(Math.round(r.ms / 1000)) });
-  if (ui.board?.day) q.set('d', ui.board.day);
-  if (ui.board?.me) q.set('r', `${ui.board.me.rank}-${ui.board.players}`);
+  const q = new URLSearchParams({ score: `${r.right}-${r.total}`, time: String(Math.round(r.ms / 1000)) });
+  if (ui.board?.day) q.set('day', ui.board.day);
+  if (ui.board?.me) q.set('rank', `${ui.board.me.rank}-${ui.board.players}`);
   const url = `https://feltready.com/share?${q}`;
   (window as unknown as { __shared?: string }).__shared = url; // for the browser test
   try {

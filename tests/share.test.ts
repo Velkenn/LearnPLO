@@ -6,17 +6,17 @@ import { sharePreview, withPreview } from '../worker/share.ts';
 const q = (s: string) => new URLSearchParams(s);
 
 test('a shared score becomes the preview title and description', () => {
-  const p = sharePreview(q('d=2026-09-27&s=18-20&t=342&r=3-12'));
+  const p = sharePreview(q('score=18-20&time=342&day=2026-09-27&rank=3-12'));
   assert.equal(p.title, '18/20 on the FeltReady daily challenge, Sep 27');
   assert.equal(p.description, 'in 5:42 · #3 of 12. Same five pot limit Omaha hands for every dealer. Can you beat it?');
   assert.equal(p.image, 'https://feltready.com/og-daily.png');
 });
 
 test('odd or missing numbers fall back to the generic card or are left out', () => {
-  for (const bad of ['', 's=21-20', 's=abc', 's=5-0', 's=1-99999', 's=<script>']) {
+  for (const bad of ['', 'score=21-20', 'score=abc', 'score=5-0', 'score=1-99999', 'score=<script>', 's=18-20']) {
     assert.match(sharePreview(q(bad)).title, /^FeltReady daily challenge/, bad);
   }
-  assert.equal(sharePreview(q('s=7-9&t=nope&r=0-x&d=someday')).description, 'Same five pot limit Omaha hands for every dealer. Can you beat it?');
+  assert.equal(sharePreview(q('score=7-9&time=nope&rank=0-x&day=someday')).description, 'Same five pot limit Omaha hands for every dealer. Can you beat it?');
 });
 
 test('the real page gets its title and preview tags replaced, and nothing else changes', () => {
@@ -40,7 +40,7 @@ test('the Worker serves /share with the preview, and passes everything else to t
     asked.push(path);
     return path === '/' ? new Response(page, { headers: { 'content-type': 'text/html' } }) : new Response('Not found', { status: 404 });
   } } };
-  const res = await worker.fetch(new Request('https://feltready.com/share?d=2026-09-27&s=18-20&t=342&r=3-12'), env);
+  const res = await worker.fetch(new Request('https://feltready.com/share?score=18-20&time=342&day=2026-09-27&rank=3-12'), env);
   assert.equal(res.status, 200);
   assert.match(res.headers.get('content-type')!, /text\/html/);
   const html = await res.text();

@@ -88,3 +88,28 @@ input[type=checkbox]{width:22px;height:22px;accent-color:var(--brass)}
 .misses li:last-child{border-bottom:0}
 .misses small{color:var(--muted);font-size:13px;margin-left:4px;white-space:nowrap}
 .misses b{font:600 18px var(--fd);font-variant-numeric:tabular-nums}
+
+/* daily challenge */
+.daily-strip{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:40px;padding:4px 2px 6px;margin:-2px 0 6px;border-bottom:1px solid var(--line);font-size:14px;color:var(--muted);font-variant-numeric:tabular-nums}
+.daily-strip b{color:var(--ink);font-weight:600;margin-right:4px}
+.daily-strip .linkbtn{font-size:14px;padding:4px 0;flex:none}
+.daily-strip .dclock{font:600 17px var(--fd);color:var(--ink);flex:none}
+.btn.small{padding:6px 14px;font-size:14px;border-radius:8px;flex:none}
+.daily h2 small{font:500 15px var(--fb);color:var(--muted);margin-left:4px}
+.daily h3 small{font-weight:400;color:var(--muted);margin-left:4px}
+.dresult{background:var(--good-bg);border-radius:10px;padding:12px 14px;margin:4px 0 12px}
+.dresult b{display:block;font:700 26px var(--fd);color:var(--good);line-height:1.1}
+.dresult span{font-size:15px}
+.dnext{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.dboard{border-top:1px solid var(--line);margin-top:12px;padding-top:10px}
+.lboard{list-style:none;margin:6px 0 0;padding:0;font-variant-numeric:tabular-nums}
+.lboard li{display:grid;grid-template-columns:28px 1fr 52px 52px;gap:8px;align-items:baseline;padding:6px 0;border-bottom:1px solid var(--line);font-size:15px}
+.lboard li:last-child{border-bottom:0}
+.lboard .b-rank{font:600 17px var(--fd);color:var(--muted)}
+.lboard .b-name{overflow-wrap:anywhere}
+.lboard .b-name small{color:var(--muted)}
+.lboard .b-score{font-weight:600;text-align:right}
+.lboard .b-time{color:var(--muted);text-align:right;font-size:14px}
+.lboard li.me{background:var(--surface-2);border-radius:8px}
+.lboard li.me .b-rank{color:var(--brand-ink)}
+.lboard li.gap{display:block;text-align:center;color:var(--muted);border-bottom:0;padding:0}

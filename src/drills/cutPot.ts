@@ -1,5 +1,5 @@
 // Drill: someone is all in for less. Cut the main pot (and any further side pots) before the next card.
-import { app, bump, logAttempt, recordTime } from '../app.ts';
+import { app, bump, challengeAnswer, logAttempt, recordTime } from '../app.ts';
 import type { Pot } from '../engine/types.ts';
 import { STREETS } from '../config.ts';
 import { active, seatName } from '../engine/hand.ts';
@@ -44,6 +44,7 @@ export function gradeCut(timeout: boolean): void {
   const d = ok || timeout ? null : cutDiag(v, pt);
   cq.ans[cq.j] = { v, ok, timeout, ms: timeout ? null : ms, diag: d ? d.text : '' }; if (!timeout) recordTime('b', ms);
   app.stats.st++; if (ok) app.stats.sr++; bump(ok); buzz(ok);
+  challengeAnswer({ k: 'cut', v: timeout ? null : v }, ok);
   logAttempt({ kind: 'cut', correct: ok, timedOut: timeout, ms: timeout ? null : ms, detail: { answer: timeout ? null : v, amount: pt.amount, pot: pt.name, street: S.street, dead: pt.parts.some(x => x.folded), ...(d && { miss: d.miss }) } });
   commitCuts(S, [pt]); S.justCut = true;
   S.log.push({ t: `${pt.name} cut: ${fmt(pt.amount)} (${seatList(pt.elig)})` });

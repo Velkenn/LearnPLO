@@ -1,11 +1,12 @@
 // Redraws everything from app state: scores, table, ticker, panel, popup, hand history.
-import { app, storeMode } from '../app.ts';
+import { app, nextHandLabel, storeMode } from '../app.ts';
 import { STREETS } from '../config.ts';
 import { $, $q } from './dom.ts';
 import { renderTable } from './table.ts';
 import { quizPanel } from '../drills/potCall.ts';
 import { cutPanel } from '../drills/cutPot.ts';
 import { readPanel } from '../drills/readHands.ts';
+import { renderStrip } from './daily.ts';
 
 export function renderScores(): void {
   const s = app.stats;
@@ -28,8 +29,8 @@ export function renderPanel(): void {
   else if (S.mode === 'quiz') h = `<p class="muted" style="margin:0">${S.caption}. Announce the pot to keep the hand going.</p>`;
   else if (S.mode === 'cut') h = `<p class="muted" style="margin:0">${S.caption}. Cut the pot to keep the hand going.</p>`;
   else if (S.sd && (S.mode === 'showdown' || S.mode === 'done')) h = readPanel();
-  else if (S.mode === 'done') h = `<h2>Hand's over</h2><p>${S.caption}.</p><button class="btn wide" id="deal">Next hand</button>`;
-  else h = `<p class="muted" style="margin-bottom:12px">Follow the action. When someone pots, you announce it.</p><button class="btn ghost" id="deal">New hand</button>`;
+  else if (S.mode === 'done') h = `<h2>Hand's over</h2><p>${S.caption}.</p><button class="btn wide" id="deal">${nextHandLabel()}</button>`;
+  else h = `<p class="muted" style="margin-bottom:12px">Follow the action. When someone pots, you announce it.</p>${app.challenge ? '' : '<button class="btn ghost" id="deal">New hand</button>'}`;
   $('#panel').innerHTML = h;
 }
 
@@ -79,4 +80,7 @@ export function fitVV(): void {
   box.style.maxHeight = `${Math.round(vv.height * .85)}px`;
 }
 
-export function render(): void { renderScores(); renderTable(); renderTicker(); renderPanel(); renderModal(); renderLog(); }
+export function render(): void {
+  renderScores(); renderTable(); renderTicker(); renderPanel(); renderModal(); renderLog();
+  if (app.challenge) renderStrip();
+}

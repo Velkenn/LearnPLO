@@ -7,6 +7,7 @@ import { $, $q, sheetOpen, showSheet } from './dom.ts';
 import { applySettings } from './settings.ts';
 import { render } from './render.ts';
 import { refreshSpots } from './weakSpots.ts';
+import { refreshDaily } from './daily.ts';
 
 type Step = 'email' | 'code';
 const ui = { step: 'email' as Step, email: '', busy: false, msg: '', err: false, loading: false, showCode: false };
@@ -113,6 +114,6 @@ export function initAccount(): void {
       ui.step = 'email'; ui.msg = 'Signed out.'; ui.err = false;
     }
     // A hand in progress keeps going; new settings apply from the next deal.
-    applySettings(); render(); renderAccount(); refreshSpots();
+    applySettings(); render(); renderAccount(); refreshSpots(); refreshDaily();
   });
 }

@@ -1,5 +1,6 @@
 // Drill: read the showdown. Pick the winning five (or each winner in a chop), side pots first.
-import { app, bump, logAttempt, recordTime } from '../app.ts';
+import { app, bump, challengeAnswer, logAttempt, nextHandLabel, recordTime } from '../app.ts';
+import { handOver } from '../game.ts';
 import type { Pot } from '../engine/types.ts';
 import { bestAny, cmp, describe } from '../engine/cards.ts';
 import { posOf } from '../engine/hand.ts';
@@ -48,6 +49,7 @@ function enterRead(): void {
 function finishShowdown(): void {
   const S = app.S!, sd = S.sd!;
   sd.phase = 'result'; S.mode = 'done';
+  handOver();
   S.caption = sd.pots.length > 1 ? 'All pots shipped'
     : `${seatList(sd.pots[0].winners!)} ${sd.pots[0].winners!.length > 1 ? 'chop' : 'takes'} ${fmt(sd.pots[0].amount)}`;
 }
@@ -78,6 +80,7 @@ export function gradeHand(timeout: boolean): void {
     sd.results[sd.order[sd.step]] = { picks: g.picks, ok, ms }; recordTime('r', ms);
   }
   app.stats.rt++; if (ok) app.stats.rr++; bump(ok); buzz(ok);
+  challengeAnswer({ k: 'read', holes: timeout ? {} : Object.fromEntries(seats.map(s => [String(s), [...sel.holes[s]]])), board: timeout ? [] : [...sel.board] }, ok);
   logAttempt({ kind: 'read', correct: ok, timedOut: timeout, ms: timeout ? null : ms, detail: { chop: pt.winners!.length > 1, hand: pt.top![0], pots: sd.pots.length, contenders: liveElig(sd, pt).length, ...(miss && { miss }) } });
   pay(pt); sd.phase = 'result';
   const rest = sd.order.slice(sd.step + 1);
@@ -166,7 +169,7 @@ export function readPanel(): string {
     h += `<button class="btn wide" id="nextPot" style="margin-top:12px">${nxt ? `Now ${potRef(nxt)}` : 'Finish'}</button>`;
   } else {
     if (multi) h += `<div class="recap" style="margin-top:12px">${sd.pots.map(p => `${p.name}, ${fmt(p.amount)}: ${seatList(p.winners!)}`).join('<br>')}</div>`;
-    h += `<button class="btn wide" id="deal" style="margin-top:12px">Next hand</button>`;
+    h += `<button class="btn wide" id="deal" style="margin-top:12px">${nextHandLabel()}</button>`;
   }
   return h;
 }

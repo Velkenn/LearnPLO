@@ -5,3 +5,4 @@ e2e/out/
 *.log
 .env
 .env.local
+e2e/stub/site/

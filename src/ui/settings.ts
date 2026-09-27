@@ -27,6 +27,7 @@ export function applySettings(): void {
   const locked = !canCustomize();
   $<HTMLFieldSetElement>('#training').disabled = locked;
   $('#lockmsg').hidden = !locked;
+  $('#lockmsg').textContent = app.challenge ? 'The daily challenge uses the same settings for every dealer.' : 'Sign in to change these.';
   const mode = storeMode();
   $('#scoreNote').textContent = mode === 'member' ? 'Scores are saved to your account.'
     : mode === 'guest' ? 'Scores last for this visit. Sign in to keep them.' : 'Scores are saved on this device.';

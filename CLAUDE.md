@@ -25,6 +25,12 @@ FeltReady (feltready.com) is a casino dealer trainer; pot limit Omaha is the fir
   add `detail.miss`, a mistake code from the drill's diagnose function (`readMiss` for reads).
   The weak spots page (`data/weakSpots.ts`) reads these fields, so keep them when changing a drill,
   and give any new mistake code a label in `MISS_LABELS`.
+- The daily challenge server (`supabase/functions/daily`) imports `src/engine/` and
+  `src/config.ts`, so keep those free of browser APIs. If a change alters how a hand plays out
+  (deal, betting, pots, showdown order), bump `CHALLENGE_VERSION`, redeploy the function, and
+  check `?action=selftest` returns the fingerprint `npm test` prints (see README).
+- New tables that only the server uses (like `daily_*`) get RLS on, no policies, and grants
+  to `service_role` only.
 
 ## Before you commit
 
@@ -33,7 +39,9 @@ npm test && npm run typecheck && npm run build
 ```
 
 For UI changes, also run the browser test (`npm run e2e`, see README) and look at the
-screenshots in `e2e/out/` on a phone-sized viewport.
+screenshots in `e2e/out/` on a phone-sized viewport. For anything behind sign-in (weak spots,
+the daily challenge), build with `e2e/stub/build.sh` and run the tests signed in and signed
+out; `e2e/daily.mjs` plays a full challenge.
 
 ## Poker rules the code relies on
 

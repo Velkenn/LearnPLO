@@ -1,5 +1,5 @@
 // Draws the felt: seats, bets, pot piles, board, dealer button, and chip motion.
-import { app } from '../app.ts';
+import { app, nextHandLabel } from '../app.ts';
 import type { Hand } from '../engine/types.ts';
 import { posOf } from '../engine/hand.ts';
 import { cutSum, potName } from '../engine/pots.ts';
@@ -114,7 +114,7 @@ export function renderTable(): void {
   h += `<div class="board${play ? ' reading' : ''}">${[0, 1, 2, 3, 4].map(k => S.board[k]
     ? cardHTML(S.board[k], (fresh.includes(k) ? 'deal' : '') + (play ? (play.board.includes(k) ? ' plays' : ' sits') : ''), fresh.includes(k) ? `style="animation-delay:${fresh.indexOf(k) * 90}ms"` : '')
     : '<span class="slot"></span>').join('')}</div>`;
-  if (S.mode === 'done') h += dealButton('Next hand');
+  if (S.mode === 'done') h += dealButton(nextHandLabel());
   t.innerHTML = h;
 }
 

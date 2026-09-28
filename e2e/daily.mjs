@@ -99,7 +99,7 @@ for (let hand = 0; hand < 5; hand++) {
       await page.click('#cont'); continue;
     }
     if (await page.isVisible('#bp')) {
-      const amt = await page.evaluate(() => { const cq = window.__app.S.cq; return cq.pots[cq.j].amount; });
+      const amt = await page.evaluate(() => { const cq = window.__app.S.cq; return cq.pots[cq.j].round; });
       await page.fill('#bp', String(amt)); await page.press('#bp', 'Enter');
       asked++;
       if (await page.$('#cont2')) await page.click('#cont2'); else await page.click('#cutDone');

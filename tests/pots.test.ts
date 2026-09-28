@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { newHand, potMath } from '../src/engine/hand.ts';
-import { buildPots, makeCut, newCutLevels, prepareCuts } from '../src/engine/pots.ts';
+import { buildPots, makeCut, newCutLevels, prepareCuts, roundBets } from '../src/engine/pots.ts';
 import { seed } from '../src/engine/rng.ts';
 import { DEFAULT_SETTINGS } from '../src/config.ts';
 import type { Hand } from '../src/engine/types.ts';
@@ -71,4 +71,33 @@ test('two all-ins make main, side pot 1, and side pot 2', () => {
   const cuts = prepareCuts(S, newCutLevels(S));
   assert.deepEqual(cuts.map(c => [c.name, c.amount]), [['Main pot', 200], ['Side pot 1', 450]]);
   assert.deepEqual(buildPots(S).map(p => p.amount), [200, 450, 600]);
+});
+
+test("building the side pot counts this round's bets only", () => {
+  // Seat 2 starts with $150 and puts in $50 preflop; Seats 3 and 4 call. On the flop Seat 2 is
+  // all in for the last $100 and both call (and bet on). The main pot takes $100 from each of the
+  // three bets this round: $300. The $150 from preflop is already in the middle.
+  const S = freshHand();
+  S.players.forEach(p => { p.totalIn = 0; p.folded = true; p.allin = false; });
+  Object.assign(S.players[2], { totalIn: 150, folded: false, allin: true });
+  Object.assign(S.players[3], { totalIn: 350, folded: false });
+  Object.assign(S.players[4], { totalIn: 350, folded: false });
+  S.streetStart = [0, 0, 50, 50, 50, 0];
+  S.street = 1;
+  const [main] = prepareCuts(S, newCutLevels(S));
+  assert.equal(main.round, 300);
+  assert.equal(main.amount, 450, 'the whole main pot: $150 from preflop plus $300 this round');
+  assert.deepEqual(roundBets(S, 0).map(b => b.amt), [100, 300, 300]);
+});
+
+test('dead money this round goes in up to the all-in amount', () => {
+  // Flop: Seat 1 bets $40 and folds to a raise; Seat 2 is all in for $100; Seat 3 puts in $300.
+  const S = freshHand();
+  S.players.forEach(p => { p.totalIn = 20; p.folded = true; p.allin = false; });
+  Object.assign(S.players[1], { totalIn: 60, folded: true });
+  Object.assign(S.players[2], { totalIn: 120, folded: false, allin: true });
+  Object.assign(S.players[3], { totalIn: 320, folded: false });
+  S.streetStart = [20, 20, 20, 20, 20, 20];
+  const [main] = prepareCuts(S, newCutLevels(S));
+  assert.equal(main.round, 240, '$100 + $100 + $40 dead');
 });

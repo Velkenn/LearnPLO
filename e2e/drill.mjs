@@ -54,7 +54,7 @@ for (let hand = 0; hand < HANDS; hand++) {
       tally.pot++; await page.click('#cont'); continue;
     }
     if (await page.isVisible('#bp')) {
-      const amt = await page.evaluate(() => { const cq = window.__app.S.cq; return cq.pots[cq.j].amount; });
+      const amt = await page.evaluate(() => { const cq = window.__app.S.cq; return cq.pots[cq.j].round; });
       const wrong = hand % 4 === 1;
       await once('cut-question');
       await page.fill('#bp', String(amt + (wrong ? 5 : 0))); await page.press('#bp', 'Enter');

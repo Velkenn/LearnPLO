@@ -26,7 +26,15 @@ async function run(settings: Settings, hands: number, firstSeed: number, t: Tall
       },
       async askCuts(pots) {
         t.cuts += pots.length;
-        for (const pt of pots) assert.equal(pt.amount, pt.parts.reduce((a, x) => a + x.amt, 0));
+        for (const pt of pots) {
+          assert.equal(pt.amount, pt.parts.reduce((a, x) => a + x.amt, 0));
+          // The dealer builds from this round's bets; the rest of the pot was already in the middle.
+          assert.ok(pt.round! > 0, 'only pots that take something from this round are asked');
+          assert.equal(pt.round, pt.roundParts!.reduce((a, x) => a + x.amt, 0));
+          const earlier = S.players.reduce((a, p) => a + Math.max(0, Math.min(S.streetStart[p.i], pt.level) - pt.prev), 0);
+          assert.equal(pt.amount, earlier + pt.round!, 'pot = earlier rounds + this round');
+          if (S.street === 0) assert.equal(pt.round, pt.amount, 'preflop, the whole pot is this round');
+        }
       },
       uncontested() { finished = true; },
       showdown() {
@@ -36,6 +44,7 @@ async function run(settings: Settings, hands: number, firstSeed: number, t: Tall
         assert.equal(S.pot, total, 'pot equals everything put in');
         assert.equal(sd.pots.reduce((a, p) => a + p.amount, 0), S.pot, 'pots add up to the pot');
         S.cuts.forEach((c, k) => assert.equal(sd.pots[k].amount, c.amount, 'cut during the hand matches showdown pot'));
+        S.cuts.forEach((c, k) => { if (k) assert.ok(c.level > S.cuts[k - 1].level, 'pots kept in order'); });
         if (S.cuts.length) assert.equal(sd.pots.length, S.cuts.length + 1, 'one open pot after the cuts');
         if (sd.pots.length > 1) t.multiPot++;
         // Read side pots first; losers muck before the next pot.

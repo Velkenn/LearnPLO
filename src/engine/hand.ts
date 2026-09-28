@@ -33,7 +33,7 @@ export function newHand(settings: Settings, btn: number): Hand {
     log: [], caption: '', acting: null, mode: 'running',
     quizLeft: calls, potsThisStreet: 0, lastPot: null,
     quizStreet: calls > 1 ? (r < .5 ? 0 : r < .9 ? 1 : 2) : (r < .35 ? 0 : r < .75 ? 1 : r < .95 ? 2 : 3),
-    quizMin: rnd(0, 3), side: false, players: [], cuts: [],
+    quizMin: rnd(0, 3), side: false, players: [], streetStart: [0, 0, 0, 0, 0, 0], cuts: [],
     peek: false, quiz: null, cq: null, sd: null, sel: { holes: {}, board: [] },
     sweep: null, ship: null, fresh: null, justCut: false,
   };
@@ -200,6 +200,7 @@ export function collect(S: Hand): void {
 
 export function dealBoard(S: Hand, st: number): void {
   S.deck.pop(); // burn
+  S.streetStart = S.players.map(p => p.totalIn); // a new betting round starts from here
   const n = st === 1 ? 3 : 1; S.fresh = [];
   for (let k = 0; k < n; k++) { const c = S.deck.pop()!; S.fresh.push(S.board.length); S.board.push(c); }
   logStreet(S, `${STREETS[st]}: ${S.board.map(cardTxt).join(' ')}`);

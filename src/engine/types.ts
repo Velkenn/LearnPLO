@@ -24,10 +24,13 @@ export interface LogLine { t: string; st?: boolean }
 
 export interface PotPart { i: number; folded: boolean; amt: number }
 
-/** A main or side pot. Built when it is cut mid-hand, or at showdown. */
+/** A main or side pot. Built at the end of a betting round with an all-in for less, or at showdown. */
 export interface Pot {
-  amount: number;
+  amount: number;       // the whole pot, including chips from earlier rounds already in the middle
   parts: PotPart[];
+  /** Built mid-hand: what this pot takes from this round's bets (what the dealer is asked). */
+  round?: number;
+  roundParts?: PotPart[];
   level: number;        // all-in level that caps this pot
   prev: number;         // level of the pot below it
   elig: number[];       // seats that can win it
@@ -88,6 +91,8 @@ export interface Hand {
   quizStreet: number; quizMin: number;
   side: boolean;
   players: Player[];
+  /** Each player's total in the hand when this betting round started (blinds count as preflop bets). */
+  streetStart: number[];
   cuts: Pot[];
   // drill and view state
   peek: boolean;

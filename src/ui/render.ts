@@ -15,12 +15,12 @@ export function renderScores(): void {
 }
 
 function introHTML(): string {
-  return `<h2>You're in the box</h2><p>Six-handed pot limit Omaha. When a player says “Pot,” announce the raise. When someone's all in for less, cut the side pot at the end of that round. At showdown, ship each pot to the right hand, and chop it when hands tie.</p>
+  return `<h2>You're in the box</h2><p>Six-handed pot limit Omaha. When a player says “Pot,” announce the raise. When someone's all in for less, build the side pot at the end of that round. At showdown, ship each pot to the right hand, and chop it when hands tie.</p>
     ${storeMode() === 'guest' ? `<p class="muted intro-acct">Want a timer, your own blinds, or stats that stick? <button class="linkbtn" id="introSignin">Sign in free</button></p>` : ''}
     <details class="howto"><summary>How to figure the pot</summary>
     <p>The player calls the bet first, then raises the size of the whole pot after that call. So the raise is the last bet plus the pot after the call.</p>
     <p>The 3× rule: three times the last bet, plus everything else out. Don't count the last bet twice, and leave out the raiser's own chips in front of them. ${app.settings.sbFull ? 'With the small blind counted as a full blind, $2/$5 first in is 3 × $5 + $5 = $20.' : 'At $2/$5 first in, that\'s 3 × $5 + $2 = $17.'}</p>
-    <p>Side pots: when someone's all in for less, the main pot is their all-in amount from everyone who matched it, plus dead money. Everything above that is a side pot they can't win.</p>
+    <p>Side pots: when someone's all in for less, build the side pot at the end of the round. What's already in the middle stays in the main pot. From each bet this round, take the all-in amount for the main pot (dead money from folded players goes in too, up to that amount). Everything left in front is the side pot, which the all-in player can't win.</p>
     <p>At showdown every hand plays exactly two hole cards and three from the board. Four hearts on board with one heart in hand is not a flush.</p></details>`;
 }
 
@@ -28,7 +28,7 @@ export function renderPanel(): void {
   const S = app.S; let h: string;
   if (!S) h = introHTML();
   else if (S.mode === 'quiz') h = `<p class="muted" style="margin:0">${S.caption}. Announce the pot to keep the hand going.</p>`;
-  else if (S.mode === 'cut') h = `<p class="muted" style="margin:0">${S.caption}. Cut the pot to keep the hand going.</p>`;
+  else if (S.mode === 'cut') h = `<p class="muted" style="margin:0">${S.caption}. Build the side pot to keep the hand going.</p>`;
   else if (S.sd && (S.mode === 'showdown' || S.mode === 'done')) h = readPanel();
   else if (S.mode === 'done') h = `<h2>Hand's over</h2><p>${S.caption}.</p><button class="btn wide" id="deal">${nextHandLabel()}</button>`;
   else h = `<p class="muted" style="margin-bottom:12px">Follow the action. When someone pots, you announce it.</p>${app.challenge ? '' : '<button class="btn ghost" id="deal">New hand</button>'}`;
@@ -48,7 +48,7 @@ function renderLog(): void {
   ol.scrollTop = ol.scrollHeight;
 }
 
-/** The question popup for pot calls and pot cuts. */
+/** The question popup for pot calls and side pots. */
 export function renderModal(): void {
   const S = app.S, m = $('#modal'), box = $('#modalBox');
   const asking = !!S && (S.mode === 'quiz' || S.mode === 'cut'), show = asking && !S!.peek;

@@ -5,7 +5,7 @@ import type { AttemptRow } from './store.ts';
 
 /** Mistake codes logged with wrong answers (see the diagnose functions in src/drills/). */
 export type PotMiss = 'sb-rule' | 'added-only' | 'before-call' | 'skipped-call' | 'after-call' | 'shortcut' | 'high' | 'low';
-export type CutMiss = 'dead-money' | 'everything' | 'one-share' | 'high' | 'low';
+export type CutMiss = 'dead-money' | 'everything' | 'one-share' | 'with-middle' | 'hand-total' | 'high' | 'low';
 
 export type Drill = 'pot' | 'cut' | 'read';
 export const DRILLS: { kind: Drill; label: string }[] = [
@@ -31,6 +31,7 @@ export const SITUATIONS: Situation[] = [
   { key: 'pot-repot', kind: 'pot', label: 'Re-pots', test: d => d.repot === true },
   { key: 'pot-sbfull', kind: 'pot', label: 'Small blind counted as a full blind', test: d => d.sbFull === true && num(d, 'street') === 0 },
   { key: 'cut-main', kind: 'cut', label: 'Main pot', test: d => d.pot === 'Main pot' },
+  { key: 'cut-later', kind: 'cut', label: 'All in after the flop', test: d => (num(d, 'street') ?? 0) > 0 },
   { key: 'cut-side', kind: 'cut', label: 'Side pots (two or more all-ins)', test: d => typeof d.pot === 'string' && d.pot !== 'Main pot' },
   { key: 'cut-dead', kind: 'cut', label: 'With dead money', test: d => d.dead === true },
   { key: 'read-single', kind: 'read', label: 'One pot', test: d => num(d, 'pots') === 1 },
@@ -59,6 +60,8 @@ export const MISS_LABELS: Record<Drill, Record<string, string>> = {
     'dead-money': 'Left out dead money',
     'everything': 'Took everything in the middle',
     'one-share': 'Took one player’s share',
+    'with-middle': 'Counted the pot already in the middle',
+    'hand-total': 'Used hand totals, not this round’s bets',
     'high': 'Other miscounts',
     'low': 'Other miscounts',
   } satisfies Record<CutMiss, string>,

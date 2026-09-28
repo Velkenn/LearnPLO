@@ -12,7 +12,7 @@ export interface Hooks {
   actionDelay(): number;
   /** A player says "Pot". Resolve when the dealer has announced it. */
   askPot(p: Player, q: PotQ): Promise<void>;
-  /** Pots to cut before the next card. Resolve when the dealer has cut them. */
+  /** Side pots to build before the next card (the dealer says what each takes from this round's bets). */
   askCuts(pots: Pot[]): Promise<void>;
   /** Everyone else folded. */
   uncontested(winner: Player, amount: number): void;
@@ -49,7 +49,7 @@ export async function playHand(S: Hand, h: Hooks): Promise<void> {
     }
   }
 
-  /** Bring bets in and cut any side pots. Returns false if the hand was abandoned. */
+  /** Bring bets in and build any side pots. Returns false if the hand was abandoned. */
   async function endRound(): Promise<boolean> {
     collect(S); S.acting = null;
     if (S.sweep && S.sweep.length) { h.render(); await h.sleep(420); if (!h.current()) return false; }
@@ -57,8 +57,14 @@ export async function playHand(S: Hand, h: Hooks): Promise<void> {
       const lv = newCutLevels(S);
       if (lv.length) {
         const pots = prepareCuts(S, lv);
-        await h.askCuts(pots);
-        if (!h.current()) return false;
+        // A pot that takes nothing from this round (its all-in happened in an earlier round and
+        // nobody bet past it until now) is already complete in the middle: nothing to ask.
+        const ask = pots.filter(pt => (pt.round ?? 0) > 0);
+        commitCuts(S, pots.filter(pt => !ask.includes(pt)));
+        if (ask.length) {
+          await h.askCuts(ask);
+          if (!h.current()) return false;
+        }
         commitCuts(S, pots);
       }
     }

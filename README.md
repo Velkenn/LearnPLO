@@ -5,7 +5,7 @@ Live at https://feltready.com. (The repo is still named LearnPLO.)
 A pot limit Omaha dealer trainer. A six-handed hand plays out on its own, and you deal it:
 
 - **Pot calls.** When a player says “Pot,” announce the raise. Re-pots included.
-- **Side pots.** When someone is all in for less, cut the main pot (and any further side pots) at the end of that betting round.
+- **Side pots.** When someone is all in for less, build the side pot at the end of that betting round: say how much of this round's bets goes in the main pot (the all-in amount from each bet, plus dead money). What's already in the middle stays in the main pot.
 - **Showdown reads.** Pick the two hole cards and three board cards that play, side pots first. Chops, odd chips, and mucking losers are handled like a real table.
 
 Every answer is graded, wrong answers explain the mistake, and there is an optional timer.
@@ -75,13 +75,13 @@ src/
     rng.ts            randomness (seedable for tests)
     cards.ts          deck, hand ranking, best Omaha hand
     hand.ts           dealing, betting actions, pot-raise math, computer players
-    pots.ts           side-pot cuts and showdown pots
+    pots.ts           side pots (built from this round's bets) and showdown pots
     showdown.ts       winners, mucking, grading reads, paying pots and odd chips
     loop.ts           plays one hand, calling hooks when the dealer is needed
     challenge.ts      daily challenge: seeded hands, server-side grading, picking a good deal
   drills/             each question the dealer answers
     potCall.ts        “Pot” announcements
-    cutPot.ts         side-pot cuts
+    cutPot.ts         building side pots
     readHands.ts      showdown reads
   ui/                 drawing and input
     table.ts          the felt, seats, chips, piles, animations
@@ -199,7 +199,7 @@ out, so the server can replay the day and grade the answers itself.
   leaderboard. Answers that don't line up with the hands are refused rather than scored.
 - **Leaderboard** (`board`): anyone, including guests. Top 25 plus your own row.
 
-The seed is picked so the day has at least one re-pot, two side-pot cuts, four reads, and
+The seed is picked so the day has at least one re-pot, two side-pot questions, four reads, and
 16–22 questions in all (about 5–7 minutes). Tables: `daily_challenges`, `daily_entries`
 (migration `20260927000500`); only the function's service role can touch them.
 

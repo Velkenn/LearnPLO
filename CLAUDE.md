@@ -12,7 +12,7 @@ FeltReady (feltready.com) is a casino dealer trainer; pot limit Omaha is the fir
   implements them in `game.ts`; `tests/simulate.test.ts` implements them headlessly.
 - Drill logic and drill HTML live together in `src/drills/`. Grading rules that don't need
   the DOM belong in the engine (for example `gradePicks` in `engine/showdown.ts`).
-- Keep the dealer's language: "Pot is $X", "Ship it to Seat 3", "Chop it", "Cut the main pot".
+- Keep the dealer's language: "Pot is $X", "Ship it to Seat 3", "Chop it", "Build the side pot".
   Sentence case, no all-caps labels.
 - Settings and stats go through `src/data/store.ts`. Three modes: `local` (no Supabase
   configured), `guest` (signed out: default training settings, stats for the visit), and
@@ -52,8 +52,10 @@ signed out; `e2e/daily.mjs` plays a full challenge and `e2e/account.mjs` covers 
 
 - Pot raise = last bet + pot after calling it. Shortcut: 3 × last bet + everything else out,
   not counting the raiser's own chips. Optional rule: small blind counts as a full blind preflop.
-- Side pots are cut at the end of the betting round where a player is all in for less.
-  The last pot is always "what's left" and is never asked.
+- Side pots are built at the end of the betting round where a player is all in for less, from
+  that round's bets only: chips from earlier rounds are already in the middle (main pot). The
+  dealer is asked what each pot takes from this round (`Pot.round`: the all-in amount from each
+  bet, plus dead money up to it). The last pot is always "what's left" and is never asked.
 - Showdown reads side pots first. Anyone who loses a pot mucks and can't win smaller pots.
 - Chops split evenly; the odd chip goes to the first winner left of the button.
 - Omaha hands use exactly two hole cards and three board cards.

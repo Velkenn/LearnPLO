@@ -11,7 +11,7 @@ export interface Preview { title: string; description: string; image: string; ur
 const SITE = 'https://feltready.com';
 const GENERIC: Preview = {
   title: 'FeltReady daily challenge: the same five PLO hands for every dealer',
-  description: 'Call the pots, cut the side pots, read the showdowns. Free, and ranked on today’s leaderboard.',
+  description: 'Call the pots, build the side pots, read the showdowns. Free, and ranked on today’s leaderboard.',
   image: `${SITE}/og-daily.png`,
   url: `${SITE}/?daily`,
 };

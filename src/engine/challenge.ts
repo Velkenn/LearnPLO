@@ -10,7 +10,7 @@ import { seed } from './rng.ts';
 import { DEFAULT_SETTINGS } from '../config.ts';
 
 /** Bump when anything that changes how a challenge hand plays out changes (deal, betting, pots). */
-export const CHALLENGE_VERSION = 2;
+export const CHALLENGE_VERSION = 3;
 export const CHALLENGE_HANDS = 5;
 
 /** Everyone plays the same table: 2/5, side pots often, up to 2 pot calls, no countdown. */
@@ -100,7 +100,7 @@ async function replay(day: number, answers?: ChallengeAnswer[][]): Promise<Chall
       const hooks: Hooks = {
         render() {}, sleep: () => Promise.resolve(), current: () => true, actionDelay: () => 0,
         async askPot(_p, q) { const a = next('pot'); qs.push({ kind: 'pot', ok: !!a && a.v === q.raiseTo }); },
-        async askCuts(pots) { for (const pt of pots) { const a = next('cut'); qs.push({ kind: 'cut', ok: !!a && a.v === pt.amount }); } },
+        async askCuts(pots) { for (const pt of pots) { const a = next('cut'); qs.push({ kind: 'cut', ok: !!a && a.v === pt.round }); } },
         uncontested() {},
         showdown() {
           // Same order as the table: side pots first, pots with one live hand pay themselves,
@@ -169,7 +169,7 @@ async function keyFor(day: number, onPot?: (q: PotQ) => void): Promise<Challenge
       await playHand(S, {
         render() {}, sleep: () => Promise.resolve(), current: () => true, actionDelay: () => 0,
         async askPot(_p, q) { onPot?.(q); out.push({ k: 'pot', v: q.raiseTo }); },
-        async askCuts(pots) { pots.forEach(pt => out.push({ k: 'cut', v: pt.amount })); },
+        async askCuts(pots) { pots.forEach(pt => out.push({ k: 'cut', v: pt.round! })); },
         uncontested() {},
         showdown() {
           const sd = buildShowdown(S);

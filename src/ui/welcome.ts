@@ -23,7 +23,7 @@ export function renderWelcome(): void {
     <p>A six-handed hand plays out on its own. You’re the dealer:</p>
     <ul class="welcome-list">
       <li><b>Call the pot.</b> A player says “Pot” and you announce the raise.</li>
-      <li><b>Cut side pots.</b> Someone’s all in for less, so you cut the main pot.</li>
+      <li><b>Build side pots.</b> Someone’s all in for less, so you split this round’s bets into the main pot and a side pot.</li>
       <li><b>Read the showdown.</b> Pick the winning hand and ship it, or chop it.</li>
     </ul>
     <p class="muted">Every answer is checked and explained. Free, and no account needed to practice.</p>

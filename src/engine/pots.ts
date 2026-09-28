@@ -1,4 +1,6 @@
-// Side pots. A pot is cut at the end of the betting round where someone is all in for less.
+// Side pots. When someone is all in for less, the dealer builds the side pot at the end of that
+// betting round: from each bet this round, the all-in amount goes in the main pot and the rest
+// starts the side pot. Chips from earlier rounds are already in the middle, in the main pot.
 import type { Hand, Pot } from './types.ts';
 import { active } from './hand.ts';
 
@@ -12,7 +14,7 @@ export function outAbove(S: Hand, lvl: number) {
   return S.players.filter(p => p.totalIn > lvl).map(p => ({ i: p.i, folded: p.folded, allin: p.allin, amt: p.totalIn - lvl }));
 }
 
-/** All-in levels that now need a pot cut: a live all-in that someone else put in more than. */
+/** All-in levels that now need a side pot: a live all-in that someone else put in more than. */
 export function newCutLevels(S: Hand): number[] {
   const last = cutTop(S);
   return [...new Set(active(S).filter(p => p.allin).map(p => p.totalIn))]
@@ -22,10 +24,24 @@ export function newCutLevels(S: Hand): number[] {
 
 export function makeCut(S: Hand, L: number, prev: number): Pot {
   const parts = S.players.map(p => ({ i: p.i, folded: p.folded, amt: Math.max(0, Math.min(p.totalIn, L) - prev) })).filter(x => x.amt > 0);
-  return { level: L, prev, parts, amount: parts.reduce((a, b) => a + b.amt, 0), elig: active(S).filter(p => p.totalIn >= L).map(p => p.i), name: '' };
+  // This round's share: each bet this round, between the pot below and this all-in level.
+  const start = (i: number) => Math.max(prev, S.streetStart?.[i] ?? 0);
+  const roundParts = S.players.map(p => ({ i: p.i, folded: p.folded, amt: Math.max(0, Math.min(p.totalIn, L) - start(p.i)) })).filter(x => x.amt > 0);
+  return {
+    level: L, prev, parts, amount: parts.reduce((a, b) => a + b.amt, 0),
+    roundParts, round: roundParts.reduce((a, b) => a + b.amt, 0),
+    elig: active(S).filter(p => p.totalIn >= L).map(p => p.i), name: '',
+  };
 }
 
-/** Build (but don't commit) the pots to cut for these levels, and rename earlier cuts to match. */
+/** Each player's bet this round above a pot level: what's in front of them when the dealer builds pots. */
+export function roundBets(S: Hand, prev: number) {
+  return S.players
+    .map(p => ({ i: p.i, folded: p.folded, allin: p.allin, amt: p.totalIn - Math.max(prev, S.streetStart?.[p.i] ?? 0) }))
+    .filter(x => x.amt > 0);
+}
+
+/** Make (but don't commit) the pots for these all-in levels, and rename earlier pots to match. */
 export function prepareCuts(S: Hand, levels: number[]): Pot[] {
   const base = S.cuts.length, total = base + levels.length + 1;
   let prev = cutTop(S);
@@ -34,12 +50,12 @@ export function prepareCuts(S: Hand, levels: number[]): Pot[] {
   return pots;
 }
 
-/** Commit cut pots (safe to call twice for the same pot). */
+/** Commit built pots (safe to call twice for the same pot). */
 export function commitCuts(S: Hand, pots: Pot[]): void {
   for (const pt of pots) if (!S.cuts.includes(pt)) S.cuts.push(pt);
 }
 
-/** All pots at showdown, from every live player's total. Matches the cuts made during the hand. */
+/** All pots at showdown, from every live player's total. Matches the pots built during the hand. */
 export function buildPots(S: Hand): Pot[] {
   const live = active(S);
   const levels = [...new Set(live.map(p => p.totalIn))].sort((a, b) => a - b);

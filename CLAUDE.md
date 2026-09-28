@@ -5,7 +5,9 @@ FeltReady (feltready.com) is a casino dealer trainer; pot limit Omaha is the fir
 ## Rules for changes
 
 - `src/engine/` never touches the DOM, `window`, or `app`. It takes a `Hand` and returns data.
-  All randomness goes through `engine/rng.ts` so tests can seed it.
+  All randomness goes through `engine/rng.ts` so tests can seed it. Shuffle with `shuffle()`,
+  never `sort(() => rand() - .5)`: each browser engine sorts differently, so the same seed
+  would deal differently in Safari than on the server (it broke a live daily challenge run).
 - The hand loop (`engine/loop.ts`) talks to the outside only through `Hooks`. The browser
   implements them in `game.ts`; `tests/simulate.test.ts` implements them headlessly.
 - Drill logic and drill HTML live together in `src/drills/`. Grading rules that don't need

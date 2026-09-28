@@ -222,7 +222,9 @@ npx esbuild supabase/functions/daily/index.ts --bundle --format=esm --platform=n
 ```
 
 Then check that the deployed engine matches this one. The fingerprint must equal the one
-`npm test` prints:
+`npm test` prints. Browsers send their own fingerprint when a dealer taps Start; if it differs
+(a browser that deals differently), the run is refused before any hands are dealt and the
+mismatch is filed as feedback, so it shows on the stats dashboard.
 
 ```sh
 curl 'https://uzeqcsigqnjvqsnvymfb.supabase.co/functions/v1/daily?action=selftest'

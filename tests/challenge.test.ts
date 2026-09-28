@@ -91,3 +91,40 @@ test('fingerprint is stable for this engine (compare with the deployed function)
   assert.equal(await challengeFingerprint(), f);
   console.log({ fingerprint: f });
 });
+
+/**
+ * JavaScript leaves it to each browser engine how sort() calls its comparison function, so
+ * anything that sorts with a random comparison deals differently in Safari than in Chrome or on
+ * the server. Swap in a different (still correct and stable) sort and the deal must not change.
+ */
+test('deals the same whichever way the JavaScript engine sorts', async () => {
+  const native = Array.prototype.sort;
+  const days = Array.from({ length: 40 }, (_, i) => (3552561295 + i * 7919) >>> 0);
+  const before = await Promise.all(days.map(d => answerKey(d))); // at once, on purpose: replays must queue
+  // A merge sort that compares in a different order from V8's, like Safari's engine may.
+  function mergeSort<T>(this: T[], cmp?: (a: T, b: T) => number): T[] {
+    const c = cmp ?? ((a: T, b: T) => (String(a) < String(b) ? -1 : String(a) > String(b) ? 1 : 0));
+    const sorted = (xs: T[]): T[] => {
+      if (xs.length < 2) return xs;
+      const mid = xs.length >> 1, l = sorted(xs.slice(0, mid)), r = sorted(xs.slice(mid)), out: T[] = [];
+      while (l.length && r.length) out.push(c(r[0], l[0]) < 0 ? r.shift()! : l.shift()!);
+      return out.concat(l, r);
+    };
+    const s = sorted([...this]);
+    for (let i = 0; i < s.length; i++) this[i] = s[i];
+    return this;
+  }
+  Array.prototype.sort = mergeSort as typeof native;
+  let after: Awaited<ReturnType<typeof answerKey>>[];
+  try { after = []; for (const d of days) after.push(await answerKey(d)); } finally { Array.prototype.sort = native; }
+  const differ = days.filter((_, i) => JSON.stringify(before[i]) !== JSON.stringify(after[i]));
+  assert.deepEqual(differ, [], `${differ.length} of ${days.length} days deal differently under another sort`);
+});
+
+test('replays started at the same moment grade the same as one at a time', async () => {
+  const days = Array.from({ length: 12 }, (_, i) => (20260927 + i * 104729) >>> 0);
+  const keys: Awaited<ReturnType<typeof answerKey>>[] = [];
+  for (const d of days) keys.push(await answerKey(d));
+  const together = await Promise.all(days.map((d, i) => replayChallenge(d, keys[i])));
+  together.forEach((r, i) => assert.ok(!r.mismatch && r.right === r.total, `day ${days[i]} graded ${r.right}/${r.total}${r.mismatch ? ' (mismatch)' : ''}`));
+});

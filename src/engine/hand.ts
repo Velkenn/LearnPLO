@@ -2,7 +2,7 @@
 import type { Hand, Player, PotQ, Settings } from './types.ts';
 import { POS, STAKES, STREETS } from '../config.ts';
 import { newDeck, cardTxt } from './cards.ts';
-import { rand, rnd, pick } from './rng.ts';
+import { rand, rnd, pick, shuffle } from './rng.ts';
 import { fmt, roundU } from '../util.ts';
 
 export const active = (S: Hand): Player[] => S.players.filter(p => !p.folded);
@@ -43,7 +43,7 @@ export function newHand(settings: Settings, btn: number): Hand {
   });
   S.side = rand() < ({ off: 0, some: .35, often: .7 }[settings.side] ?? .35);
   if (S.side) {
-    const seats = [0, 1, 2, 3, 4, 5].sort(() => rand() - .5), lv = [rnd(15, 40), rnd(55, 95)];
+    const seats = shuffle([0, 1, 2, 3, 4, 5]), lv = [rnd(15, 40), rnd(55, 95)];
     for (let k = 0; k < (rand() < .35 ? 2 : 1); k++) { const sp = S.players[seats[k]]; sp.short = true; sp.stack = roundU(bb * lv[k], unit); }
   }
   for (let k = 0; k < 4; k++) for (let j = 1; j <= 6; j++) S.players[(S.btn + j) % 6].hole.push(S.deck.pop()!);

@@ -1,6 +1,6 @@
 // Talking to the daily challenge server (supabase/functions/daily). Grading and timing happen there.
 import { supabase } from './supabase.ts';
-import { CHALLENGE_VERSION, type ChallengeAnswer } from '../engine/challenge.ts';
+import { CHALLENGE_VERSION, challengeFingerprint, type ChallengeAnswer } from '../engine/challenge.ts';
 
 export interface BoardRow { rank: number; name: string; right: number; total: number; ms: number; me: boolean }
 export interface Board { day: string; players: number; top: BoardRow[]; me: BoardRow | null }
@@ -33,7 +33,13 @@ async function call<T>(body: Record<string, unknown>): Promise<T> {
 }
 
 export const loadBoard = (): Promise<Board> => call<Board>({ action: 'board' });
-/** Start (or resume) today's run. Pass a name to set the leaderboard name first. */
-export const startDaily = (name?: string): Promise<StartReply> => call<StartReply>({ action: 'start', ...(name != null && { name }) });
+/**
+ * Start (or resume) today's run. Pass a name to set the leaderboard name first. Sends this
+ * browser's engine fingerprint so the server can stop a run it wouldn't be able to grade.
+ */
+export async function startDaily(name?: string): Promise<StartReply> {
+  const fingerprint = await challengeFingerprint();
+  return call<StartReply>({ action: 'start', version: CHALLENGE_VERSION, fingerprint, ...(name != null && { name }) });
+}
 export const submitDaily = (day: string, answers: ChallengeAnswer[][]): Promise<SubmitReply> =>
   call<SubmitReply>({ action: 'submit', day, version: CHALLENGE_VERSION, answers });

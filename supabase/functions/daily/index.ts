@@ -104,7 +104,29 @@ async function entry(day: string, userId: string) {
   return data;
 }
 
-async function start(userId: string, body: Record<string, unknown>): Promise<Response> {
+let serverPrint: Promise<string> | null = null;
+
+/**
+ * The browser sends its engine fingerprint when starting. If it differs from ours, that browser
+ * deals the hands differently and its answers could never be graded, so stop before the dealer
+ * plays, and file it as feedback so it shows on the stats dashboard.
+ */
+async function sameEngine(userId: string, req: Request, body: Record<string, unknown>): Promise<boolean> {
+  if (typeof body.fingerprint !== 'string') return true; // older pages don't send one
+  serverPrint ??= challengeFingerprint();
+  const ours = await serverPrint;
+  if (body.fingerprint === ours) return true;
+  const ua = (req.headers.get('user-agent') || '').slice(0, 180);
+  console.error('daily: engine fingerprint mismatch', { theirs: body.fingerprint, ours, ua });
+  const fb = await db.from('feedback').insert({ user_id: userId, message: 'Daily challenge blocked automatically: this browser deals the hands differently from the server (engine fingerprint mismatch).', context: { auto: 'fingerprint', theirs: String(body.fingerprint).slice(0, 16), ours, version: body.version ?? null, ua } });
+  if (fb.error) console.error('daily: could not file the mismatch', fb.error);
+  return false;
+}
+
+async function start(userId: string, body: Record<string, unknown>, req: Request): Promise<Response> {
+  if (!await sameEngine(userId, req, body)) {
+    return fail(409, 'engine', 'This browser deals the challenge hands differently from our server, so a run here couldn’t be graded. We’ve been notified. Try the latest Safari or Chrome.');
+  }
   const prof = await db.from('profiles').select('display_name').eq('id', userId).maybeSingle();
   if (prof.error) throw prof.error;
   let name = prof.data?.display_name as string | null | undefined;
@@ -127,7 +149,9 @@ async function start(userId: string, body: Record<string, unknown>): Promise<Res
     e = await entry(day, userId);
   }
   // The clock started on the first start; starting again (after a reload) keeps it running.
-  return json({ status: 'play', day, name, seed: ch.seed, version: ch.version, hands: CHALLENGE_HANDS, startedAt: e!.started_at });
+  // The server's engine version, not the one the day was picked with: what matters is that the
+  // browser deals like the replay will. (A bump mid-day keeps the day's seed.)
+  return json({ status: 'play', day, name, seed: ch.seed, version: CHALLENGE_VERSION, hands: CHALLENGE_HANDS, startedAt: e!.started_at });
 }
 
 async function submit(userId: string, body: Record<string, unknown>): Promise<Response> {
@@ -174,7 +198,7 @@ Deno.serve(async req => {
     if (action === 'board') return json(await board(today(), me?.id ?? null));
     if (!me) return fail(401, 'sign-in', 'Sign in to play the daily challenge.');
     if (req.method !== 'POST') return fail(405, 'method', 'Use POST.');
-    if (action === 'start') return await start(me.id, body);
+    if (action === 'start') return await start(me.id, body, req);
     if (action === 'submit') return await submit(me.id, body);
     return fail(400, 'action', 'Unknown action.');
   } catch (e) {

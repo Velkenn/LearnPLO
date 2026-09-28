@@ -34,6 +34,24 @@ const shoot = async (page, name) => { if (SHOTS) { await page.waitForTimeout(300
   await page.close();
 }
 
+// ---- a browser that deals differently from the server is stopped before it plays ----
+{
+  const odd = await browser.newContext({ viewport: { width: 390, height: 844 } });
+  await odd.addInitScript(() => { window.__stubServerPrint = 'deadbeef'; });
+  const page = await odd.newPage();
+  page.on('pageerror', e => errors.push(String(e)));
+  await page.goto(url.href);
+  await page.waitForSelector('#dailyStrip:not([hidden]) #dailyOpen');
+  await page.click('#dailyOpen');
+  await page.waitForSelector('#daily.open #dailyStart');
+  await page.click('#dailyStart');
+  await page.waitForSelector('#daily .acct-msg.err');
+  check((await page.innerText('#daily .acct-msg.err')).includes('deals the challenge hands differently'), 'engine mismatch is explained');
+  check(!await page.isVisible('#dailyRetry'), 'no pointless retry after an engine mismatch');
+  check(!await page.evaluate(() => window.__app.challenge), 'no run started');
+  await odd.close();
+}
+
 // ---- member: play the whole challenge ----
 const page = await ctx.newPage();
 page.on('pageerror', e => errors.push(String(e)));

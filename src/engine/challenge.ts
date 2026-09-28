@@ -10,7 +10,7 @@ import { seed } from './rng.ts';
 import { DEFAULT_SETTINGS } from '../config.ts';
 
 /** Bump when anything that changes how a challenge hand plays out changes (deal, betting, pots). */
-export const CHALLENGE_VERSION = 1;
+export const CHALLENGE_VERSION = 2;
 export const CHALLENGE_HANDS = 5;
 
 /** Everyone plays the same table: 2/5, side pots often, up to 2 pot calls, no countdown. */
@@ -24,6 +24,18 @@ export type ChallengeAnswer =
   | { k: 'pot'; v: number | null }
   | { k: 'cut'; v: number | null }
   | { k: 'read'; holes: Record<string, number[]>; board: number[] };
+
+/**
+ * Replays share the one random generator, and a replay pauses at every hook, so two running at
+ * once (two dealers submitting at the same moment on the server) would mix up each other's
+ * cards. Every replay below takes its turn through this queue.
+ */
+let queue: Promise<unknown> = Promise.resolve();
+function oneAtATime<T>(fn: () => Promise<T>): Promise<T> {
+  const run = queue.then(fn, fn);
+  queue = run.catch(() => undefined);
+  return run;
+}
 
 /** The seed for hand k of a day (0-based). */
 export function handSeed(day: number, k: number): number {
@@ -68,7 +80,10 @@ export interface ChallengeResult {
  * Replay a day's hands. With answers, grade them in the order they were asked; without, just
  * list the questions (every one counts as missed).
  */
-export async function replayChallenge(day: number, answers?: ChallengeAnswer[][]): Promise<ChallengeResult> {
+export const replayChallenge = (day: number, answers?: ChallengeAnswer[][]): Promise<ChallengeResult> =>
+  oneAtATime(() => replay(day, answers));
+
+async function replay(day: number, answers?: ChallengeAnswer[][]): Promise<ChallengeResult> {
   const hands: ChallengeResult['hands'] = [];
   let mismatch = !!answers && (!Array.isArray(answers) || answers.length !== CHALLENGE_HANDS);
   try {
@@ -116,9 +131,11 @@ export async function replayChallenge(day: number, answers?: ChallengeAnswer[][]
 export type Mix = Record<ChallengeKind | 'repot', number>;
 
 /** How many questions of each kind a day's deal asks (re-pots are also counted as pot calls). */
-export async function challengeMix(day: number): Promise<Mix> {
+export const challengeMix = (day: number): Promise<Mix> => oneAtATime(() => mix(day));
+
+async function mix(day: number): Promise<Mix> {
   const m: Mix = { pot: 0, cut: 0, read: 0, repot: 0 };
-  const key = await answerKey(day, q => { if (q.repotOf) m.repot++; });
+  const key = await keyFor(day, q => { if (q.repotOf) m.repot++; });
   key.flat().forEach(a => { m[a.k]++; });
   return m;
 }
@@ -133,14 +150,17 @@ export const goodMix = (m: Mix): boolean => {
 };
 
 /** Starting from a random number, find the next seed whose deal is worth playing. */
-export async function pickDaySeed(start: number): Promise<number> {
+export const pickDaySeed = (start: number): Promise<number> => oneAtATime(async () => {
   let s = start >>> 0;
-  for (let n = 0; n < 1000; n++, s = (s + 0x9e3779b9) >>> 0) if (goodMix(await challengeMix(s))) return s;
+  for (let n = 0; n < 1000; n++, s = (s + 0x9e3779b9) >>> 0) if (goodMix(await mix(s))) return s;
   return start >>> 0;
-}
+});
 
 /** The right answers for a day, in the order they're asked (for tests and local stand-ins). */
-export async function answerKey(day: number, onPot?: (q: PotQ) => void): Promise<ChallengeAnswer[][]> {
+export const answerKey = (day: number, onPot?: (q: PotQ) => void): Promise<ChallengeAnswer[][]> =>
+  oneAtATime(() => keyFor(day, onPot));
+
+async function keyFor(day: number, onPot?: (q: PotQ) => void): Promise<ChallengeAnswer[][]> {
   const key: ChallengeAnswer[][] = [];
   try {
     for (let k = 0; k < CHALLENGE_HANDS; k++) {
@@ -177,11 +197,11 @@ export async function answerKey(day: number, onPot?: (q: PotQ) => void): Promise
  * and grade alike, so comparing the server's (GET .../daily?action=selftest) with this one checks
  * that the deployed function matches the browser.
  */
-export async function challengeFingerprint(): Promise<string> {
+export const challengeFingerprint = (): Promise<string> => oneAtATime(async () => {
   const keys: ChallengeAnswer[][][] = [];
-  for (const d of [1, 20260927, 4000000000]) keys.push(await answerKey(d));
+  for (const d of [1, 20260927, 4000000000]) keys.push(await keyFor(d));
   const s = JSON.stringify(keys);
   let h = 0x811c9dc5;
   for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 0x01000193) >>> 0; }
   return h.toString(16).padStart(8, '0');
-}
+});

@@ -80,6 +80,10 @@ async function daily(body) {
   if (body.action === 'board') return { data: board(), error: null };
   if (!session) return fail(401, 'sign-in', 'Sign in to play the daily challenge.');
   if (body.action === 'start') {
+    // Tests can pretend the server's engine differs from this browser's.
+    if (window.__stubServerPrint && body.fingerprint !== window.__stubServerPrint) {
+      return fail(409, 'engine', 'This browser deals the challenge hands differently from our server, so a run here couldn’t be graded. We’ve been notified. Try the latest Safari or Chrome.');
+    }
     if (body.name !== undefined) {
       const n = String(body.name).trim();
       if (n.length < 2 || n.length > 24) return fail(400, 'name', 'Use 2 to 24 letters, numbers, or spaces for your leaderboard name.');

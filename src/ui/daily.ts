@@ -113,7 +113,7 @@ async function refreshBoard(): Promise<void> {
 function fail(e: unknown, retry: 'start' | 'submit'): void {
   ui.phase = 'error';
   ui.msg = e instanceof DailyError ? e.message : 'Something went wrong. Try again.';
-  ui.retry = e instanceof DailyError && (e.code === 'version' || e.code === 'expired') ? null : retry;
+  ui.retry = e instanceof DailyError && (e.code === 'version' || e.code === 'expired' || e.code === 'engine') ? null : retry;
   renderDaily();
 }
 

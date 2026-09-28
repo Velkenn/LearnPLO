@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<link rel="stylesheet" href="app.css">
+<style>
+html,body{margin:0;background:#000;overflow:hidden}
+*{animation:none!important;transition:none!important}
+#stage{position:relative;width:540px;height:960px;overflow:hidden;font-family:var(--fb);color:#F2E8D8;
+  background:radial-gradient(ellipse 95% 70% at 50% 45%, #2E7C5B 0%, #1E6045 48%, #154A34 78%, #0C2E20 100%)}
+#stage::before{content:"";position:absolute;inset:0;background:repeating-radial-gradient(circle at 30% 20%,rgba(255,255,255,.022) 0 1px,transparent 1px 3px);pointer-events:none}
+#stage::after{content:"";position:absolute;inset:0;box-shadow:inset 0 0 140px rgba(0,0,0,.55);pointer-events:none;z-index:50}
+.line{position:absolute;left:4%;right:4%;top:14%;bottom:16%;border-radius:50%;border:2px solid rgba(233,214,160,.13)}
+.vprint{position:absolute;left:0;right:0;bottom:120px;text-align:center;font:700 44px var(--fd);color:rgba(233,214,160,.10);letter-spacing:.04em}
+.obj{position:absolute;left:0;top:0;transform-origin:0 0;will-change:transform,opacity}
+.obj>.c{position:absolute;left:0;top:0;transform:translate(-50%,-50%);white-space:nowrap}
+.obj>.c.mark{transform:translate(0,-50%);display:flex;align-items:center;gap:8px;font:700 24px var(--fd);color:#F2E8D8}
+.mark .mlogo svg{width:30px;height:30px;display:block}
+.wm span,.bigwm span{color:#D9B048}
+.pill{background:rgba(0,0,0,.45);color:#FFF3D6;font:600 30px var(--fd);padding:6px 18px;border-radius:12px}
+.vseat{position:static;transform:none;width:84px}
+.seat.potting{box-shadow:0 0 0 3px var(--brass),0 0 24px rgba(201,155,47,.8)}
+.chipsbox{display:flex;flex-direction:column;align-items:center;gap:3px}
+.amt.big{font-size:22px;padding:2px 10px;margin-top:4px}
+.potbox{display:flex;flex-direction:column;align-items:center}
+.boardrow{display:flex;gap:7px;--cw:54px}
+.tag{background:#F2E8D8;color:#1A1A1A;font:700 19px var(--fd);padding:2px 10px;border-radius:7px}
+.bubble{background:#FFF8E6;color:#17110A;font:700 40px var(--fd);padding:4px 18px 6px;border-radius:16px;box-shadow:0 6px 16px rgba(0,0,0,.4)}
+.bubble::after{content:"";position:absolute;left:50%;bottom:-12px;margin-left:-10px;border:10px solid transparent;border-top-color:#FFF8E6;border-bottom:0}
+.panel{width:476px;background:#2A1D15;border:1px solid #4B3423;border-radius:20px;padding:20px 24px;box-shadow:0 14px 34px rgba(0,0,0,.45);white-space:normal;min-height:190px}
+.panel .q1,.panel .a1{position:absolute;left:24px;right:24px;top:20px}
+.ph{font:700 48px var(--fd);color:#F2E8D8;line-height:1.05}
+.pq{font:600 22px var(--fb);color:#C9BBA6}
+.vbar{height:12px;border-radius:6px;background:rgba(255,255,255,.12);margin-top:26px;margin-right:56px;overflow:hidden}
+.vbar i{display:block;height:100%;background:var(--brass);border-radius:6px;transform-origin:0 50%}
+.tnum{position:absolute;right:0;top:104px;font:700 38px var(--fd);color:#F2E8D8}
+.verdict-good{font:700 50px var(--fd);color:#7BE0A6;transform-origin:0 50%}
+.eq{display:flex;gap:14px;margin-top:10px}
+.eq span{display:flex;flex-direction:column}
+.eq b{font:700 36px var(--fd);color:#F2E8D8}
+.eq small{font:500 15px var(--fb);color:#C9BBA6}
+.eq .t3 b{color:#E8C25A}
+.note{font:500 16px var(--fb);color:#C9BBA6;margin-top:10px}
+.head{font:700 50px var(--fd);color:#FFF3D6;text-shadow:0 3px 12px rgba(0,0,0,.4)}
+.head2{font:700 46px var(--fd);color:#FFF3D6;text-align:center;line-height:1.05;text-shadow:0 3px 12px rgba(0,0,0,.4)}
+.rule{font:600 24px var(--fd);color:#FFF3D6;border:2px dashed rgba(233,214,160,.5);border-radius:10px;padding:4px 14px}
+.pilelbl{text-align:center;background:rgba(0,0,0,.42);border-radius:12px;padding:6px 14px 8px;min-width:190px}
+.plbl{font:600 20px var(--fb);color:#C9BBA6}
+.pval{font:700 42px var(--fd);color:#FFF3D6;line-height:1.05}
+.pmath{font:500 15px var(--fb);color:#C9BBA6}
+.note2{font:600 26px var(--fd);color:#FFF3D6;background:rgba(0,0,0,.35);padding:4px 14px;border-radius:10px}
+.bigq{font:700 44px var(--fd);color:#FFF3D6;text-align:center;line-height:1.05;text-shadow:0 3px 12px rgba(0,0,0,.4)}
+.bigq .sp{background:#FFFDF7;color:#1A1A1A;border-radius:6px;padding:0 6px}
+.bcard{--cw:66px}
+.hcard{--cw:54px}
+.flip{position:relative;width:54px;height:75.6px}
+.flip .card,.flip .cback{position:absolute;left:0;top:0}
+.flip .card{display:none}.flip.up .card{display:inline-block}.flip.up .cback{display:none}
+.cback{width:54px;height:75.6px;border-radius:5px;border:3px solid #F6F0E4;background-color:#A12F2C;background-image:repeating-linear-gradient(45deg,rgba(255,255,255,.22) 0 1.5px,transparent 1.5px 6px),repeating-linear-gradient(-45deg,rgba(255,255,255,.22) 0 1.5px,transparent 1.5px 6px);box-shadow:0 1px 3px rgba(0,0,0,.35)}
+.card.vplays{box-shadow:0 0 0 3px var(--brass),0 8px 14px rgba(0,0,0,.4)}
+.rowlbl{font:700 28px var(--fd);color:#FFF3D6}
+.rtag{font:600 18px var(--fb);color:#FFF3D6;background:rgba(0,0,0,.4);padding:2px 10px;border-radius:7px}
+.rtag.win{background:#DDF1E5;color:#14532F;font-weight:700}
+.rtag.lose{background:rgba(0,0,0,.5);color:#F4B2AA}
+.verdict{text-align:center;white-space:normal;width:480px}
+.vg{font:700 54px var(--fd);color:#7BE0A6;text-shadow:0 3px 12px rgba(0,0,0,.45)}
+.vs{font:500 18px var(--fb);color:#E6DCC8;margin-top:2px}
+.feat{background:#FFFDF7;color:#17211C;font:700 21px var(--fd);padding:7px 0;width:154px;text-align:center;border-radius:10px;box-shadow:0 4px 10px rgba(0,0,0,.3)}
+.phone{width:272px;height:589px;border-radius:40px;background:#0B0B0B;padding:9px;box-shadow:0 24px 50px rgba(0,0,0,.55),inset 0 0 0 2px #333}
+.phone img{width:254px;height:571px;border-radius:32px;display:block;object-fit:cover;object-position:top}
+.biglogo svg{width:150px;height:150px;display:block;filter:drop-shadow(0 10px 18px rgba(0,0,0,.45))}
+.bigwm{font:700 84px var(--fd);color:#FFF3D6;letter-spacing:.01em;text-shadow:0 3px 14px rgba(0,0,0,.35)}
+.tagline{font:600 28px var(--fb);color:#F2E8D8}
+.free{font:500 21px var(--fb);color:#C9D8CF}
+.url{background:var(--brass);color:var(--brass-ink);font:700 38px var(--fd);padding:10px 30px;border-radius:14px;box-shadow:0 8px 20px rgba(0,0,0,.4)}
+</style></head>
+<body><div id="stage"><div class="line"></div><div class="vprint">FeltReady</div></div>
+<script type="module" src="main.js"></script></body></html>

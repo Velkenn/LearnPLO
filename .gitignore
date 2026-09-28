@@ -6,3 +6,4 @@ e2e/out/
 .env
 .env.local
 e2e/stub/site/
+marketing/promo/out/

@@ -28,8 +28,23 @@ npm run dev        # open the printed localhost URL
 
 ## Checks
 
+One command runs everything: unit tests and typecheck, then every browser test in parallel
+against two builds it makes itself (accounts off, and accounts on with the Supabase stand-in).
+It needs no servers and no network.
+
 ```sh
-npm test           # unit tests + a 2,600-hand simulation (about 3 seconds)
+npx playwright install chromium   # first time only
+npm run check -- --quick   # unit tests + typecheck (about 10 seconds)
+npm run check              # plus all browser tests (about a minute)
+npm run check -- --full    # more hands per drill run, before a bigger release (about 2 minutes)
+npm run check -- --shots   # also save screenshots in e2e/out/
+npm run ci:wait            # after a push: wait for GitHub and Cloudflare, report the result
+```
+
+The pieces, if you need one on its own:
+
+```sh
+npm test           # unit tests + 2,600 six-handed and 1,400 nine-handed simulated hands
 npm run typecheck  # TypeScript, strict mode
 npm run build      # production build into dist/
 ```
@@ -110,6 +125,9 @@ e2e/account.mjs       Playwright browser test: sign-in, in-app browser notice, p
 e2e/launch.mjs        Playwright browser test: first-visit welcome, feedback, stats dashboard
 worker/               the Cloudflare Worker: link previews for shared daily scores (/share)
 e2e/stub/             stand-in for supabase-js, and a build script that uses it
+e2e/check.mjs         npm run check: every check in one command
+e2e/ci-wait.mjs       npm run ci:wait: waits for GitHub's checks on a pushed commit
+marketing/promo/      the promo video, animated in code (see its README)
 ```
 
 ## Deploying

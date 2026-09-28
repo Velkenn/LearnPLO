@@ -39,14 +39,28 @@ FeltReady (feltready.com) is a casino dealer trainer; pot limit Omaha is the fir
 
 ## Before you commit
 
-```sh
-npm test && npm run typecheck && npm run build
-```
+Match the checks to the change, so small fixes stay fast:
 
-For UI changes, also run the browser test (`npm run e2e`, see README) and look at the
-screenshots in `e2e/out/` on a phone-sized viewport. For anything behind sign-in (weak spots,
-the daily challenge, sign-in), build with `e2e/stub/build.sh` and run the tests signed in and
-signed out; `e2e/daily.mjs` plays a full challenge and `e2e/account.mjs` covers sign-in and passkeys.
+- Wording, copy, or styling only: `npm run check -- --quick`, plus one screenshot of the changed
+  screen at phone size (390 px wide) if it's visible.
+- Anything else (drills, settings, sign-in, weak spots, the daily challenge, the engine):
+  `npm run check`. It runs every browser test, signed in and out, in parallel. Add `--shots` for
+  UI changes and look at the screenshots in `e2e/out/` at phone size.
+- Changes to how a hand plays out (deal, betting, pots, showdown) or before a bigger release:
+  `npm run check -- --full`.
+
+After pushing, run `npm run ci:wait` once (it polls and stops when GitHub and Cloudflare finish);
+don't sleep a fixed time. For small fixes, it's fine to push and check at the start of the next task.
+
+## Working in a cloud sandbox
+
+- If `npm install` is blocked, the checks still run: `npm run check` builds with the esbuild that
+  tsx bundles, skips `npm run build` (CI runs it), and ignores only the type errors caused by
+  supabase-js being missing.
+- Servers started in the background don't always survive between commands. `npm run check`
+  and `marketing/promo/render.mjs` start and stop their own, so prefer them over `http.server`.
+- Barlow fonts come from Google Fonts, which the sandbox may block; screenshots then fall back to
+  system fonts unless Barlow is installed locally.
 
 ## Poker rules the code relies on
 

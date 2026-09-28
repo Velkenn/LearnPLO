@@ -11,29 +11,52 @@ import { $ } from './dom.ts';
 import { cardHTML, chipStacks } from './cards.ts';
 import { chipClick } from './sound.ts';
 
-// Positions in % of the table box. Seats go clockwise from the dealer's left; the dealer sits at the bottom.
-// Each table size has its own seat, bet, and dealer-button spots.
+// Positions in % of the table box (a tall table, 1 wide by 1.6 high). Seats go clockwise from the
+// dealer's left; the dealer sits at the bottom. Each table size has its own seat, bet, and
+// dealer-button spots. A seat's spot is the middle of its player icon and name plate.
 type XY = [number, number];
 /** piles: where separate pots sit, by how many there are. dblBet and dblPiles: the same, clear of two boards. */
 interface Layout { seat: XY[]; bet: XY[]; dblBet: XY[]; puck: XY[]; piles: Record<number, XY[]>; dblPiles: Record<number, XY[]> }
+const PILES: Record<number, XY[]> = { 1: [[50, 42]], 2: [[37, 42], [63, 42]], 3: [[50, 31], [36, 42], [64, 42]], 4: [[37, 31], [63, 31], [37, 42], [63, 42]] };
 const LAYOUTS: Record<number, Layout> = {
   6: {
-    seat: [[19, 76], [11, 40.6], [32.6, 12.2], [67.4, 12.2], [89, 40.6], [81, 76]],
-    bet: [[33, 70], [29, 44], [39, 33], [61, 33], [71, 44], [67, 70]],
-    dblBet: [[34, 85], [25, 32], [43, 19], [57, 19], [75, 32], [66, 85]],
-    puck: [[4.5, 77], [11, 27.5], [16, 13], [84, 13], [89, 27.5], [95.5, 77]],
-    piles: { 1: [[50, 41]], 2: [[35, 41], [62, 41]], 3: [[50, 29], [35, 42], [65, 42]], 4: [[36, 29], [64, 29], [36, 42], [64, 42]] },
-    dblPiles: { 1: [[50, 39]], 2: [[35, 39], [65, 39]], 3: [[50, 29], [34, 40], [66, 40]], 4: [[33, 29], [67, 29], [34, 40], [66, 40]] },
+    seat: [[17, 81], [11, 44], [24, 11], [76, 11], [89, 44], [83, 81]],
+    bet: [[32, 74], [29, 48.5], [34, 27], [66, 27], [71, 48.5], [68, 74]],
+    dblBet: [[32, 76], [28, 39], [34, 27], [66, 27], [72, 39], [68, 76]],
+    puck: [[34, 89], [21, 35], [37, 8], [63, 8], [79, 35], [66, 89]],
+    piles: PILES,
+    dblPiles: PILES,
   },
   9: {
-    seat: [[24.5, 83.5], [10.5, 62.5], [10.5, 38], [24, 17], [50, 7.5], [76, 17], [89.5, 38], [89.5, 62.5], [75.5, 83.5]],
-    bet: [[40, 77], [25, 74], [25.5, 49.5], [34, 31.5], [50, 22], [66, 31.5], [74.5, 49.5], [75, 74], [60, 77]],
-    dblBet: [[40, 80], [23, 74], [25, 39], [32, 33], [50, 24], [68, 33], [75, 39], [77, 74], [60, 80]],
-    puck: [[37.5, 88], [10.5, 74], [10.5, 26.5], [11.5, 17], [36, 5.5], [64, 5.5], [88.5, 17], [89.5, 26.5], [89.5, 74]],
-    piles: { 1: [[50, 41]], 2: [[37, 40], [63, 40]], 3: [[50, 33], [36, 42], [64, 42]], 4: [[37, 33], [63, 33], [37, 42], [63, 42]] },
-    dblPiles: { 1: [[50, 40]], 2: [[36, 40], [64, 40]], 3: [[50, 31], [35, 41], [65, 41]], 4: [[34, 31], [66, 31], [35, 41], [65, 41]] },
+    seat: [[26, 85], [10, 68], [10, 45], [19, 20], [50, 8], [81, 20], [90, 45], [90, 68], [74, 85]],
+    bet: [[37, 79], [27, 70], [26, 46], [32, 33], [50, 24], [68, 33], [74, 46], [73, 70], [63, 79]],
+    dblBet: [[37, 79], [26, 73], [26, 44], [32, 33], [50, 24], [68, 33], [74, 44], [74, 73], [63, 79]],
+    puck: [[38, 90], [10, 57.5], [9, 33], [31, 14], [36, 6], [69, 14], [91, 33], [90, 57.5], [62, 90]],
+    piles: PILES,
+    dblPiles: PILES,
   },
 };
+
+/** The last thing each seat did this betting round, as a tag under its name plate. */
+const TAGS: Record<string, string> = { folds: 'Fold', checks: 'Check', calls: 'Call', bets: 'Bet', raises: 'Raise', pots: 'Pot', 're-pots': 'Re-pot' };
+function lastActions(S: Hand): Map<number, string> {
+  const out = new Map<number, string>();
+  for (let k = S.log.length - 1; k >= 0; k--) {
+    const e = S.log[k];
+    if (e.st) break;
+    const m = /^Seat (\d+) \([^)]*\) ([a-z-]+)/.exec(e.t);
+    if (!m || out.has(+m[1] - 1)) continue;
+    const tag = / all in/.test(e.t) ? 'All in' : TAGS[m[2]];
+    if (tag) out.set(+m[1] - 1, tag);
+  }
+  return out;
+}
+const tagClass = (t: string): string => ({ Fold: 'fold', Check: 'check', Call: 'call', 'All in': 'allin' } as Record<string, string>)[t] ?? 'raise';
+
+/** A plain player icon (head and shoulders), tinted per seat. */
+const PERSON = '<svg viewBox="0 0 40 40" aria-hidden="true"><circle cx="20" cy="15" r="7.5"/><path d="M5.5 38c1.2-8.3 7.2-13 14.5-13s13.3 4.7 14.5 13z"/></svg>';
+const TINTS = ['#3F6E8C', '#8C5A3F', '#5E7A3F', '#7A4F86', '#3F8078', '#8C7A3F', '#86504F', '#4F5E86', '#6B6B6B'];
+const avatar = (i: number): string => `<span class="disc" style="--tint:${TINTS[i % TINTS.length]}">${PERSON}</span>`;
 /** The layout for a table of n seats (six-handed if there's no layout for n). */
 export const layoutFor = (n: number): Layout => LAYOUTS[n] ?? LAYOUTS[6];
 
@@ -67,7 +90,7 @@ export function piles(S: Hand | null): Pile[] | null {
     if (rest > 0) list.push({ k: n, name: pending ? 'Still out' : potName(n, n + 1), amt: rest, open: !pending });
   }
   const L = layoutFor(S.players.length), layouts = isBomb ? L.dblPiles : L.piles;
-  const spots = layouts[list.length] || list.map((_, j) => [20 + 60 * j / (list.length - 1), isBomb ? 39 : 41] as XY);
+  const spots = layouts[list.length] || list.map((_, j) => [20 + 60 * j / (list.length - 1), 42] as XY);
   return list.map((x, j) => ({ ...x, x: spots[j][0], y: spots[j][1] })).filter(x => !x.aw);
 }
 
@@ -94,10 +117,10 @@ function shownPlay(S: Hand): { holeBy: Record<number, number[]>; board: number[]
   return null;
 }
 
-// Printed on the felt near the dealer, curved along the rail like a casino's name.
-// The viewBox matches the table box (100 wide, 120 tall), so % positions map to x and 1.2 × y.
-const PRINT = `<svg class="print" viewBox="0 0 100 120" aria-hidden="true">
-  <defs><path id="printArc1" d="M17 60A33 41 0 0 0 83 60"/><path id="printArc2" d="M11 60A39 47 0 0 0 89 60"/></defs>
+// Printed on the felt near the dealer, curved along the bottom of the rail like a casino's name.
+// The viewBox matches the table box (100 wide, 160 tall), so % positions map to x and 1.6 × y.
+const PRINT = `<svg class="print" viewBox="0 0 100 160" aria-hidden="true">
+  <defs><path id="printArc1" d="M27 106A23 23 0 0 0 73 106"/><path id="printArc2" d="M20 106A30 30 0 0 0 80 106"/></defs>
   <text class="print-brand"><textPath href="#printArc1" startOffset="50%" text-anchor="middle">FeltReady</textPath></text>
   <text class="print-game"><textPath href="#printArc2" startOffset="50%" text-anchor="middle">${GAMES[game].name}</textPath></text>
 </svg>`;
@@ -110,7 +133,7 @@ export function renderTable(): void {
   t.classList.toggle('dbl', isBomb);
   let h = `<div class="rail"><div class="felt"></div></div>${PRINT}<div class="dealer">Dealer</div>`;
   if (!S) {
-    L.seat.forEach(([x, y], i) => { h += `<div class="seat idle" style="left:${x}%;top:${y}%"><div class="sn">Seat ${i + 1}</div></div>`; });
+    L.seat.forEach(([x, y], i) => { h += `<div class="seat idle${x < 50 ? ' l' : ''}" style="left:${x}%;top:${y}%">${avatar(i)}<div class="plate"><div class="sn">Seat ${i + 1}</div></div></div>`; });
     h += `${emptyBoards()}${dealButton('Deal a hand')}`;
     t.innerHTML = h; return;
   }
@@ -119,16 +142,19 @@ export function renderTable(): void {
   const wonSet = S.sd ? new Set(S.sd.pots.filter(pt => pt.awarded).flatMap(pt => pt.winners!)) : new Set<number>();
   const play = shownPlay(S);
   const muck = S.sd ? S.sd.mucked : null;
+  const acts = S.sd ? new Map<number, string>() : lastActions(S);
   S.players.forEach(p => {
     const [x, y] = L.seat[p.i], pos = posOf(S, p), gone = p.folded || (muck && muck.has(p.i));
     const potting = (S.mode === 'quiz' && S.quiz && S.quiz.q.seat === p.i) ||
       (S.mode === 'cut' && S.cq && p.allin && !p.folded && p.totalIn === S.cq.pots[S.cq.j].level);
-    const cls = ['seat', gone ? 'folded' : '', S.acting === p.i && S.mode === 'running' ? 'acting' : '', potting ? 'potting' : '', wonSet.has(p.i) ? 'win' : ''].join(' ');
-    const minis = gone ? '' : reveal
-      ? p.hole.map((c, k) => cardHTML(c, 'xs' + (play ? (play.holeBy[p.i] && play.holeBy[p.i].includes(k) ? ' plays' : ' sits') : ''))).join('')
-      : '<span class="back"></span>'.repeat(4);
+    const cls = ['seat', x < 50 ? 'l' : '', gone ? 'folded' : '', S.acting === p.i && S.mode === 'running' ? 'acting' : '', potting ? 'potting' : '', wonSet.has(p.i) ? 'win' : '', reveal && !gone ? 'shows' : ''].join(' ');
+    // Face down, the cards fan out behind the player; at showdown they turn up over the icon.
+    const cards = gone ? '' : reveal
+      ? `<div class="fan up">${p.hole.map((c, k) => cardHTML(c, 'fc' + (play ? (play.holeBy[p.i] && play.holeBy[p.i].includes(k) ? ' plays' : ' sits') : ''))).join('')}</div>`
+      : `<div class="fan">${'<span class="back"></span>'.repeat(4)}</div>`;
     const blind = !S.bottom && (pos === 'SB' || pos === 'BB'); // bomb pots have no blinds
-    h += `<div class="${cls}" style="left:${x}%;top:${y}%"><div class="sn">Seat ${p.i + 1}${blind ? ` <span class="badge">${pos}</span>` : ''}</div><div class="stk">${p.allin ? 'All in' : fmt(p.stack)}</div><div class="minis">${minis}</div></div>`;
+    const tag = p.folded ? 'Fold' : potting && S.mode === 'quiz' ? 'Pot' : acts.get(p.i);
+    h += `<div class="${cls}" style="left:${x}%;top:${y}%">${cards}${avatar(p.i)}<div class="plate"><div class="sn">Seat ${p.i + 1}${blind ? ` <span class="badge">${pos}</span>` : ''}</div><div class="stk">${p.allin ? 'All in' : fmt(p.stack)}</div></div>${tag && !S.sd ? `<div class="tag ${tagClass(tag)}">${tag}</div>` : ''}</div>`;
     if (p.committed > 0) {
       const [bx, by] = bets[p.i];
       h += `<div class="bet" style="left:${bx}%;top:${by}%" aria-label="${fmt(p.committed)} bet">${chipStacks(p.committed, 8)}${lbl ? `<span class="amt">${fmt(p.committed)}</span>` : ''}</div>`;
@@ -140,7 +166,7 @@ export function renderTable(): void {
   const left = S.sd ? S.pot - S.sd.pots.filter(pt => pt.awarded).reduce((a, pt) => a + pt.amount, 0) : (S.mode === 'done' ? 0 : S.pot);
   const moving = (S.sweep && S.sweep.length) || (S.ship && S.ship.length) || 0;
   const pl = piles(S);
-  const tgt = pl && pl.length ? pl[pl.length - 1] : { x: 50, y: isBomb ? 36 : 41 };
+  const tgt = pl && pl.length ? pl[pl.length - 1] : { x: 50, y: 42 };
   if (S.sweep && S.sweep.length) S.sweep.forEach(sw => {
     const [bx, by] = bets[sw.i];
     h += `<div class="bet sweep" style="left:${bx}%;top:${by}%;--tx:${tgt.x}%;--ty:${tgt.y}%" aria-hidden="true">${chipStacks(sw.amt, 8)}</div>`;
@@ -152,7 +178,7 @@ export function renderTable(): void {
   else if (left > 0) h += `<div class="pot${S.sweep && S.sweep.length ? ' landing' : ''}">${chipStacks(left, 6)}${settings.showPot || S.sd ? `<span class="amt">Pot ${fmt(left)}</span>` : ''}</div>`;
   if (S.ship && S.ship.length) S.ship.forEach((sh, k) => {
     const [sx, sy] = L.seat[sh.i];
-    h += `<div class="bet ship" style="--fx:${sh.fx || 50}%;--fy:${sh.fy || 41}%;--x:${sx}%;--y:${sy}%;animation-delay:${k * 120}ms" aria-hidden="true">${chipStacks(Math.max(1, sh.amt || 0), 6)}</div>`;
+    h += `<div class="bet ship" style="--fx:${sh.fx || 50}%;--fy:${sh.fy || 42}%;--x:${sx}%;--y:${sy}%;animation-delay:${k * 120}ms" aria-hidden="true">${chipStacks(Math.max(1, sh.amt || 0), 6)}</div>`;
   });
   S.sweep = null; S.ship = null;
   if (moving) setTimeout(() => chipClick(moving > 1 ? 4 : 3), 60);

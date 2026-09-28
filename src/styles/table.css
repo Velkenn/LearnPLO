@@ -1,66 +1,100 @@
 /* The felt: rail, seats, chips, pot, dealer button, board slots. */
-/* table */
-.table{position:relative;width:100%;aspect-ratio:1/1.2;margin:0 auto}
-.rail{position:absolute;inset:6% 8%;border-radius:50%;background:radial-gradient(ellipse at 50% 30%, #5A3A24 0%, var(--rail) 60%, #26170E 100%);box-shadow:0 10px 22px rgba(0,0,0,.28), inset 0 2px 0 rgba(255,255,255,.08)}
-.felt{position:absolute;inset:13px;border-radius:50%;background:radial-gradient(ellipse at 50% 45%, var(--felt-hi) 0%, var(--felt) 55%, var(--felt-2) 100%);box-shadow:inset 0 10px 30px rgba(0,0,0,.35)}
-.felt::before{content:"";position:absolute;inset:0;border-radius:50%;background:repeating-radial-gradient(circle at 30% 20%,rgba(255,255,255,.018) 0 1px,transparent 1px 3px);pointer-events:none}
-.felt::after{content:"";position:absolute;inset:16%;border-radius:50%;border:1.5px solid rgba(233,214,160,.22)}
+/* table: a tall rounded table that fills a phone, dark rail with a brass pinstripe */
+.table{position:relative;width:100%;aspect-ratio:1/1.6;margin:0 auto;--cw:clamp(32px, 10.5vw, 42px)}
+.rail{position:absolute;inset:2.5% 7% 5.5%;border-radius:999px;background:linear-gradient(180deg,#2A2A2E,#161618 55%,#101012);box-shadow:0 12px 26px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.08)}
+.rail::before{content:"";position:absolute;inset:7px;border-radius:999px;border:1.5px solid rgba(201,155,47,.75);pointer-events:none;z-index:1}
+.felt{position:absolute;inset:12px;border-radius:999px;background:radial-gradient(ellipse 80% 60% at 50% 42%, var(--felt-hi) 0%, var(--felt) 55%, var(--felt-2) 100%);box-shadow:inset 0 8px 30px rgba(0,0,0,.45)}
+.felt::before{content:"";position:absolute;inset:0;border-radius:999px;background:repeating-radial-gradient(circle at 30% 20%,rgba(255,255,255,.018) 0 1px,transparent 1px 3px);pointer-events:none}
+.felt::after{content:"";position:absolute;inset:13% 11%;border-radius:999px;border:1.5px solid rgba(233,214,160,.16)}
 .print{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;overflow:visible}
-.print text{font-family:var(--fd);fill:rgba(233,214,160,.36)}
-.print-brand{font-size:6.2px;font-weight:700;letter-spacing:.05em}
-.print .print-game{font-size:2.9px;font-weight:600;letter-spacing:.22em;fill:rgba(233,214,160,.3)}
-.dealer{position:absolute;left:50%;top:96%;transform:translate(-50%,-50%);font:500 13px var(--fb);color:var(--muted);white-space:nowrap}
+.print text{font-family:var(--fd);fill:rgba(233,214,160,.3)}
+.print-brand{font-size:6.4px;font-weight:700;letter-spacing:.05em}
+.print .print-game{font-size:2.7px;font-weight:600;letter-spacing:.12em;fill:rgba(233,214,160,.26)}
+.dealer{position:absolute;left:50%;top:97.5%;transform:translate(-50%,-50%);font:500 13px var(--fb);color:var(--muted);white-space:nowrap}
 
-.seat{position:absolute;transform:translate(-50%,-50%);width:76px;padding:5px 4px 6px;border-radius:12px;background:#231811;color:#F2E8D8;border:1px solid #4B3423;text-align:center;transition:opacity .25s, box-shadow .2s;z-index:2}
-.seat .sn{font-family:var(--fd);font-weight:600;font-size:15px;line-height:1.1;white-space:nowrap;display:flex;justify-content:center;align-items:center;gap:4px}
-.badge{font:600 10px var(--fb);letter-spacing:.06em;padding:0 3px;border-radius:3px;border:1px solid rgba(242,232,216,.45);color:rgba(242,232,216,.85);line-height:1.35}
-.seat .stk{font-size:12px;opacity:.82;margin-top:1px}
-.seat.folded{opacity:.35}
-.seat.idle{opacity:.7;padding:6px 4px}
-.seat.acting{box-shadow:0 0 0 2px var(--brass)}
-.seat.potting{box-shadow:0 0 0 3px var(--brass),0 0 20px rgba(201,155,47,.7);animation:pulse 1.4s ease-in-out infinite}
-.seat.win{box-shadow:0 0 0 3px #6FD39A}
-@keyframes pulse{50%{box-shadow:0 0 0 3px var(--brass),0 0 6px rgba(201,155,47,.3)}}
-.minis{display:flex;justify-content:center;gap:2px;margin-top:4px;min-height:18px}
-.back{width:12px;height:17px;border-radius:2px;border:1.5px solid #F6F0E4;background-color:#A12F2C;background-image:repeating-linear-gradient(45deg,rgba(255,255,255,.22) 0 1px,transparent 1px 3.5px),repeating-linear-gradient(-45deg,rgba(255,255,255,.22) 0 1px,transparent 1px 3.5px)}
+/* A seat: player icon over a name plate, cards fanned behind, the last action under the plate. */
+.seat{--sw:80px;--dd:38px;position:absolute;transform:translate(-50%,-50%);width:var(--sw);display:flex;flex-direction:column;align-items:center;transition:opacity .25s;z-index:2;color:#F2EEE6}
+.disc{position:relative;z-index:2;width:var(--dd);height:var(--dd);border-radius:50%;background:var(--tint);background:radial-gradient(circle at 50% 35%,color-mix(in srgb,var(--tint) 75%,#fff),var(--tint) 70%);border:2px solid #0E0F10;box-shadow:0 2px 5px rgba(0,0,0,.5);overflow:hidden;margin-bottom:-7px}
+.disc svg{width:100%;height:100%;display:block;fill:rgba(255,255,255,.82)}
+.plate{position:relative;z-index:3;width:100%;padding:5px 3px 4px;border-radius:9px;background:linear-gradient(180deg,#26282C,#18191C);border:1px solid rgba(255,255,255,.1);box-shadow:0 3px 8px rgba(0,0,0,.45);text-align:center;transition:box-shadow .2s}
+.seat .sn{font:500 12px var(--fb);color:rgba(242,238,230,.75);line-height:1.15;white-space:nowrap;display:flex;justify-content:center;align-items:center;gap:4px}
+.seat .stk{font:600 16px var(--fd);letter-spacing:.01em;line-height:1.15;font-variant-numeric:tabular-nums;color:#FFFFFF}
+.badge{font:600 9.5px var(--fb);letter-spacing:.05em;padding:0 3px;border-radius:3px;background:rgba(242,238,230,.9);color:#18191C;line-height:1.4}
+.tag{position:absolute;top:100%;left:50%;transform:translate(-50%,-3px);z-index:4;font:600 12px var(--fb);line-height:1;padding:3px 9px 3.5px;border-radius:5px;white-space:nowrap;box-shadow:0 2px 4px rgba(0,0,0,.35)}
+.tag.fold{background:#3A3C40;color:#C9C9CC}
+.tag.check{background:#2E5A86;color:#fff}
+.tag.call{background:#2D7A48;color:#fff}
+.tag.raise{background:#C98A2A;color:#1E1405}
+.tag.allin{background:#B8322C;color:#fff}
+.seat.folded{opacity:.42}
+.seat.idle .plate{padding:6px 3px}
+.seat.acting .plate::after{content:"";position:absolute;left:8%;right:8%;bottom:-6px;height:3px;border-radius:2px;background:var(--brass);animation:think 1.1s ease-in-out infinite alternate}
+@keyframes think{from{opacity:.45}}
+.seat.potting .plate{box-shadow:0 0 0 2px var(--brass),0 0 18px rgba(201,155,47,.75);animation:pulse 1.4s ease-in-out infinite}
+.seat.win .plate{box-shadow:0 0 0 2px #6FD39A,0 0 14px rgba(111,211,154,.55)}
+@keyframes pulse{50%{box-shadow:0 0 0 2px var(--brass),0 0 5px rgba(201,155,47,.3)}}
+
+/* Face-down cards fan out behind the icon, toward the rail. */
+.fan{position:absolute;z-index:1;display:flex;top:calc(var(--dd)*.08);left:calc(50% + var(--dd)*.1)}
+.seat.l .fan:not(.up){left:auto;right:calc(50% + var(--dd)*.1);flex-direction:row-reverse}
+.back{width:15px;height:21px;border-radius:2px;border:1.5px solid #F6F0E4;background-color:#A12F2C;background-image:repeating-linear-gradient(45deg,rgba(255,255,255,.22) 0 1px,transparent 1px 3.5px),repeating-linear-gradient(-45deg,rgba(255,255,255,.22) 0 1px,transparent 1px 3.5px);box-shadow:0 1px 2px rgba(0,0,0,.4);flex:none}
+.back+.back{margin-left:-9px}
+.seat.l .fan .back+.back{margin-left:0;margin-right:-9px}
+.fan .back:nth-child(1){transform:rotate(-8deg)}.fan .back:nth-child(2){transform:rotate(-2deg) translateY(-1px)}
+.fan .back:nth-child(3){transform:rotate(4deg) translateY(-1px)}.fan .back:nth-child(4){transform:rotate(10deg) translateY(1px)}
+/* At showdown the hand turns face up over the icon. */
+.fan.up{z-index:4;top:auto;bottom:calc(100% - var(--dd) + 4px);left:50%;transform:translateX(-50%)}
+.seat.shows .disc{visibility:hidden}
+.card.fc{--w:25px;border-radius:3px;box-shadow:0 1px 3px rgba(0,0,0,.45);transition:transform .2s, opacity .2s}
+.card.fc .pip{display:none}
+.card.fc .ix{left:6%;top:4%}
+.card.fc .ix b{font-size:14px}.card.fc .ix i{font-size:11px;margin-top:0}
+.card.fc+.card.fc{margin-left:-11px}
+.fan.up .card:nth-child(1){transform:rotate(-9deg) translateY(2px)}.fan.up .card:nth-child(2){transform:rotate(-3deg)}
+.fan.up .card:nth-child(3){transform:rotate(3deg)}.fan.up .card:nth-child(4){transform:rotate(9deg) translateY(2px)}
+.fan.up .card.plays{outline:2px solid var(--good);outline-offset:0;translate:0 -5px}
+.fan.up .card.sits{opacity:.5}
 
 .bet{position:absolute;transform:translate(-50%,-100%);display:flex;flex-direction:column;align-items:center;gap:2px;z-index:1}
+.bet .stacks{transform:scale(.85);transform-origin:50% 100%;margin-bottom:-2px}
 .stacks{display:flex;align-items:flex-end;gap:0}
 .stack{display:flex;flex-direction:column;align-items:center;filter:drop-shadow(0 1.5px 1px rgba(0,0,0,.45))}
 .stack::before{content:"";order:-1;width:27px;height:11px;border-radius:50%;background:var(--c);border:1.6px dashed var(--e);box-shadow:inset 0 0 0 1.6px var(--c),inset 0 0 0 2.4px rgba(255,255,255,.25);margin-bottom:-5.5px;position:relative;z-index:1}
 .stack i{display:block;width:27px;height:5px;border-radius:0 0 50% 50% / 0 0 100% 100%;background:linear-gradient(90deg,var(--c) 0 10%,var(--e) 10% 20%,var(--c) 20% 45%,var(--e) 45% 55%,var(--c) 55% 80%,var(--e) 80% 90%,var(--c) 90%);box-shadow:inset 0 -1px rgba(0,0,0,.4)}
 .stack::after{content:"";display:block;width:27px;height:5px;border-radius:0 0 50% 50% / 0 0 100% 100%;background:linear-gradient(90deg,var(--c) 0 10%,var(--e) 10% 20%,var(--c) 20% 45%,var(--e) 45% 55%,var(--c) 55% 80%,var(--e) 80% 90%,var(--c) 90%);box-shadow:inset 0 -1px rgba(0,0,0,.4)}
 .amt{font:600 13px var(--fd);color:#FFF3D6;background:rgba(0,0,0,.42);padding:0 5px;border-radius:4px;line-height:1.35;white-space:nowrap}
-.pot{position:absolute;left:50%;top:41%;transform:translate(-50%,-100%);display:flex;flex-direction:column;align-items:center;gap:3px}
-.pot .amt{font-size:15px;padding:1px 8px;color:#F7EBC7}
+.pot{position:absolute;left:50%;top:42%;transform:translate(-50%,-100%);display:flex;flex-direction:column;align-items:center;gap:3px}
+.pot .amt{font:600 15px var(--fd);padding:3px 12px;color:#FFFFFF;background:rgba(10,12,14,.62);border:1px solid rgba(255,255,255,.12);border-radius:999px;letter-spacing:.02em}
 .puck{position:absolute;transform:translate(-50%,-50%);width:23px;height:23px;border-radius:50%;background:radial-gradient(circle at 40% 35%,#FFFFFF,#E4DDCF 75%);box-shadow:0 2px 3px rgba(0,0,0,.5),inset 0 0 0 2px #D5CCBA;display:grid;place-items:center;font:700 12px Georgia,'Times New Roman',serif;color:#2A2420;z-index:3}
-.board{position:absolute;left:50%;top:56%;transform:translate(-50%,-50%);display:flex;gap:4px}
+.board{position:absolute;left:50%;top:57%;transform:translate(-50%,-50%);display:flex;gap:4px}
 .slot{width:var(--cw);height:calc(var(--cw)*1.4);border-radius:calc(var(--cw)*.1);border:1px solid rgba(233,214,160,.14)}
-.tdeal{position:absolute;left:50%;top:41%;transform:translate(-50%,-50%);z-index:4;white-space:nowrap;box-shadow:0 4px 12px rgba(0,0,0,.4)}
+.tdeal{position:absolute;left:50%;top:42%;transform:translate(-50%,-50%);z-index:4;white-space:nowrap;box-shadow:0 4px 12px rgba(0,0,0,.4)}
 
 /* Nine-handed: smaller seats, cards, and chips so nine seats fit around a phone-sized felt. */
 .ring9{--cw:clamp(29px, 9vw, 40px)}
-.ring9 .seat{width:62px;padding:3px 2px 4px;border-radius:10px}
-.ring9 .seat .sn{font-size:13px;gap:3px}
-.ring9 .seat .stk{font-size:11px}
-.ring9 .badge{font-size:9px;padding:0 2px}
-.ring9 .seat.idle{padding:5px 2px}
-.ring9 .minis{gap:1.5px;margin-top:3px;min-height:15px}
-.ring9 .back{width:10px;height:14px;border-width:1.2px}
-.ring9 .card.xs{--w:13px}
-.ring9 .bet .stacks{transform:scale(.82);transform-origin:50% 100%;margin-bottom:-2px}
+.ring9 .seat{--sw:66px;--dd:32px}
+.ring9 .seat .sn{font-size:11px;gap:3px}
+.ring9 .seat .stk{font-size:14px}
+.ring9 .badge{font-size:8.5px;padding:0 2px}
+.ring9 .tag{font-size:11px;padding:2.5px 7px 3px}
+.ring9 .back{width:12px;height:17px;border-width:1.2px}
+.ring9 .back+.back{margin-left:-7px}.ring9 .seat.l .fan .back+.back{margin-right:-7px}
+.ring9 .card.fc{--w:21px}.ring9 .card.fc .ix b{font-size:12px}.ring9 .card.fc .ix i{font-size:9.5px}
+.ring9 .card.fc+.card.fc{margin-left:-9px}
+.ring9 .bet .stacks{transform:scale(.75)}
 .ring9 .bet .amt{font-size:12px;padding:0 4px}
 .ring9 .puck{width:20px;height:20px;font-size:11px}
 
 /* Double board (bomb pots): two smaller boards stacked in the middle, the pot above them, and
    bets clear of both (see dblBet in ui/table.ts). */
 .dbl{--cw:clamp(30px, 9vw, 40px)}
-.dbl .board.b-top{top:47.5%}
+.dbl .board.b-top{top:50.5%}
 .dbl .board.b-bot{top:60.5%}
 .dbl .board{transition:opacity .25s}
 .dbl .board.away{opacity:.4}
-.dbl .pot:not(.pile){top:36%}
-.dbl .tdeal{top:34%}
+.dbl .pot:not(.pile){top:42%}
+.dbl .tdeal{top:40%}
 .dbl.ring9{--cw:clamp(27px, 8.4vw, 36px)}
-.dbl.ring9 .board.b-top{top:48%}
-.dbl.ring9 .board.b-bot{top:60%}
+.dbl.ring9 .board.b-top{top:51%}
+.dbl.ring9 .board.b-bot{top:60.5%}
+.ring9 .print{transform:translateY(-3.5%)}

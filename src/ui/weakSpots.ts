@@ -2,7 +2,8 @@
 import { storeMode } from '../app.ts';
 import { accountsOn } from '../data/supabase.ts';
 import { ATTEMPTS_WINDOW, store } from '../data/store.ts';
-import { DRILLS, MIN_ANSWERS, WEAK_BELOW, accuracy, weakSpots, type Line, type Report } from '../data/weakSpots.ts';
+import { MIN_ANSWERS, WEAK_BELOW, accuracy, drillsFor, weakSpots, type Line, type Report } from '../data/weakSpots.ts';
+import { game } from '../page.ts';
 import { $, sheetOpen, showSheet } from './dom.ts';
 import { openAccount } from './account.ts';
 
@@ -10,6 +11,7 @@ const view = { loading: false, error: false, report: null as Report | null, run:
 
 const pct = (l: Pick<Line, 'n' | 'right'>): string => `${Math.round(accuracy(l) * 100)}%`;
 const secs = (ms: number | null): string => ms == null ? '–' : `${(ms / 1000).toFixed(1)}s`;
+const DRILLS = drillsFor(game);
 const drillName = (kind: string): string => DRILLS.find(d => d.kind === kind)?.label || kind;
 /** Red is saved for the spots in "Work on these"; green is 90% or better; in between stays neutral. */
 const tone = (l: Line, focus: Line[] = []): string => focus.includes(l) ? 'weak' : accuracy(l) >= WEAK_BELOW ? 'good' : '';
@@ -56,7 +58,7 @@ export function renderSpots(): void {
   if (!sheetOpen('spots')) return;
   let h = `<div class="spots-head"><h2>Your weak spots</h2><button class="linkbtn" id="spotsClose">Close</button></div>`;
   if (storeMode() !== 'member') {
-    h += `<p>Sign in and FeltReady keeps every answer you give, then shows where you slip: re-pots, side pots with two or more all-ins, chops, and the mistakes you make most.</p>
+    h += `<p>Sign in and FeltReady keeps every answer you give, then shows where you slip: re-pots, side pots with two or more all-ins, ${game === 'bomb' ? 'odd-chip splits, the bottom board' : 'chops'}, and the mistakes you make most.</p>
       <button class="btn" id="spotsSignin">Sign in free</button>`;
   } else if (view.report && !view.loading) {
     h += view.report.total ? reportHTML(view.report)
@@ -77,7 +79,7 @@ async function load(): Promise<void> {
   try {
     const rows = await from.loadAttempts!();
     if (run !== view.run || from !== store) return; // signed out or reopened meanwhile
-    view.report = weakSpots(rows);
+    view.report = weakSpots(rows, DRILLS);
   } catch (e) {
     if (run !== view.run) return;
     console.warn('FeltReady: could not load answers', e);

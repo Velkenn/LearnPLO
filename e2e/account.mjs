@@ -2,12 +2,12 @@
 // Needs a build with accounts on; e2e/stub/build.sh makes one (see there). The passkey
 // ceremony itself is faked by the stub; this checks when the buttons show and what happens next.
 //
-//   node e2e/account.mjs http://localhost:4174/ [--shots] [--dark]
+//   node e2e/account.mjs http://localhost:4174/plo/ [--shots] [--dark]
 import { chromium } from 'playwright';
 import { mkdirSync } from 'node:fs';
 
 const args = process.argv.slice(2);
-const base = new URL(args.find(a => a.startsWith('http')) || 'http://localhost:4174/');
+const base = new URL(args.find(a => a.startsWith('http')) || 'http://localhost:4174/plo/');
 base.searchParams.delete('stub');
 const guestUrl = base.href;
 const memberUrl = (() => { const u = new URL(base.href); u.searchParams.set('stub', 'member'); return u.href; })();

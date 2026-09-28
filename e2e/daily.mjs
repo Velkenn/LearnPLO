@@ -2,12 +2,12 @@
 // couple of answers wrong on purpose, and check the server's grade and the leaderboard.
 // Needs a build with accounts on and a daily server; e2e/stub/build.sh makes one (see there).
 //
-//   node e2e/daily.mjs "http://localhost:4174/?stub=member" [--shots] [--dark]
+//   node e2e/daily.mjs "http://localhost:4174/plo/?stub=member" [--shots] [--dark]
 import { chromium } from 'playwright';
 import { mkdirSync } from 'node:fs';
 
 const args = process.argv.slice(2);
-const base = args.find(a => a.startsWith('http')) || 'http://localhost:4174/?stub=member';
+const base = args.find(a => a.startsWith('http')) || 'http://localhost:4174/plo/?stub=member';
 const url = new URL(base); url.searchParams.set('e2e', '');
 const guestUrl = new URL(base); guestUrl.searchParams.delete('stub'); guestUrl.searchParams.set('e2e', '');
 const SHOTS = args.includes('--shots');

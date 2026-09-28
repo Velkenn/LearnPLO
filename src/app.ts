@@ -45,8 +45,8 @@ export function bump(ok: boolean): void {
   saveStats();
 }
 
-/** Add an answer time. kind: p = pot calls, b = side-pot cuts, r = reads. */
-export function recordTime(kind: 'p' | 'b' | 'r', ms: number | null): void {
+/** Add an answer time. kind: p = pot calls, b = side-pot cuts, r = reads, h = splits (bomb pots). */
+export function recordTime(kind: 'p' | 'b' | 'r' | 'h', ms: number | null): void {
   if (ms == null) return;
   const st = app.stats;
   st[kind + 'time'] = (st[kind + 'time'] || 0) + ms;
@@ -57,8 +57,8 @@ export function resetStats(): void { app.stats = { ...DEFAULT_STATS }; saveStats
 
 /** Log one answer (kept only for signed-in members). Challenge answers are tagged with the day. */
 export const logAttempt = (a: Attempt): void => {
-  // Every answer notes the table size, and challenge answers the day.
-  const detail = { ...a.detail, seats: app.S?.players.length ?? 6, ...(app.challenge && { daily: app.challenge.day }) };
+  // Every answer notes the table size, bomb pots the ante, and challenge answers the day.
+  const detail = { ...a.detail, seats: app.S?.players.length ?? 6, ...(app.S?.ante && { ante: app.S.ante }), ...(app.challenge && { daily: app.challenge.day }) };
   store.recordAttempt({ ...a, detail });
 };
 

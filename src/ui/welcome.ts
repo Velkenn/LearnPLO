@@ -6,8 +6,9 @@ import { accountsOn } from '../data/supabase.ts';
 import { $ } from './dom.ts';
 import { startHand } from '../game.ts';
 import { openDaily } from './daily.ts';
+import { isBomb } from '../page.ts';
 
-const KEY = 'plo-dd-welcomed';
+const KEY = isBomb ? 'fr-bomb-welcomed' : 'plo-dd-welcomed';
 const seen = (): boolean => { try { return localStorage.getItem(KEY) === '1'; } catch { return false; } };
 export function dismissWelcome(): void {
   try { localStorage.setItem(KEY, '1'); } catch { /* private window */ }
@@ -19,7 +20,15 @@ export function renderWelcome(): void {
   const show = !app.S && !seen() && storeMode() !== 'member' && !startedBefore();
   if (!show) { if (app.S && !box.hidden) dismissWelcome(); box.hidden = true; return; }
   if (!box.hidden && box.innerHTML) return;
-  box.innerHTML = `<h2>Practice dealing pot limit Omaha</h2>
+  box.innerHTML = isBomb ? `<h2>Practice dealing double board bomb pots</h2>
+    <p>Everyone antes, there's no betting before the flop, and two boards come out. A six- or nine-handed hand plays out on its own. You're the dealer:</p>
+    <ul class="welcome-list">
+      <li><b>Call the pot.</b> A player says “Pot” and you announce the raise.</li>
+      <li><b>Build side pots.</b> Someone's all in for less, so you split this round's bets into the main pot and a side pot.</li>
+      <li><b>Split and read.</b> Cut each pot in half, odd chip to the top board, then ship each board to its best hand.</li>
+    </ul>
+    <p class="muted">Every answer is checked and explained. Free, and no account needed to practice.</p>
+    <div class="welcome-go"><button class="btn" id="welcomeDeal">Deal a hand</button></div>` : `<h2>Practice dealing pot limit Omaha</h2>
     <p>A hand plays out on its own at a six- or nine-handed table. You’re the dealer:</p>
     <ul class="welcome-list">
       <li><b>Call the pot.</b> A player says “Pot” and you announce the raise.</li>

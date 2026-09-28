@@ -13,7 +13,7 @@ const GENERIC: Preview = {
   title: 'FeltReady daily challenge: the same five PLO hands for every dealer',
   description: 'Call the pots, build the side pots, read the showdowns. Free, and ranked on today’s leaderboard.',
   image: `${SITE}/og-daily.png`,
-  url: `${SITE}/?daily`,
+  url: `${SITE}/plo/?daily`,
 };
 
 const pair = (v: string | null, max: number): [number, number] | null => {

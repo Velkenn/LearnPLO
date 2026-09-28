@@ -51,3 +51,16 @@
 .ring9 .bet .stacks{transform:scale(.82);transform-origin:50% 100%;margin-bottom:-2px}
 .ring9 .bet .amt{font-size:12px;padding:0 4px}
 .ring9 .puck{width:20px;height:20px;font-size:11px}
+
+/* Double board (bomb pots): two smaller boards stacked in the middle, the pot above them, and
+   bets clear of both (see dblBet in ui/table.ts). */
+.dbl{--cw:clamp(30px, 9vw, 40px)}
+.dbl .board.b-top{top:47.5%}
+.dbl .board.b-bot{top:60.5%}
+.dbl .board{transition:opacity .25s}
+.dbl .board.away{opacity:.4}
+.dbl .pot:not(.pile){top:36%}
+.dbl .tdeal{top:34%}
+.dbl.ring9{--cw:clamp(27px, 8.4vw, 36px)}
+.dbl.ring9 .board.b-top{top:48%}
+.dbl.ring9 .board.b-bot{top:60%}

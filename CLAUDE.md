@@ -1,6 +1,8 @@
 # FeltReady (repo LearnPLO): notes for coding sessions
 
-FeltReady (feltready.com) is a casino dealer trainer; pot limit Omaha is the first game. Vite + TypeScript, no framework. See README.md for the layout.
+FeltReady (feltready.com) is a casino dealer trainer. Games: pot limit Omaha (`/plo/`) and
+double board bomb pots (`/bombpot/`); the home page (`/`) lists them. Vite + TypeScript, no
+framework. See README.md for the layout.
 
 ## Rules for changes
 
@@ -23,7 +25,12 @@ FeltReady (feltready.com) is a casino dealer trainer; pot limit Omaha is the fir
   explicit grants to `authenticated` (see `20260927000200_api_grants.sql`), or every request
   fails with "permission denied for table".
 - supabase-js queries only run when awaited (or `.then` is called). Never fire one with `void`.
-- Each logged answer carries `game` (`GAME` in `config.ts`) and a `detail` object. Wrong answers
+- Both game pages run the same script. The game comes from `src/page.ts` (`game`, `isBomb`),
+  read from `<body data-game>`; `GAME` in `config.ts` is the daily challenge's game ('plo').
+  Anything only one game has (the ante row, the daily strip) checks the page's game. The
+  engine keeps pot limit Omaha's code path and random draws unchanged: bomb pot branches key
+  off `S.bottom` (only bomb pot hands have a second board).
+- Each logged answer carries `game` (the page's game) and a `detail` object. Wrong answers
   add `detail.miss`, a mistake code from the drill's diagnose function (`readMiss` for reads).
   The weak spots page (`data/weakSpots.ts`) reads these fields, so keep them when changing a drill,
   and give any new mistake code a label in `MISS_LABELS`.
@@ -73,3 +80,14 @@ don't sleep a fixed time. For small fixes, it's fine to push and check at the st
 - Showdown reads side pots first. Anyone who loses a pot mucks and can't win smaller pots.
 - Chops split evenly; the odd chip goes to the first winner left of the button.
 - Omaha hands use exactly two hole cards and three board cards.
+
+Bomb pots (double board, pot limit Omaha):
+
+- Everyone antes (`settings.ante`: $5, $10, $25), no preflop betting, action starts left of the
+  button on the flop. The smallest bet is the ante. One burn per street, then the top board's
+  cards, then the bottom board's.
+- At showdown each pot splits in half: the top board gets the odd chip. Each board is read on its
+  own; a tie on one board splits that half, odd chip to the first winner left of the button.
+- Order: side pots first; for each pot, split it, read the top board, then the bottom. Losing a
+  board of a bigger pot means that player can't win that board of smaller pots (`sd.gone[b]`);
+  they keep playing the other board. Out on both boards, the hand is mucked.

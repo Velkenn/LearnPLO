@@ -1,0 +1,15 @@
+/* The home page: the list of games. */
+.home .top{margin-bottom:10px}
+.home-lead{font-size:17px;line-height:1.5;margin:4px 0 18px}
+.games{list-style:none;margin:0;padding:0;display:grid;gap:14px}
+.gamecard{background:var(--surface);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.gamelink{display:grid;gap:8px;padding:16px 16px 18px;color:inherit;text-decoration:none;background:linear-gradient(160deg, var(--felt-hi) 0%, var(--felt) 45%, var(--felt-2) 100%);color:#F2E8D8}
+.gname{font:700 26px/1.1 var(--fd);display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.gnew{font:600 11px var(--fb);letter-spacing:.05em;padding:2px 6px;border-radius:5px;background:var(--brass);color:var(--brass-ink)}
+.gdesc{font-size:15px;line-height:1.45;color:rgba(242,232,216,.88)}
+.gamelink .btn{justify-self:start;margin-top:4px}
+.gamelink:hover .btn,.gamelink:focus-visible .btn{filter:brightness(1.06)}
+.gdaily{display:block;padding:12px 16px;color:var(--ink);text-decoration:none;font-size:15px;border-top:1px solid var(--line)}
+.gdaily b{margin-right:6px}
+.gdaily::after{content:"›";float:right;color:var(--muted);font-size:18px;line-height:1}
+.home-foot{font-size:14px;line-height:1.5;margin:18px 2px 0}

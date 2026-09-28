@@ -9,6 +9,9 @@ import type { Hand } from './engine/types.ts';
 import { askPot } from './drills/potCall.ts';
 import { askCuts } from './drills/cutPot.ts';
 import { startShowdown } from './drills/readHands.ts';
+import { startBombShowdown } from './drills/bombShowdown.ts';
+import { newBombHand } from './engine/bomb.ts';
+import { isBomb } from './page.ts';
 import { render } from './ui/render.ts';
 import { timerStop } from './ui/timer.ts';
 import { showDailyResults, submitChallenge } from './ui/daily.ts';
@@ -28,7 +31,7 @@ export function startHand(): void {
   } else {
     seed(null);
     app.lastBtn = (app.lastBtn + 1) % tableSize(app.settings);
-    S = newHand(app.settings, app.lastBtn);
+    S = (isBomb ? newBombHand : newHand)(app.settings, app.lastBtn);
   }
   app.S = S;
   const hooks: Hooks = {
@@ -39,7 +42,7 @@ export function startHand(): void {
     askPot,
     askCuts,
     uncontested: (w, amount) => { S.ship = [{ i: w.i, amt: amount }]; handOver(); render(); },
-    showdown: startShowdown,
+    showdown: S.bottom ? startBombShowdown : startShowdown,
   };
   void playHand(S, hooks);
 }

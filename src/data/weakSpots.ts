@@ -1,18 +1,28 @@
 // Weak spots: accuracy and answer times from a member's logged answers, split by drill and by
 // situation (re-pots, side pots, chops...), plus the mistakes they make most. No DOM here.
 import type { ReadMiss } from '../engine/showdown.ts';
+import type { SplitMiss } from '../engine/bomb.ts';
+import type { GameId } from '../config.ts';
 import type { AttemptRow } from './store.ts';
 
 /** Mistake codes logged with wrong answers (see the diagnose functions in src/drills/). */
 export type PotMiss = 'sb-rule' | 'added-only' | 'before-call' | 'skipped-call' | 'after-call' | 'shortcut' | 'high' | 'low';
 export type CutMiss = 'dead-money' | 'everything' | 'one-share' | 'with-middle' | 'hand-total' | 'high' | 'low';
 
-export type Drill = 'pot' | 'cut' | 'read';
+export type Drill = 'pot' | 'cut' | 'read' | 'split';
 export const DRILLS: { kind: Drill; label: string }[] = [
   { kind: 'pot', label: 'Pot calls' },
   { kind: 'cut', label: 'Side pots' },
   { kind: 'read', label: 'Showdown reads' },
 ];
+/** Bomb pots add splitting each pot between the two boards. */
+export const BOMB_DRILLS: { kind: Drill; label: string }[] = [
+  { kind: 'pot', label: 'Pot calls' },
+  { kind: 'cut', label: 'Side pots' },
+  { kind: 'split', label: 'Splitting the pot' },
+  { kind: 'read', label: 'Board reads' },
+];
+export const drillsFor = (game: GameId) => game === 'bomb' ? BOMB_DRILLS : DRILLS;
 
 /** A situation needs this many answers before it can be called a weak spot. */
 export const MIN_ANSWERS = 5;
@@ -34,6 +44,11 @@ export const SITUATIONS: Situation[] = [
   { key: 'cut-later', kind: 'cut', label: 'All in after the flop', test: d => (num(d, 'street') ?? 0) > 0 },
   { key: 'cut-side', kind: 'cut', label: 'Side pots (two or more all-ins)', test: d => typeof d.pot === 'string' && d.pot !== 'Main pot' },
   { key: 'cut-dead', kind: 'cut', label: 'With dead money', test: d => d.dead === true },
+  { key: 'split-even', kind: 'split', label: 'Even pots', test: d => d.odd === false },
+  { key: 'split-odd', kind: 'split', label: 'Odd chip', test: d => d.odd === true },
+  { key: 'split-side', kind: 'split', label: 'Side pots', test: d => typeof d.pot === 'string' && d.pot !== 'Main pot' },
+  { key: 'read-top', kind: 'read', label: 'Top board', test: d => num(d, 'board') === 0 },
+  { key: 'read-bottom', kind: 'read', label: 'Bottom board', test: d => num(d, 'board') === 1 },
   { key: 'read-single', kind: 'read', label: 'One pot', test: d => num(d, 'pots') === 1 },
   { key: 'read-side', kind: 'read', label: 'Main pot and one side pot', test: d => num(d, 'pots') === 2 },
   { key: 'read-sides', kind: 'read', label: 'Two or more side pots', test: d => (num(d, 'pots') ?? 0) >= 3 },
@@ -65,6 +80,12 @@ export const MISS_LABELS: Record<Drill, Record<string, string>> = {
     'high': 'Other miscounts',
     'low': 'Other miscounts',
   } satisfies Record<CutMiss, string>,
+  split: {
+    'odd-chip': 'Gave the odd chip to the bottom board',
+    'whole': 'Gave the top board the whole pot',
+    'high': 'Other miscounts',
+    'low': 'Other miscounts',
+  } satisfies Record<SplitMiss, string>,
   read: {
     'omaha-rule': 'Missed the two-card rule',
     'wrong-winner': 'Shipped it to the wrong hand',
@@ -110,8 +131,8 @@ function tally(key: string, kind: Drill, label: string, rows: AttemptRow[]): Lin
   return { key, kind, label, n: rows.length, right, timeouts, avgMs: timed ? time / timed : null };
 }
 
-export function weakSpots(rows: AttemptRow[]): Report {
-  const drills = DRILLS.map(({ kind, label }) => {
+export function weakSpots(rows: AttemptRow[], drillList = DRILLS): Report {
+  const drills = drillList.map(({ kind, label }) => {
     const mine = rows.filter(r => r.kind === kind);
     const situations = SITUATIONS.filter(s => s.kind === kind)
       .map(s => tally(s.key, kind, s.label, mine.filter(r => s.test(r.detail || {}))))

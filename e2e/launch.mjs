@@ -1,12 +1,12 @@
 // Browser test for the launch pieces: the first-visit welcome, sending feedback, and the
 // owner's stats dashboard. Needs a build with accounts on; e2e/stub/build.sh makes one.
 //
-//   node e2e/launch.mjs http://localhost:4174/ [--shots] [--dark]
+//   node e2e/launch.mjs http://localhost:4174/plo/ [--shots] [--dark]
 import { chromium } from 'playwright';
 import { mkdirSync } from 'node:fs';
 
 const args = process.argv.slice(2);
-const base = new URL(args.find(a => a.startsWith('http')) || 'http://localhost:4174/');
+const base = new URL(args.find(a => a.startsWith('http')) || 'http://localhost:4174/plo/');
 base.searchParams.delete('stub');
 const memberUrl = (() => { const u = new URL(base.href); u.searchParams.set('stub', 'member'); return u.href; })();
 const SHOTS = args.includes('--shots');

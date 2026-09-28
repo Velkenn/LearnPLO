@@ -1,6 +1,6 @@
 // Stand-in for @supabase/supabase-js, for browser tests without a network or a real account.
 // e2e/stub/build.sh swaps it in. The URL picks who you are:
-//   ?stub=member   signed in as a member with ~330 sample answers and a daily challenge server
+//   ?stub=member   signed in as a member with a few hundred sample answers per game and a daily challenge server
 //   (anything else) signed out; a passkey sign-in then signs you in as that member
 // Passkeys only show when /auth/v1/settings says they're on; tests fake that with page.route.
 // The daily challenge grades with the real engine, like supabase/functions/daily does.
@@ -19,8 +19,8 @@ function signIn() {
 window.__inserted = [];   // attempts rows sent
 window.__feedback = [];   // feedback rows sent
 
-// ---- sample answers for the weak spots page ----
-function rows() {
+// ---- sample answers for the weak spots page (pot limit Omaha, or bomb pots) ----
+function rows(game) {
   let seed = 7; const r = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
   const out = []; const t0 = Date.UTC(2026, 8, 20);
   const add = (kind, pRight, detail, ms) => {
@@ -31,6 +31,13 @@ function rows() {
       created_at: new Date(t0 + out.length * 60000).toISOString() });
   };
   const potMiss = ['skipped-call', 'skipped-call', 'after-call', 'shortcut', 'high', 'low'];
+  if (game === 'bomb') {
+    for (let i = 0; i < 60; i++) add('pot', 0.9, { street: 1 + (i % 3), repot: i % 5 === 0, missPool: potMiss }, 9000);
+    for (let i = 0; i < 20; i++) add('cut', 0.8, { pot: 'Main pot', dead: i % 2 === 0, missPool: ['dead-money', 'one-share'] }, 15000);
+    for (let i = 0; i < 50; i++) add('split', i % 3 ? 0.95 : 0.6, { odd: i % 3 === 0, pot: i % 4 ? 'Main pot' : 'Side pot', amount: 375, top: 188, missPool: ['odd-chip', 'odd-chip', 'whole'] }, 5000);
+    for (let i = 0; i < 70; i++) add('read', i % 2 ? 0.78 : 0.92, { board: i % 2, pots: 1 + (i % 3 === 0), chop: i % 9 === 0, contenders: 3, hand: [3, 4, 5, 6][i % 4], missPool: ['wrong-winner', 'omaha-rule', 'wrong-five'] }, 16000);
+    return out.reverse();
+  }
   for (let i = 0; i < 90; i++) add('pot', 0.94, { street: 0, repot: false, sbFull: i % 3 === 0, missPool: potMiss }, 7000);
   for (let i = 0; i < 70; i++) add('pot', 0.9, { street: 1 + (i % 3), repot: false, missPool: potMiss }, 9000);
   for (let i = 0; i < 24; i++) add('pot', 0.62, { street: 1 + (i % 3), repot: true, missPool: potMiss }, 12000);
@@ -43,10 +50,13 @@ function rows() {
 }
 
 function query(table) {
-  let result = { data: null, error: null };
+  let result = { data: null, error: null }, game = 'plo';
   const q = {
-    select() { if (table === 'attempts') result = { data: [...window.__inserted.slice().reverse(), ...rows()], error: null }; return q; },
-    eq() { return q; }, order() { return q; }, limit() { return q; },
+    select() {
+      if (table === 'attempts') result = { get data() { return [...window.__inserted.filter(r => (r.game ?? 'plo') === game).reverse(), ...rows(game)]; }, error: null };
+      return q;
+    },
+    eq(col, v) { if (col === 'game') game = v; return q; }, order() { return q; }, limit() { return q; },
     maybeSingle() { result = { data: null, error: null }; return q; },
     upsert() { return q; },
     insert(v) { (table === 'feedback' ? window.__feedback : window.__inserted).push(...[].concat(v)); return q; },

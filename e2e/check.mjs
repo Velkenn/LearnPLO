@@ -61,7 +61,11 @@ if (!QUICK) {
     rmSync(dir, { recursive: true, force: true }); mkdirSync(dir, { recursive: true });
     await esbuild.build({ entryPoints: [join(ROOT, 'src/main.ts')], bundle: true, format: 'esm', outfile: join(dir, 'main.js'), define: { 'import.meta.env': JSON.stringify(env) }, alias, logLevel: 'warning' });
     await esbuild.build({ entryPoints: [join(ROOT, 'src/styles/main.css')], bundle: true, outfile: join(dir, 'main.css'), logLevel: 'warning' });
-    writeFileSync(join(dir, 'index.html'), readFileSync(join(ROOT, 'index.html'), 'utf8').replace('./src/styles/main.css', './main.css').replace('./src/main.ts', './main.js'));
+    // The same three pages Vite builds: home, and one per game, all on the one script.
+    for (const page of ['index.html', 'plo/index.html', 'bombpot/index.html']) {
+      mkdirSync(join(dir, page, '..'), { recursive: true });
+      writeFileSync(join(dir, page), readFileSync(join(ROOT, page), 'utf8').replace('/src/styles/main.css', '/main.css').replace('/src/main.ts', '/main.js'));
+    }
     cpSync(join(ROOT, 'public'), dir, { recursive: true });
   };
   const bStart = Date.now();
@@ -91,13 +95,17 @@ if (!QUICK) {
   const n = (quick, full) => String(FULL ? full : quick);
   const shots = SHOTS ? ['--shots'] : [];
   const e2e = [
-    ['drill, 6-handed (settings open)', 'drill.mjs', local.url, '--hands', n(10, 40), ...shots],
-    ['drill, 9-handed (settings open)', 'drill.mjs', local.url, '--hands', n(6, 20), '--seats', '9', ...shots],
-    ['drill, member', 'drill.mjs', `${stub.url}?stub=member`, '--hands', n(6, 16)],
-    ['drill, guest', 'drill.mjs', stub.url, '--hands', n(4, 10)],
-    ['daily challenge', 'daily.mjs', `${stub.url}?stub=member`, ...shots],
-    ['sign-in and passkeys', 'account.mjs', stub.url, ...shots],
-    ['welcome, feedback, stats', 'launch.mjs', stub.url, ...shots],
+    ['drill, 6-handed (settings open)', 'drill.mjs', `${local.url}plo/`, '--hands', n(10, 40), ...shots],
+    ['drill, 9-handed (settings open)', 'drill.mjs', `${local.url}plo/`, '--hands', n(6, 20), '--seats', '9', ...shots],
+    ['drill, member', 'drill.mjs', `${stub.url}plo/?stub=member`, '--hands', n(6, 16)],
+    ['drill, guest', 'drill.mjs', `${stub.url}plo/`, '--hands', n(4, 10)],
+    ['bomb pots, 6-handed (settings open)', 'drill.mjs', `${local.url}bombpot/`, '--hands', n(10, 40), ...shots],
+    ['bomb pots, 9-handed (settings open)', 'drill.mjs', `${local.url}bombpot/`, '--hands', n(6, 20), '--seats', '9', ...shots],
+    ['bomb pots, member', 'drill.mjs', `${stub.url}bombpot/?stub=member`, '--hands', n(6, 16), ...shots],
+    ['daily challenge', 'daily.mjs', `${stub.url}plo/?stub=member`, ...shots],
+    ['sign-in and passkeys', 'account.mjs', `${stub.url}plo/`, ...shots],
+    ['welcome, feedback, stats', 'launch.mjs', `${stub.url}plo/`, ...shots],
+    ['home page and old links', 'pages.mjs', stub.url, ...shots],
   ];
   const queue = [...e2e], width = Math.max(2, Math.min(4, availableParallelism()));
   await Promise.all([viteBuild, ...Array.from({ length: width }, async () => {

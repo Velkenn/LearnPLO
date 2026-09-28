@@ -2,7 +2,14 @@
 
 Live at https://feltready.com. (The repo is still named LearnPLO.)
 
-A pot limit Omaha dealer trainer. A six- or nine-handed hand plays out on its own, and you deal it:
+A poker dealer trainer. The home page (`/`) lists the games:
+
+- **Pot limit Omaha** at `/plo/`
+- **Double board bomb pots** at `/bombpot/` (pot limit Omaha: antes, no preflop betting, two boards)
+
+## Pot limit Omaha
+
+A six- or nine-handed hand plays out on its own, and you deal it:
 
 - **Pot calls.** When a player says “Pot,” announce the raise. Re-pots included.
 - **Side pots.** When someone is all in for less, build the side pot at the end of that betting round: say how much of this round's bets goes in the main pot (the all-in amount from each bet, plus dead money). What's already in the middle stays in the main pot.
@@ -15,7 +22,24 @@ the three spots to work on, and their most common mistakes.
 
 **Daily challenge.** The same five hands for every dealer each day (midnight to midnight
 Central). Members only. Ranked by answers right, then by total time from Start to the last
-answer, measured on the server. See "Daily challenge" below.
+answer, measured on the server. See "Daily challenge" below. It's pot limit Omaha only, and
+only shows on the PLO page.
+
+## Double board bomb pots
+
+Everyone antes ($5, $10, or $25; a member setting, $10 by default), there's no betting before the
+flop, and two boards come out: one burn per street, then the top board's cards, then the bottom
+board's. Pot calls and side pots work as in pot limit Omaha. At showdown, pot by pot, side pots
+first:
+
+- **Split it.** Say what the top board gets. The odd chip goes to the top board ($375 is $188 top,
+  $187 bottom).
+- **Read the top board, then the bottom board.** A tie on one board splits that half (odd chip to
+  the first winner left of the button), so quarters happen. Anyone who loses a board of a bigger
+  pot can't win that board of the smaller pots, but keeps playing the other board.
+
+Scores are kept per game; bomb pots add a Splits score and their own weak spots (splits with an
+odd chip, the bottom board...).
 
 ## Run it locally
 
@@ -44,7 +68,7 @@ npm run ci:wait            # after a push: wait for GitHub and Cloudflare, repor
 The pieces, if you need one on its own:
 
 ```sh
-npm test           # unit tests + 2,600 six-handed and 1,400 nine-handed simulated hands
+npm test           # unit tests + 4,000 PLO and 2,300 bomb pot simulated hands
 npm run typecheck  # TypeScript, strict mode
 npm run build      # production build into dist/
 ```
@@ -54,7 +78,8 @@ Browser test (plays 40 real hands in Chromium and checks every drill grades corr
 ```sh
 npx playwright install chromium   # first time only
 npm run build && npx vite preview --port 4173 &
-npm run e2e -- http://localhost:4173/ --shots   # screenshots land in e2e/out/
+npm run e2e -- http://localhost:4173/plo/ --shots       # screenshots land in e2e/out/
+npm run e2e -- http://localhost:4173/bombpot/ --shots   # bomb pots (files start with bomb-)
 ```
 
 The URL can carry its own query string; the test adds `e2e` to it. When accounts are on, it
@@ -68,21 +93,25 @@ can't reach the registry.
 ```sh
 e2e/stub/build.sh                                    # into e2e/stub/site/
 python3 -m http.server 4174 -d e2e/stub/site &
-npm run e2e -- "http://localhost:4174/?stub=member" --shots   # signed in
-npm run e2e -- http://localhost:4174/ --shots                 # guest
-node e2e/daily.mjs "http://localhost:4174/?stub=member" --shots   # the whole daily challenge
-node e2e/account.mjs http://localhost:4174/ --shots               # code sign-in and passkeys
-node e2e/launch.mjs http://localhost:4174/ --shots                # welcome, feedback, stats
+npm run e2e -- "http://localhost:4174/plo/?stub=member" --shots   # signed in
+npm run e2e -- http://localhost:4174/plo/ --shots                 # guest
+node e2e/daily.mjs "http://localhost:4174/plo/?stub=member" --shots   # the whole daily challenge
+node e2e/account.mjs http://localhost:4174/plo/ --shots               # code sign-in and passkeys
+node e2e/launch.mjs http://localhost:4174/plo/ --shots                # welcome, feedback, stats
+node e2e/pages.mjs http://localhost:4174/ --shots                     # home page and old links
 ```
 
 ## How the code is laid out
 
 ```
-index.html            page markup
+index.html            the home page: the list of games (static, no script)
+plo/index.html        pot limit Omaha's page: its head, and <body data-game="plo">
+bombpot/index.html    bomb pots' page: <body data-game="bomb">
 src/
-  main.ts             entry point
+  main.ts             entry point for both game pages (puts in the shared markup from ui/shell.ts)
+  page.ts             which game this page deals (from <body data-game>)
   app.ts              shared state: current hand, settings, stats, a daily challenge run
-  config.ts           stakes, speeds, timer lengths, defaults
+  config.ts           games, stakes, antes, speeds, timer lengths, defaults
   util.ts             formatting helpers
   game.ts             starts a hand and connects the engine to the drills
   engine/             the game itself, no screen code (this is what the tests exercise)
@@ -94,12 +123,15 @@ src/
     showdown.ts       winners, mucking, grading reads, paying pots and odd chips
     loop.ts           plays one hand, calling hooks when the dealer is needed
     challenge.ts      daily challenge: seeded hands, server-side grading, picking a good deal
+    bomb.ts           bomb pots: antes, two boards, splitting pots, per-board reads and mucking
   drills/             each question the dealer answers
     potCall.ts        “Pot” announcements
     cutPot.ts         building side pots
     readHands.ts      showdown reads
+    bombShowdown.ts   bomb pot showdown: split each pot, then read each board
   ui/                 drawing and input
-    table.ts          the felt, seats, chips, piles, animations
+    shell.ts          the markup both game pages share (header, sheets, table, panel)
+    table.ts          the felt, seats, chips, piles, animations (one board or two)
     render.ts         redraws the page from state
     settings.ts       settings sheet
     weakSpots.ts      weak spots sheet
@@ -123,6 +155,7 @@ e2e/drill.mjs         Playwright browser test: hands and drills
 e2e/daily.mjs         Playwright browser test: the daily challenge
 e2e/account.mjs       Playwright browser test: sign-in, in-app browser notice, passkeys
 e2e/launch.mjs        Playwright browser test: first-visit welcome, feedback, stats dashboard
+e2e/pages.mjs         Playwright browser test: home page, links between pages, old links
 worker/               the Cloudflare Worker: link previews for shared daily scores (/share)
 e2e/stub/             stand-in for supabase-js, and a build script that uses it
 e2e/check.mjs         npm run check: every check in one command
@@ -134,10 +167,14 @@ marketing/promo/      the promo video, animated in code (see its README)
 
 The live site is https://feltready.com, served by Cloudflare. Cloudflare watches `main`:
 each push runs `npm run build`, then `npx wrangler deploy`, which publishes `dist/` and the
-small Worker in `worker/` as described in `wrangler.jsonc`. Files are served straight from
-`dist/`; the Worker only runs for paths with no file. Today that's `/share`, which returns the
-page with a shared daily score in its link preview (iMessage, Reddit, and Facebook read these
-tags without running scripts). The Worker in the Cloudflare dashboard is named `learnplo`;
+small Worker in `worker/` as described in `wrangler.jsonc`. The build has three pages (see
+`vite.config.ts`): `dist/index.html`, `dist/plo/index.html`, and `dist/bombpot/index.html`.
+Files are served straight from `dist/`; the Worker only runs for paths with no file. Today
+that's `/share`, which returns the PLO page with a shared daily score in its link preview
+(iMessage, Reddit, and Facebook read these tags without running scripts).
+
+Pot limit Omaha used to be at `/`. The home page sends `/?daily` and sign-in links that come
+back to `/` (with `#access_token=...`) on to `/plo/`. The Worker in the Cloudflare dashboard is named `learnplo`;
 keep that name in `wrangler.jsonc` to match.
 
 Visitor numbers: turn on **Cloudflare Web Analytics** for feltready.com in the Cloudflare
@@ -167,7 +204,8 @@ Setup:
 1. Run `supabase/migrations/*.sql` in the Supabase SQL editor (or `supabase db push`).
    It creates `profiles`, `user_settings`, `user_stats`, and `attempts`, each locked to
    its owner with row-level security. `attempts.game` says which game an answer came from
-   (`'plo'` for now; `GAME` in `src/config.ts`).
+   (`'plo'` or `'bomb'`), and `user_stats` has one row per member per game. Settings are
+   one row per member, shared by the games (blinds for PLO, the ante for bomb pots).
 2. Put the project URL and publishable key in `.env.production` (already done for the live
    project; copy it to `.env.local` for `npm run dev`):
    ```
@@ -176,7 +214,8 @@ Setup:
    ```
    Both values are public by design; row-level security is what protects the data.
 3. In Supabase **Authentication → URL Configuration**, set the Site URL to the live site
-   and add it (plus `http://localhost:5173/**`) to Redirect URLs.
+   and add `https://feltready.com/**` (plus `http://localhost:5173/**`) to Redirect URLs, so
+   email links can come back to either game's page.
 4. In **Authentication → Emails → Magic Link** (and Confirm signup), paste
    `supabase/templates/sign-in.html`. It leads with the code: the sign-in box asks for
    it, because typing it in signs in the browser you're using. On phones the email's link often
@@ -248,8 +287,14 @@ mismatch is filed as feedback, so it shows on the stats dashboard.
 curl 'https://uzeqcsigqnjvqsnvymfb.supabase.co/functions/v1/daily?action=selftest'
 ```
 
+## Adding a game
+
+A game is a page (`<name>/index.html` with `<body data-game="...">`, added to `vite.config.ts`,
+`e2e/check.mjs`, and `e2e/stub/build.sh`), an id in `GameId` and `GAMES` (`src/config.ts`), a
+card on the home page, and a new migration allowing its id in `attempts.game` and
+`user_stats.game`.
+
 ## Next up
 
-1. More games under one roof: a home page listing games, pot limit Omaha at /plo
-   (`attempts.game` and the daily tables already carry a game).
+1. More games: a bomb pot daily challenge, then other games (Texas Hold'em, and games beyond poker).
 2. A version for card rooms and dealer schools, with a manager view of trainee progress.

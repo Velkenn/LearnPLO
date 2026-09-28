@@ -1,6 +1,11 @@
 // The daily challenge: the strip under the scores, and the sheet with start, results, and leaderboard.
 import { app, beginChallenge, challengeComplete, endChallenge, storeMode } from '../app.ts';
-import { accountsOn } from '../data/supabase.ts';
+import { accountsOn as accounts } from '../data/supabase.ts';
+import { GAME } from '../config.ts';
+import { game } from '../page.ts';
+
+/** The daily challenge is pot limit Omaha: only its page shows it. */
+const accountsOn = accounts && game === GAME;
 import { DailyError, loadBoard, startDaily, submitDaily, type Board, type DailyResult } from '../data/daily.ts';
 import { CHALLENGE_HANDS, CHALLENGE_VERSION } from '../engine/challenge.ts';
 import { startHand } from '../game.ts';
@@ -106,6 +111,7 @@ export function renderDaily(): void {
 
 // ---- actions ----
 async function refreshBoard(): Promise<void> {
+  if (!accountsOn) return;
   try { ui.board = await loadBoard(); ui.boardFailed = false; } catch (e) { console.warn('FeltReady: leaderboard', e); ui.boardFailed = true; }
   renderDaily();
 }

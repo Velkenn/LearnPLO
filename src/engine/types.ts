@@ -41,6 +41,19 @@ export interface Pot {
   share?: number;
   awarded?: boolean;
   odd?: { seat: number; amt: number };
+  /** Double board: the pot's top-board and bottom-board halves (the top gets the odd chip). */
+  halves?: [Half, Half];
+}
+
+/** One board's half of a pot in a double board hand. */
+export interface Half {
+  board: 0 | 1;         // 0 = top board, 1 = bottom board
+  amount: number;
+  top: Score;           // best hand on this board among the pot's players
+  winners: number[];
+  share?: number;
+  awarded?: boolean;
+  odd?: { seat: number; amt: number };
 }
 
 /** Everything needed to ask and explain one pot-raise question. */
@@ -60,7 +73,8 @@ export interface QuizState {
 export interface CutAnswer { v: number; ok: boolean; timeout: boolean; ms: number | null; diag?: string }
 export interface CutState { pots: Pot[]; j: number; ans: CutAnswer[] }
 
-export interface ShowdownRow { i: number; best: Best }
+/** best: the hand on the board (the top board in a double board hand). best2: the bottom board. */
+export interface ShowdownRow { i: number; best: Best; best2?: Best }
 export interface ReadResult {
   ok: boolean;
   auto?: boolean;
@@ -68,6 +82,7 @@ export interface ReadResult {
   picks?: { seat: number; score: Score }[];
   ms?: number | null;
 }
+export interface SplitAnswer { v: number | null; ok: boolean; timeout: boolean; ms: number | null; diag?: string }
 export interface Showdown {
   rows: ShowdownRow[];
   pots: Pot[];
@@ -76,6 +91,15 @@ export interface Showdown {
   phase: 'read' | 'result';
   results: Record<number, ReadResult>;
   mucked: Set<number>;
+  /**
+   * Double board only. part: what's being done with the current pot: split it, then read the
+   * top board (0), then the bottom board (1). reads: keyed "pot-board". gone: per board, players
+   * who lost that board of a bigger pot (they can't win it in smaller pots). splits: per pot.
+   */
+  part?: 'split' | 0 | 1;
+  reads?: Record<string, ReadResult>;
+  gone?: [Set<number>, Set<number>];
+  splits?: Record<number, SplitAnswer>;
 }
 
 export type Mode = 'running' | 'quiz' | 'cut' | 'showdown' | 'done';
@@ -83,6 +107,8 @@ export type Mode = 'running' | 'quiz' | 'cut' | 'showdown' | 'done';
 export interface Hand {
   btn: number; sb: number; bb: number; unit: number; sbFull: boolean;
   deck: Card[]; board: Card[]; pot: number; street: number;
+  /** Double board bomb pots: the bottom board (board is the top one) and the ante each player put in. */
+  bottom?: Card[]; ante?: number; freshB?: number[] | null;
   currentBet: number; lastRaise: number; lastAgg: number | null;
   streetActions: number; streetBets: number; streetRaises: number;
   log: LogLine[]; caption: string; acting: number | null; mode: Mode;
@@ -113,13 +139,17 @@ export type Speed = 'slow' | 'normal' | 'fast';
 export type TimerLevel = 'off' | 'relaxed' | 'standard' | 'fast';
 export type SideFreq = 'off' | 'some' | 'often';
 export type TableSize = 6 | 9;
+/** Bomb pot ante per player. */
+export type Ante = 5 | 10 | 25;
 
 export interface Settings {
   stakes: Stakes; speed: Speed; four: boolean; showPot: boolean; sbFull: boolean;
   side: SideFreq; timer: TimerLevel; potCalls: number; chipAmt: boolean; sound: boolean;
   /** Players at the table (6-max or full ring). */
   seats: TableSize;
+  /** Bomb pots: what each player antes. */
+  ante: Ante;
 }
 
-/** Counters: pr/pt pot calls right/total, rr/rt reads, sr/st side-pot cuts, plus time sums (ptime/pn etc). */
+/** Counters: pr/pt pot calls right/total, rr/rt reads, sr/st side-pot cuts, hr/ht splits (bomb pots), plus time sums (ptime/pn etc). */
 export type Stats = Record<string, number>;

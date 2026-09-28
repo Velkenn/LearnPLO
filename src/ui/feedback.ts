@@ -4,6 +4,7 @@ import { app, memberEmail, storeMode } from '../app.ts';
 import { accountsOn } from '../data/supabase.ts';
 import { sendFeedback } from '../data/admin.ts';
 import { $, $q, sheetOpen, showSheet } from './dom.ts';
+import { game } from '../page.ts';
 
 const ui = { busy: false, sent: false, msg: '', draft: '', email: '' };
 
@@ -37,7 +38,7 @@ async function send(): Promise<void> {
   ui.busy = true; ui.msg = ''; renderFeedback();
   // A little context makes a bug report usable: where they were and on what device.
   const context = {
-    mode: storeMode(), hand: app.S?.mode ?? null, challenge: !!app.challenge,
+    game, mode: storeMode(), hand: app.S?.mode ?? null, challenge: !!app.challenge,
     width: window.innerWidth, ua: navigator.userAgent.slice(0, 180),
   };
   const err = await sendFeedback(message, storeMode() === 'member' ? null : email || null, context);

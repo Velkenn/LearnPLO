@@ -4,14 +4,15 @@
 //  guest  – accounts are on, nobody is signed in: default settings, stats for this visit only.
 //  member – signed in: settings and stats sync to Supabase; every answer is logged.
 import type { Settings, Stats } from '../engine/types.ts';
-import { DEFAULT_SETTINGS, DEFAULT_STATS, GAME } from '../config.ts';
+import { DEFAULT_SETTINGS, DEFAULT_STATS } from '../config.ts';
+import { game } from '../page.ts';
 import { supabase } from './supabase.ts';
 import { answered, cleanSettings, cleanStats, pickMemberSettings, pickMemberStats } from './merge.ts';
 
 export type StoreMode = 'local' | 'guest' | 'member';
 
 export interface Attempt {
-  kind: 'pot' | 'cut' | 'read';
+  kind: 'pot' | 'cut' | 'read' | 'split';
   correct: boolean;
   timedOut: boolean;
   ms: number | null;
@@ -53,13 +54,16 @@ function write(storage: 'local' | 'session', key: string, value: unknown): void 
   try { (storage === 'local' ? localStorage : sessionStorage).setItem(key, JSON.stringify(value)); } catch { /* ignore */ }
 }
 
+// Settings (and the answers queue, whose rows carry their game) are shared by every game.
+// Stats are kept per game; pot limit Omaha keeps the names it had before there were other games.
+const statsKey = (name: string): string => game === 'plo' ? `plo-dd-${name}` : `fr-${game}-${name}`;
 const K = {
   settings: 'plo-dd-settings',           // local mode, and legacy data from before accounts
-  stats: 'plo-dd-stats',
+  stats: statsKey('stats'),
   comfort: 'plo-dd-comfort',             // guest: sound and four-color deck
-  guestStats: 'plo-dd-guest-stats',      // guest: this visit (sessionStorage)
+  guestStats: statsKey('guest-stats'),   // guest: this visit (sessionStorage)
   memberSettings: (id: string) => `plo-dd-m-settings-${id}`,
-  memberStats: (id: string) => `plo-dd-m-stats-${id}`,
+  memberStats: (id: string) => statsKey(`m-stats-${id}`),
   queue: (id: string) => `plo-dd-m-queue-${id}`,
 };
 
@@ -100,7 +104,7 @@ export async function memberStore(id: string, email: string): Promise<Store> {
   const sb = supabase!;
   const [s, t] = await Promise.all([
     sb.from('user_settings').select('data').eq('user_id', id).maybeSingle(),
-    sb.from('user_stats').select('data').eq('user_id', id).maybeSingle(),
+    sb.from('user_stats').select('data').eq('user_id', id).eq('game', game).maybeSingle(),
   ]);
   // If either read failed (offline, server hiccup), run from this device's copy and don't
   // treat the account as new, so defaults never overwrite what's saved on the server.
@@ -114,7 +118,10 @@ export async function memberStore(id: string, email: string): Promise<Store> {
   // Supabase queries only run when awaited, so each push awaits its request.
   // A failed push stays marked and is retried on the next change or when the connection returns.
   const upsert = async (table: 'user_settings' | 'user_stats', data: Settings | Stats): Promise<boolean> => {
-    const { error } = await sb.from(table).upsert({ user_id: id, data, updated_at: new Date().toISOString() });
+    const row = { user_id: id, data, updated_at: new Date().toISOString() };
+    const { error } = table === 'user_stats'
+      ? await sb.from(table).upsert({ ...row, game }, { onConflict: 'user_id,game' })
+      : await sb.from(table).upsert(row);
     if (error) console.warn(`FeltReady: saving ${table} failed`, error);
     return !error;
   };
@@ -123,7 +130,8 @@ export async function memberStore(id: string, email: string): Promise<Store> {
   const pushStats = debounce(async () => { statsDirty = true; if (await upsert('user_stats', stats)) statsDirty = false; }, 1500);
 
   // Answers wait in a small queue so nothing is lost offline; the queue is sent in batches.
-  // Rows queued before the game column existed get the table default ('plo').
+  // Rows queued before the game column existed get the table default ('plo'). One queue for
+  // every game: each row says which game it's from.
   const queued = (): Record<string, unknown>[] => (read('local', K.queue(id)) as Record<string, unknown>[] | null) || [];
   const send = async (): Promise<void> => {
     const q = queued();
@@ -163,7 +171,7 @@ export async function memberStore(id: string, email: string): Promise<Store> {
     saveStats: next => { stats = { ...next }; write('local', K.memberStats(id), stats); pushStats.run(); },
     recordAttempt: a => {
       const q = (read('local', K.queue(id)) as unknown[] | null) || [];
-      q.push({ game: GAME, kind: a.kind, correct: a.correct, timed_out: a.timedOut, ms: a.ms == null ? null : Math.round(a.ms), detail: a.detail ?? null, created_at: new Date().toISOString() });
+      q.push({ game, kind: a.kind, correct: a.correct, timed_out: a.timedOut, ms: a.ms == null ? null : Math.round(a.ms), detail: a.detail ?? null, created_at: new Date().toISOString() });
       write('local', K.queue(id), q.slice(-500));
       flushQueue.run();
     },
@@ -173,12 +181,12 @@ export async function memberStore(id: string, email: string): Promise<Store> {
       await sendQueue();
       const { data, error } = await sb.from('attempts')
         .select('kind, correct, timed_out, ms, detail, created_at')
-        .eq('game', GAME)
+        .eq('game', game)
         .order('created_at', { ascending: false })
         .limit(ATTEMPTS_WINDOW);
       if (error) throw error;
       // Anything still queued (the send failed) counts too.
-      const pending = queued().filter(r => (r.game ?? GAME) === GAME).reverse() as unknown as AttemptRow[];
+      const pending = queued().filter(r => (r.game ?? 'plo') === game).reverse() as unknown as AttemptRow[];
       return [...pending, ...((data ?? []) as AttemptRow[])].slice(0, ATTEMPTS_WINDOW);
     },
     close: () => {

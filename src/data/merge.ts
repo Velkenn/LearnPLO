@@ -3,7 +3,7 @@ import type { Settings, Stats } from '../engine/types.ts';
 import { DEFAULT_SETTINGS, DEFAULT_STATS } from '../config.ts';
 
 /** How many answers a stats object holds. Used to decide which copy is newer. */
-export const answered = (s: Stats | null | undefined): number => s ? (s.pt || 0) + (s.rt || 0) + (s.st || 0) : 0;
+export const answered = (s: Stats | null | undefined): number => s ? (s.pt || 0) + (s.rt || 0) + (s.st || 0) + (s.ht || 0) : 0;
 
 /** Settings from the account laid over defaults, ignoring anything unknown. */
 export function cleanSettings(raw: unknown): Settings {
@@ -15,6 +15,7 @@ export function cleanSettings(raw: unknown): Settings {
     }
   }
   if (out.seats !== 6 && out.seats !== 9) out.seats = DEFAULT_SETTINGS.seats;
+  if (out.ante !== 5 && out.ante !== 10 && out.ante !== 25) out.ante = DEFAULT_SETTINGS.ante;
   return out;
 }
 

@@ -5,20 +5,20 @@
 <script>
   // One address only: a sign-in is remembered per address, so www would look signed out.
   if (location.hostname === 'www.feltready.com') location.replace('https://feltready.com' + location.pathname + location.search + location.hash);
-  // Shared daily-challenge scores come in as /share?... (the server fills in the link preview).
-  // Visitors land on the challenge.
-  else if (location.pathname === '/share') history.replaceState(null, '', '/?daily');
+  // Pot limit Omaha used to live here. Its daily challenge links (?daily) and sign-in links that
+  // come back to this address go on to its page.
+  else if (new URLSearchParams(location.search).has('daily') || /access_token=|error_description=/.test(location.hash)) location.replace('/plo/' + location.search + location.hash);
 </script>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<link rel="canonical" href="https://feltready.com/">
-<meta name="description" content="Dealer training for pot limit Omaha: call pot raises, build side pots, and read showdowns. Free to practice.">
-<title>FeltReady: pot limit Omaha dealer training</title>
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <meta name="theme-color" content="#154A34">
+<link rel="canonical" href="https://feltready.com/">
+<meta name="description" content="Dealer training for pot limit Omaha and double board bomb pots: call pot raises, build side pots, split pots, and read showdowns. Free to practice.">
+<title>FeltReady: poker dealer training</title>
 <meta property="og:site_name" content="FeltReady">
-<meta property="og:title" content="FeltReady: pot limit Omaha dealer training">
-<meta property="og:description" content="Call pot raises, build side pots, and read showdowns on a live table. Free to practice.">
+<meta property="og:title" content="FeltReady: poker dealer training">
+<meta property="og:description" content="Practice dealing pot limit Omaha and double board bomb pots on a live table. Free to practice.">
 <meta property="og:url" content="https://feltready.com/">
 <meta property="og:image" content="https://feltready.com/og.png">
 <meta property="og:image:width" content="1200">
@@ -28,64 +28,31 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="./src/styles/main.css">
+<link rel="stylesheet" href="/src/styles/main.css">
 </head>
-<body>
-<div class="wrap">
-  <header class="top">
-    <h1 class="brand">
-      <svg class="logo" viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="31" fill="#1E6045"/><circle cx="32" cy="32" r="26" fill="none" stroke="#F2E8D0" stroke-width="6.5" stroke-dasharray="10.21 10.21"/><circle cx="32" cy="32" r="19" fill="#1E6045" stroke="#C99B2F" stroke-width="1.6"/><path d="M25.5 20h14v4.8h-8.6v5h7.6v4.8h-7.6V44h-5.4z" fill="#F2E8D0"/></svg>
-      <span class="wm">Felt<span>Ready</span></span>
-      <span class="game">PLO</span>
-    </h1>
-    <button class="linkbtn" id="signin" hidden>Sign in</button>
-    <button class="iconbtn" id="spotsBtn" aria-label="Your weak spots" aria-expanded="false" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M5 20v-7M12 20V5M19 20v-10M3 20h18"/></svg></button>
-    <button class="iconbtn" id="gear" aria-label="Settings" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg></button>
-  </header>
-  <div class="scores" id="scores"></div>
-  <div class="daily-strip" id="dailyStrip" hidden></div>
-
-  <section class="sheet" id="sheet" aria-label="Settings">
-    <div class="acct" id="acct" hidden></div>
-    <fieldset class="training" id="training">
-    <legend class="sr">Training settings</legend>
-    <p class="lockmsg" id="lockmsg" hidden>Sign in to change these.</p>
-    <div class="row"><label for="stakes">Blinds</label>
-      <select id="stakes"><option>1/2</option><option>2/5</option><option>5/10</option><option>25/50</option></select></div>
-    <div class="row"><span>Players</span>
-      <div class="seg" id="seatsSeg"><button data-v="6">6-handed</button><button data-v="9">9-handed</button></div></div>
-    <div class="row"><span>Action speed</span>
-      <div class="seg" id="speed"><button data-v="slow">Slow</button><button data-v="normal">Normal</button><button data-v="fast">Fast</button></div></div>
-    <div class="row trow"><span>Timer</span>
-      <div class="seg" id="timerSeg"><button data-v="off">Off</button><button data-v="relaxed">Relaxed</button><button data-v="standard">Standard</button><button data-v="fast">Fast</button></div></div>
-    <p class="thint muted" id="thint"></p>
-    <div class="row"><span>Pot calls per hand</span>
-      <div class="seg" id="potCount"><button data-v="1">1</button><button data-v="2">2</button><button data-v="3">3</button></div></div>
-    <p class="thint muted">Up to this many per hand. With 2 or 3, some come as re-pots on the same street.</p>
-    <div class="row"><span>Side pot hands</span>
-      <div class="seg" id="sideFreq"><button data-v="off">Off</button><button data-v="some">Some</button><button data-v="often">Often</button></div></div>
-    <div class="row"><label for="showPot">Show the pot total on the table</label><input type="checkbox" id="showPot"></div>
-    <div class="row"><label for="sbFull">Count the small blind as a full blind in the preflop pot</label><input type="checkbox" id="sbFull"></div>
-    <div class="row"><label for="chipAmt">Label chip amounts (turn off to count chips yourself)</label><input type="checkbox" id="chipAmt"></div>
-    </fieldset>
-    <div class="row"><label for="sound">Chip sounds and vibration</label><input type="checkbox" id="sound"></div>
-    <div class="row"><label for="four">Four-color deck</label><input type="checkbox" id="four"></div>
-    <div class="row"><span class="muted" id="scoreNote">Scores are saved on this device.</span><button class="btn ghost" id="reset">Reset scores</button></div>
-  </section>
-
-  <section class="sheet spots" id="spots" aria-label="Your weak spots"></section>
-  <section class="sheet spots daily" id="daily" aria-label="Daily challenge"></section>
-  <section class="sheet spots" id="feedback" aria-label="Send feedback"></section>
-  <section class="sheet spots" id="stats" aria-label="Stats"></section>
-  <section class="welcome" id="welcome" hidden></section>
-
-  <div class="table" id="table"></div>
-  <div class="ticker"><span class="street" id="street">Ready</span><strong id="caption">Waiting on a deal</strong></div>
-  <section class="panel" id="panel"></section>
-  <div class="modal" id="modal" role="dialog" aria-modal="true" aria-labelledby="qtitle"><div class="box" id="modalBox"></div></div>
-  <details class="log" id="logwrap"><summary>Hand history</summary><ol id="log"></ol></details>
-  <footer class="foot"><button class="linkbtn" id="feedbackOpen" hidden>Send feedback</button></footer>
+<body data-page="home">
+<div class="wrap home">
+  <header class="top"><h1 class="brand"><svg class="logo" viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="31" fill="#1E6045"/><circle cx="32" cy="32" r="26" fill="none" stroke="#F2E8D0" stroke-width="6.5" stroke-dasharray="10.21 10.21"/><circle cx="32" cy="32" r="19" fill="#1E6045" stroke="#C99B2F" stroke-width="1.6"/><path d="M25.5 20h14v4.8h-8.6v5h7.6v4.8h-7.6V44h-5.4z" fill="#F2E8D0"/></svg>
+      <span class="wm">Felt<span>Ready</span></span></h1></header>
+  <p class="home-lead">Deal it here before you deal it live. A hand plays out on its own and you run the table: call the pots, build the side pots, and ship every pot to the right hand. Every answer is checked and explained.</p>
+  <ul class="games">
+    <li class="gamecard">
+      <a class="gamelink" href="/plo/">
+        <span class="gname">Pot limit Omaha</span>
+        <span class="gdesc">Six- or nine-handed, with blinds. Call pot raises and re-pots, build side pots, and read the showdown.</span>
+        <span class="btn">Deal pot limit Omaha</span>
+      </a>
+      <a class="gdaily" href="/plo/?daily"><b>Daily challenge</b> Same five hands for every dealer, with a leaderboard</a>
+    </li>
+    <li class="gamecard">
+      <a class="gamelink" href="/bombpot/">
+        <span class="gname">Double board bomb pots <span class="gnew">New</span></span>
+        <span class="gdesc">Pot limit Omaha with everyone in for an ante and two boards. Call the pots, split each pot between the boards, and read both boards.</span>
+        <span class="btn">Deal bomb pots</span>
+      </a>
+    </li>
+  </ul>
+  <p class="muted home-foot">Free to practice, no account needed. Sign in free to set your own stakes and timer, keep your stats, and play the daily challenge.</p>
 </div>
-<script type="module" src="./src/main.ts"></script>
 </body>
 </html>

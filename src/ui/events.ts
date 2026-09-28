@@ -4,6 +4,7 @@ import { startHand } from '../game.ts';
 import { continueQuiz, gradeQuiz } from '../drills/potCall.ts';
 import { finishCuts, gradeCut, nextCut } from '../drills/cutPot.ts';
 import { gradeHand, nextPot, toggleSel } from '../drills/readHands.ts';
+import { gradeBombRead, gradeSplit, nextPart } from '../drills/bombShowdown.ts';
 import { $ } from './dom.ts';
 import { openAccount } from './account.ts';
 import { fitVV, renderModal, renderPanel, unpeek } from './render.ts';
@@ -20,8 +21,10 @@ export function initEvents(): void {
     if (t.id === 'deal') { deal(); return; }
     if (t.id === 'unpeek') { unpeek(); return; }
     if (t.id === 'introSignin') { openAccount(); return; }
-    if (t.id === 'gradeBtn') { gradeHand(false); return; }
+    if (t.id === 'gradeBtn') { if (app.S?.bottom) gradeBombRead(false); else gradeHand(false); return; }
     if (t.id === 'nextPot') { nextPot(); return; }
+    if (t.id === 'splitBtn') { gradeSplit(false); return; }
+    if (t.id === 'nextPart') { nextPart(); return; }
     const S = app.S;
     if (t.dataset.k && S && S.mode === 'showdown' && S.sd?.phase === 'read') {
       toggleSel(t.dataset.k as 'board' | 'hole', t.dataset.s != null ? +t.dataset.s : null, +(t.dataset.i || 0));
@@ -36,6 +39,11 @@ export function initEvents(): void {
     if (t.id === 'cont2') { nextCut(); return; }
     if (t.id === 'cutDone') { finishCuts(); return; }
     if (t.id === 'peek' && app.S) { app.S.peek = true; renderModal(); renderPanel(); window.scrollTo({ top: 0, behavior: 'auto' }); }
+  });
+
+  // The split question at showdown is in the panel.
+  $('#panel').addEventListener('keydown', e => {
+    if (e.key === 'Enter' && (e.target as HTMLElement).id === 'sp') { e.preventDefault(); gradeSplit(false); }
   });
 
   $('#modal').addEventListener('keydown', e => {

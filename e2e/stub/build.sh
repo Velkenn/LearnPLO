@@ -5,8 +5,8 @@
 #
 #   e2e/stub/build.sh [out dir]      # default e2e/stub/site
 #   python3 -m http.server 4174 -d e2e/stub/site &
-#   npm run e2e -- "http://localhost:4174/?stub=member" --shots
-#   node e2e/daily.mjs "http://localhost:4174/?stub=member" --shots
+#   npm run e2e -- "http://localhost:4174/plo/?stub=member" --shots
+#   node e2e/daily.mjs "http://localhost:4174/plo/?stub=member" --shots
 set -e
 cd "$(dirname "$0")/../.."
 OUT=${1:-e2e/stub/site}
@@ -16,6 +16,9 @@ rm -rf "$OUT"; mkdir -p "$OUT"
 "$ES" src/main.ts --bundle --format=esm --outfile="$OUT/main.js" --define:import.meta.env="$ENV" \
   --alias:@supabase/supabase-js=./e2e/stub/supabase.js --log-level=warning
 "$ES" src/styles/main.css --bundle --outfile="$OUT/main.css" --log-level=warning
-sed -e 's#\./src/styles/main.css#./main.css#' -e 's#\./src/main.ts#./main.js#' index.html > "$OUT/index.html"
+for page in index.html plo/index.html bombpot/index.html; do
+  mkdir -p "$OUT/$(dirname "$page")"
+  sed -e 's#/src/styles/main.css#/main.css#' -e 's#/src/main.ts#/main.js#' "$page" > "$OUT/$page"
+done
 cp -r public/. "$OUT/"
 echo "built $OUT"

@@ -1,7 +1,7 @@
 /* Ticker, drill panel, popup, verdicts, timer bar, lists. */
 /* ticker */
 .ticker{display:flex;align-items:baseline;gap:12px;padding:4px 2px 10px;margin-top:2px;min-height:40px;border-bottom:1px solid var(--line)}
-.ticker .street{font:600 14px var(--fb);color:var(--muted);min-width:70px}
+.ticker .street{font:600 14px var(--fb);color:var(--muted);min-width:70px;flex:none}
 .ticker strong{font:600 20px var(--fd);line-height:1.15}
 
 /* panel */

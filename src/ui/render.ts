@@ -1,20 +1,37 @@
 // Redraws everything from app state: scores, table, ticker, panel, popup, hand history.
 import { app, nextHandLabel, storeMode } from '../app.ts';
 import { STREETS } from '../config.ts';
+import { fmt } from '../util.ts';
 import { $, $q } from './dom.ts';
 import { renderTable } from './table.ts';
 import { quizPanel } from '../drills/potCall.ts';
 import { cutPanel } from '../drills/cutPot.ts';
 import { readPanel } from '../drills/readHands.ts';
+import { bombPanel } from '../drills/bombShowdown.ts';
+import { isBomb } from '../page.ts';
 import { renderStrip } from './daily.ts';
 import { renderWelcome } from './welcome.ts';
 
 export function renderScores(): void {
-  const s = app.stats;
-  $('#scores').innerHTML = `<div class="sc"><span>Pots</span><b>${s.pr}/${s.pt}</b></div><div class="sc"><span>Reads</span><b>${s.rr}/${s.rt}</b></div><div class="sc"><span>Side pots</span><b>${s.sr}/${s.st}</b></div><div class="sc"><span>Streak</span><b>${s.streak}</b></div>`;
+  const s = app.stats, sc = (label: string, v: string) => `<div class="sc"><span>${label}</span><b>${v}</b></div>`;
+  $('#scores').innerHTML = sc('Pots', `${s.pr}/${s.pt}`) + (isBomb ? sc('Splits', `${s.hr || 0}/${s.ht || 0}`) : '') +
+    sc('Reads', `${s.rr}/${s.rt}`) + sc('Side pots', `${s.sr}/${s.st}`) + sc('Streak', String(s.streak));
+}
+
+/** Before the first deal in bomb pots. */
+function bombIntroHTML(): string {
+  const ante = app.settings.ante;
+  return `<h2>You're in the box</h2><p>${app.settings.seats === 9 ? 'Nine' : 'Six'}-handed double board bomb pot. Everyone antes ${fmt(ante)}, there's no betting before the flop, and two boards come out. When a player says “Pot,” announce the raise. When someone's all in for less, build the side pot. At showdown, split each pot between the boards, then read the top board and the bottom board.</p>
+    ${storeMode() === 'guest' ? `<p class="muted intro-acct">Want a timer, your own ante, or stats that stick? <button class="linkbtn" id="introSignin">Sign in free</button></p>` : ''}
+    <details class="howto"><summary>How to split and read two boards</summary>
+    <p>The pot on the flop is the antes: ${app.settings.seats === 9 ? 'nine' : 'six'} players at ${fmt(ante)} is ${fmt(ante * app.settings.seats)}. Pot raises work the same as always: the last bet plus the pot after calling it, or three times the last bet plus everything else out.</p>
+    <p>At showdown, cut each pot into two equal stacks, one for each board. If it doesn't split evenly, the odd chip goes to the top board: a $375 pot is $188 top, $187 bottom.</p>
+    <p>Read each board on its own. One player can win both halves (a scoop). A tie on one board splits that half, so a player can end up with a quarter of the pot.</p>
+    <p>With side pots, read the side pot first. Anyone who loses a board of the side pot can't win that board of the main pot, but still plays for the other board.</p></details>`;
 }
 
 function introHTML(): string {
+  if (isBomb) return bombIntroHTML();
   return `<h2>You're in the box</h2><p>${app.settings.seats === 9 ? 'Nine' : 'Six'}-handed pot limit Omaha. When a player says “Pot,” announce the raise. When someone's all in for less, build the side pot at the end of that round. At showdown, ship each pot to the right hand, and chop it when hands tie.</p>
     ${storeMode() === 'guest' ? `<p class="muted intro-acct">Want a timer, your own blinds, or stats that stick? <button class="linkbtn" id="introSignin">Sign in free</button></p>` : ''}
     <details class="howto"><summary>How to figure the pot</summary>
@@ -29,7 +46,7 @@ export function renderPanel(): void {
   if (!S) h = introHTML();
   else if (S.mode === 'quiz') h = `<p class="muted" style="margin:0">${S.caption}. Announce the pot to keep the hand going.</p>`;
   else if (S.mode === 'cut') h = `<p class="muted" style="margin:0">${S.caption}. Build the side pot to keep the hand going.</p>`;
-  else if (S.sd && (S.mode === 'showdown' || S.mode === 'done')) h = readPanel();
+  else if (S.sd && (S.mode === 'showdown' || S.mode === 'done')) h = S.bottom ? bombPanel() : readPanel();
   else if (S.mode === 'done') h = `<h2>Hand's over</h2><p>${S.caption}.</p><button class="btn wide" id="deal">${nextHandLabel()}</button>`;
   else h = `<p class="muted" style="margin-bottom:12px">Follow the action. When someone pots, you announce it.</p>${app.challenge ? '' : '<button class="btn ghost" id="deal">New hand</button>'}`;
   $('#panel').innerHTML = h;
@@ -37,7 +54,7 @@ export function renderPanel(): void {
 
 function renderTicker(): void {
   const S = app.S;
-  $('#street').textContent = !S ? 'Ready' : S.mode === 'showdown' || S.mode === 'done' ? 'Showdown' : STREETS[S.street];
+  $('#street').textContent = !S ? 'Ready' : S.mode === 'showdown' || S.mode === 'done' ? 'Showdown' : S.bottom && S.street === 0 ? 'Antes' : STREETS[S.street];
   $('#caption').textContent = !S ? 'Waiting on a deal' : S.caption;
 }
 

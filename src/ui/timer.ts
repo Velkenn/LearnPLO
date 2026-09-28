@@ -2,7 +2,7 @@
 import { app } from '../app.ts';
 import { TIMERS } from '../config.ts';
 
-type Kind = 'pot' | 'build' | 'read';
+type Kind = 'pot' | 'build' | 'read' | 'split';
 interface Running { kind: Kind; limit: number; start: number; paused: number; hiddenAt: number | null; onExpire: () => void; raf: number }
 let T: Running | null = null;
 
@@ -50,7 +50,7 @@ export function timerHTML(kind: Kind): string {
   return `<div class="tbar" role="timer" aria-label="Time left"><div class="ttrack"><div class="tfill" style="width:${w}%"></div></div><span class="tsec">${sec}s</span></div>`;
 }
 
-export function timeLine(kind: 'p' | 'b' | 'r', ms: number | null | undefined): string {
+export function timeLine(kind: 'p' | 'b' | 'r' | 'h', ms: number | null | undefined): string {
   if (ms == null) return '';
   const n = app.stats[kind + 'n'] || 0, t = app.stats[kind + 'time'] || 0;
   return `<p class="tline">Answered in ${(ms / 1000).toFixed(1)}s${n > 1 ? `. Your average: ${(t / n / 1000).toFixed(1)}s` : ''}.</p>`;

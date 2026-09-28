@@ -79,7 +79,9 @@ export async function playHand(S: Hand, h: Hooks): Promise<void> {
       await h.sleep(h.actionDelay() * 1.2);
       if (!h.current()) return;
     }
-    if (S.players.filter(p => !p.folded && !p.allin).length >= 2) await bettingRound();
+    // Bomb pots: everyone antes and there's no betting before the flop.
+    const bets = !(st === 0 && S.bottom);
+    if (bets && S.players.filter(p => !p.folded && !p.allin).length >= 2) await bettingRound();
     if (!h.current()) return;
     if (S.quizLeft > 0 && S.quizStreet === st) S.quizStreet = st + 1;
     if (active(S).length <= 1) break;

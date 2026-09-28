@@ -159,7 +159,8 @@ export function decide(S: Hand, p: Player): void {
     else {
       const afterPot = S.potsThisStreet > 0;
       // Full ring: more players fold preflop, so about as many see the flop as six-handed.
-      const foldP = afterPot ? .45 : (S.street === 0 ? (seatsOf(S) > 6 ? .58 : .4) : .3);
+      // Nine-handed bomb pots (everyone sees the flop) fold a little more after it.
+      const foldP = afterPot ? .45 : (S.street === 0 ? (seatsOf(S) > 6 ? .58 : .4) : S.bottom && seatsOf(S) > 6 ? .4 : .3);
       const r = rand();
       if (cf && r < foldP) doFold(S, p);
       else if (S.streetRaises === 0 && !afterPot && r > .88 && tryRaise(S, p)) { /* raised */ }
@@ -213,6 +214,14 @@ export function dealBoard(S: Hand, st: number): void {
   S.streetStart = S.players.map(p => p.totalIn); // a new betting round starts from here
   const n = st === 1 ? 3 : 1; S.fresh = [];
   for (let k = 0; k < n; k++) { const c = S.deck.pop()!; S.fresh.push(S.board.length); S.board.push(c); }
+  if (S.bottom) {
+    // Double board: one burn, then the top board's cards, then the bottom board's.
+    const B = S.bottom; S.freshB = [];
+    for (let k = 0; k < n; k++) { const c = S.deck.pop()!; S.freshB.push(B.length); B.push(c); }
+    logStreet(S, `${STREETS[st]}: top ${S.board.map(cardTxt).join(' ')}, bottom ${B.map(cardTxt).join(' ')}`);
+    S.caption = `${STREETS[st]}s are out`;
+    return;
+  }
   logStreet(S, `${STREETS[st]}: ${S.board.map(cardTxt).join(' ')}`);
   S.caption = `${STREETS[st]} is out`;
 }

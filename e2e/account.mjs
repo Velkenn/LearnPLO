@@ -41,7 +41,7 @@ const openSheet = async page => { await page.click('#gear'); await page.waitForS
   await page.fill('#acctEmail', 'dealer@example.com');
   await page.click('#acctEmailForm button');
   await page.waitForSelector('#acctCode');
-  check((await page.innerText('#acct')).includes('6-digit code'), 'asks for the emailed code');
+  check((await page.innerText('#acct')).includes('sign-in code'), 'asks for the emailed code');
   await shoot(page, 'signin-code');
   await ctx.close();
 }

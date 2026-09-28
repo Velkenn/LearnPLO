@@ -1,4 +1,4 @@
-// Sign-in with an emailed 6-digit code (or the email's link), or a passkey. No passwords.
+// Sign-in with an emailed code (its length is set in Supabase; the box takes 6 to 10 digits) (or the email's link), or a passkey. No passwords.
 import { supabase, supabaseKey, supabaseUrl } from './supabase.ts';
 import { inAppBrowser } from './browser.ts';
 
@@ -45,7 +45,7 @@ export async function sendLink(email: string): Promise<string | null> {
   return error ? friendly(error.message) : null;
 }
 
-/** Sign in with the 6-digit code from the email. Returns an error message, or null on success. */
+/** Sign in with the code from the email. Returns an error message, or null on success. */
 export async function verifyCode(email: string, code: string): Promise<string | null> {
   if (!supabase) return 'Accounts aren’t set up yet.';
   const { error } = await supabase.auth.verifyOtp({ email, token: code, type: 'email' });

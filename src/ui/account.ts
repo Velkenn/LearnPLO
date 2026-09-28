@@ -64,10 +64,10 @@ export function renderAccount(): void {
   } else {
     // The code signs in this browser, so it stays signed in. The emailed link can open in a
     // different browser on a phone (often the Google app's), which is why it's the backup.
-    box.innerHTML = `${warn}<p class="acct-lead">We sent a 6-digit code to <b>${esc(ui.email)}</b>. Enter it here and this browser stays signed in. It can take a minute to arrive, so check spam too.</p>
+    box.innerHTML = `${warn}<p class="acct-lead">We sent a sign-in code to <b>${esc(ui.email)}</b>. Enter it here and this browser stays signed in. It can take a minute to arrive, so check spam too.</p>
       <form class="acct-form" id="acctCodeForm" novalidate>
         <label class="sr" for="acctCode">Code from the email</label>
-        <input id="acctCode" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]*" maxlength="10" placeholder="6-digit code">
+        <input id="acctCode" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]*" maxlength="10" placeholder="Code from the email">
         <button class="btn" type="submit" ${ui.busy ? 'disabled' : ''}>${ui.busy ? 'Checking…' : 'Sign in'}</button>
       </form>${note}
       <p class="acct-alt"><button class="linkbtn" id="acctBack">Use a different email</button></p>

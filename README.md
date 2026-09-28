@@ -140,7 +140,7 @@ Without Supabase settings the app runs device-only: everything saves in the brow
 With them:
 
 - **Guests** play the full drill with default settings; stats last for the visit.
-- **Signed-in users** (emailed 6-digit code, or a passkey; no passwords) unlock the training
+- **Signed-in users** (emailed sign-in code, or a passkey; no passwords) unlock the training
   settings, and settings, stats, and every answer save to their account.
   On first sign-in, the visit's stats (and any older stats on that device) carry over.
 
@@ -160,7 +160,7 @@ Setup:
 3. In Supabase **Authentication → URL Configuration**, set the Site URL to the live site
    and add it (plus `http://localhost:5173/**`) to Redirect URLs.
 4. In **Authentication → Emails → Magic Link** (and Confirm signup), paste
-   `supabase/templates/sign-in.html`. It leads with the 6-digit code: the sign-in box asks for
+   `supabase/templates/sign-in.html`. It leads with the code: the sign-in box asks for
    it, because typing it in signs in the browser you're using. On phones the email's link often
    opens in another app's browser (the Google app's, usually), which forgets the sign-in; the
    page warns people who are in one (`src/data/browser.ts`).

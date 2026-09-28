@@ -1,6 +1,6 @@
 // Plays one hand from blinds to showdown. The UI (or a test) supplies the hooks.
 import type { Hand, Player, Pot, PotQ } from './types.ts';
-import { active, collect, dealBoard, decide, makePotRaise, potCallDue, roundDone, seatName, startStreet } from './hand.ts';
+import { active, collect, dealBoard, decide, makePotRaise, potCallDue, leftOf, roundDone, seatName, seatsOf, startStreet } from './hand.ts';
 import { commitCuts, newCutLevels, prepareCuts } from './pots.ts';
 import { fmt } from '../util.ts';
 
@@ -39,13 +39,13 @@ export async function playHand(S: Hand, h: Hooks): Promise<void> {
 
   async function bettingRound(): Promise<void> {
     startStreet(S);
-    let i = S.street === 0 ? (S.btn + 3) % 6 : (S.btn + 1) % 6;
+    let i = leftOf(S, S.street === 0 ? 3 : 1);
     for (let guard = 0; guard < 400; guard++) {
       if (!h.current()) return;
       if (active(S).length <= 1 || roundDone(S)) return;
       const p = S.players[i];
       if (!p.folded && !p.allin && (!p.acted || p.committed < S.currentBet)) await act(p);
-      i = (i + 1) % 6;
+      i = (i + 1) % seatsOf(S);
     }
   }
 

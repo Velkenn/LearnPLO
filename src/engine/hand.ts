@@ -1,13 +1,21 @@
 // Dealing a hand, betting actions, pot-raise math, and the computer players' decisions.
-import type { Hand, Player, PotQ, Settings } from './types.ts';
-import { POS, STAKES, STREETS } from '../config.ts';
+import type { Hand, Player, PotQ, Settings, TableSize } from './types.ts';
+import { POSITIONS, STAKES, STREETS } from '../config.ts';
 import { newDeck, cardTxt } from './cards.ts';
 import { rand, rnd, pick, shuffle } from './rng.ts';
 import { fmt, roundU } from '../util.ts';
 
 export const active = (S: Hand): Player[] => S.players.filter(p => !p.folded);
 export const seatName = (p: Player): string => `Seat ${p.i + 1}`;
-export const posOf = (S: Hand, p: Player): string => POS[(p.i - S.btn + 6) % 6];
+/** Players dealt in (6 or 9). */
+export const seatsOf = (S: Hand): number => S.players.length;
+/** The seat `k` places to the left of the button (1 = small blind). */
+export const leftOf = (S: Hand, k: number): number => (S.btn + k) % seatsOf(S);
+/** How far a seat is to the left of the button (0 = button). */
+export const fromBtn = (S: Hand, i: number): number => (i - S.btn + seatsOf(S)) % seatsOf(S);
+export const posOf = (S: Hand, p: Player): string => (POSITIONS[seatsOf(S) as TableSize] ?? POSITIONS[6])[fromBtn(S, p.i)];
+/** A table size from settings, falling back to six-handed. */
+export const tableSize = (settings: Pick<Settings, 'seats'>): TableSize => settings.seats === 9 ? 9 : 6;
 
 export function say(S: Hand, p: Player, txt: string): void {
   S.caption = `${seatName(p)} ${txt}`;
@@ -22,33 +30,34 @@ export function commit(p: Player, amt: number): number {
   return amt;
 }
 
-/** Deal a new six-handed hand with the button on seat `btn`, blinds posted. */
+/** Deal a new hand (6 or 9 players, from settings) with the button on seat `btn`, blinds posted. */
 export function newHand(settings: Settings, btn: number): Hand {
   const [sb, bb, unit] = STAKES[settings.stakes] || STAKES['2/5'];
   const r = rand();
   const calls = +settings.potCalls || 1;
+  const n = tableSize(settings);
   const S: Hand = {
     btn, sb, bb, unit, sbFull: !!settings.sbFull, deck: newDeck(), board: [], pot: 0, street: 0,
     currentBet: 0, lastRaise: bb, lastAgg: null, streetActions: 0, streetBets: 0, streetRaises: 0,
     log: [], caption: '', acting: null, mode: 'running',
     quizLeft: calls, potsThisStreet: 0, lastPot: null,
     quizStreet: calls > 1 ? (r < .5 ? 0 : r < .9 ? 1 : 2) : (r < .35 ? 0 : r < .75 ? 1 : r < .95 ? 2 : 3),
-    quizMin: rnd(0, 3), side: false, players: [], streetStart: [0, 0, 0, 0, 0, 0], cuts: [],
+    quizMin: rnd(0, 3), side: false, players: [], streetStart: Array(n).fill(0), cuts: [],
     peek: false, quiz: null, cq: null, sd: null, sel: { holes: {}, board: [] },
     sweep: null, ship: null, fresh: null, justCut: false,
   };
-  for (let i = 0; i < 6; i++) S.players.push({
+  for (let i = 0; i < n; i++) S.players.push({
     i, stack: roundU(bb * rnd(250, 500) * (1 + .5 * (calls - 1)), unit),
     committed: 0, totalIn: 0, folded: false, allin: false, acted: false, short: false, hole: [],
   });
   S.side = rand() < ({ off: 0, some: .35, often: .7 }[settings.side] ?? .35);
   if (S.side) {
-    const seats = shuffle([0, 1, 2, 3, 4, 5]), lv = [rnd(15, 40), rnd(55, 95)];
+    const seats = shuffle(S.players.map(p => p.i)), lv = [rnd(15, 40), rnd(55, 95)];
     for (let k = 0; k < (rand() < .35 ? 2 : 1); k++) { const sp = S.players[seats[k]]; sp.short = true; sp.stack = roundU(bb * lv[k], unit); }
   }
-  for (let k = 0; k < 4; k++) for (let j = 1; j <= 6; j++) S.players[(S.btn + j) % 6].hole.push(S.deck.pop()!);
-  logStreet(S, `New hand, ${settings.stakes} PLO. Button on Seat ${S.btn + 1}.${S.sbFull ? ' Small blind counts as a full blind.' : ''}`);
-  const sbP = S.players[(S.btn + 1) % 6], bbP = S.players[(S.btn + 2) % 6];
+  for (let k = 0; k < 4; k++) for (let j = 1; j <= n; j++) S.players[leftOf(S, j)].hole.push(S.deck.pop()!);
+  logStreet(S, `New hand, ${settings.stakes} PLO${n === 9 ? ', 9-handed' : ''}. Button on Seat ${S.btn + 1}.${S.sbFull ? ' Small blind counts as a full blind.' : ''}`);
+  const sbP = S.players[leftOf(S, 1)], bbP = S.players[leftOf(S, 2)];
   commit(sbP, sb); say(S, sbP, `posts ${fmt(sb)}`);
   commit(bbP, bb); say(S, bbP, `posts ${fmt(bb)}`);
   S.currentBet = bb; S.lastAgg = bbP.i; S.caption = 'Blinds are up';
@@ -60,7 +69,7 @@ export function potMath(S: Hand, p: Player): PotQ {
   const cb = S.currentBet, mine = p.committed, toCall = cb - mine;
   const bets = S.players.filter(x => x.committed > 0).map(x => ({ i: x.i, amt: x.committed, folded: x.folded }));
   const sumC = bets.reduce((a, b) => a + b.amt, 0);
-  const sbP = S.players[(S.btn + 1) % 6];
+  const sbP = S.players[leftOf(S, 1)];
   const sbApplies = S.street === 0 && sbP !== p && sbP.committed === S.sb && S.sb < S.bb;
   const adj = sbApplies && S.sbFull ? S.bb - S.sb : 0;
   const total = S.pot + sumC + adj, after = total + toCall, raiseTo = cb + after, addNow = raiseTo - mine;
@@ -149,7 +158,8 @@ export function decide(S: Hand, p: Player): void {
     if (toCall > p.stack && cf) doFold(S, p);
     else {
       const afterPot = S.potsThisStreet > 0;
-      const foldP = afterPot ? .45 : (S.street === 0 ? .4 : .3);
+      // Full ring: more players fold preflop, so about as many see the flop as six-handed.
+      const foldP = afterPot ? .45 : (S.street === 0 ? (seatsOf(S) > 6 ? .58 : .4) : .3);
       const r = rand();
       if (cf && r < foldP) doFold(S, p);
       else if (S.streetRaises === 0 && !afterPot && r > .88 && tryRaise(S, p)) { /* raised */ }

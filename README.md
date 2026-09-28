@@ -2,7 +2,7 @@
 
 Live at https://feltready.com. (The repo is still named LearnPLO.)
 
-A pot limit Omaha dealer trainer. A six-handed hand plays out on its own, and you deal it:
+A pot limit Omaha dealer trainer. A six- or nine-handed hand plays out on its own, and you deal it:
 
 - **Pot calls.** When a player says “Pot,” announce the raise. Re-pots included.
 - **Side pots.** When someone is all in for less, build the side pot at the end of that betting round: say how much of this round's bets goes in the main pot (the all-in amount from each bet, plus dead money). What's already in the middle stays in the main pot.

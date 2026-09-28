@@ -20,7 +20,7 @@ export function renderWelcome(): void {
   if (!show) { if (app.S && !box.hidden) dismissWelcome(); box.hidden = true; return; }
   if (!box.hidden && box.innerHTML) return;
   box.innerHTML = `<h2>Practice dealing pot limit Omaha</h2>
-    <p>A six-handed hand plays out on its own. You’re the dealer:</p>
+    <p>A hand plays out on its own at a six- or nine-handed table. You’re the dealer:</p>
     <ul class="welcome-list">
       <li><b>Call the pot.</b> A player says “Pot” and you announce the raise.</li>
       <li><b>Build side pots.</b> Someone’s all in for less, so you split this round’s bets into the main pot and a side pot.</li>

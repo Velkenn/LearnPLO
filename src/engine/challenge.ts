@@ -17,6 +17,7 @@ export const CHALLENGE_HANDS = 5;
 export const CHALLENGE_SETTINGS: Settings = {
   ...DEFAULT_SETTINGS,
   stakes: '2/5', speed: 'normal', showPot: true, sbFull: false, side: 'often', timer: 'off', potCalls: 2, chipAmt: true,
+  seats: 6, // everyone plays the same six-handed hands, whatever their own table size
 };
 
 export type ChallengeKind = 'pot' | 'cut' | 'read';

@@ -1,7 +1,7 @@
 // Plays thousands of seeded hands through the engine with no screen and checks the invariants.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { newHand } from '../src/engine/hand.ts';
+import { newHand, posOf } from '../src/engine/hand.ts';
 import { playHand, type Hooks } from '../src/engine/loop.ts';
 import { awardPot, buildShowdown, curPot, gradePicks, liveElig, losersOf, readMiss } from '../src/engine/showdown.ts';
 import { seed } from '../src/engine/rng.ts';
@@ -13,7 +13,8 @@ interface Tally { hands: number; potCalls: number; repots: number; cuts: number;
 async function run(settings: Settings, hands: number, firstSeed: number, t: Tally): Promise<void> {
   for (let n = 0; n < hands; n++) {
     seed(firstSeed + n);
-    const S: Hand = newHand(settings, n % 6);
+    const S: Hand = newHand(settings, n % settings.seats);
+    assert.equal(S.players.length, settings.seats);
     const chips = S.players.reduce((a, p) => a + p.stack + p.committed, 0);
     let finished = false;
     const hooks: Hooks = {
@@ -100,4 +101,29 @@ test('thousands of hands keep chips, pots, and cuts consistent', async () => {
   assert.ok(t.cuts > 200 && t.multiPot > 200, 'side pots happen');
   assert.ok(t.chops > 0 && t.mucks > 0, 'chops and mucks happen');
   assert.ok(t.misreads > 100, 'wrong reads were classified');
+});
+
+test('nine-handed hands play out the same way', async () => {
+  const t: Tally = { hands: 0, potCalls: 0, repots: 0, cuts: 0, showdowns: 0, multiPot: 0, chops: 0, mucks: 0, misreads: 0 };
+  const base = { ...DEFAULT_SETTINGS, seats: 9 as const };
+  await run({ ...base, side: 'off', potCalls: 1 }, 400, 21000, t);
+  await run({ ...base, side: 'often', potCalls: 2 }, 600, 25000, t);
+  await run({ ...base, side: 'often', potCalls: 3, sbFull: true, stakes: '1/2' }, 400, 29000, t);
+  console.log('9-handed', t);
+  assert.ok(t.potCalls > 800 && t.repots > 50, 'pot calls and re-pots happen');
+  assert.ok(t.cuts > 100 && t.multiPot > 100, 'side pots happen');
+  assert.ok(t.chops > 0 && t.mucks > 0, 'chops and mucks happen');
+});
+
+test('nine-handed positions and blinds go around the button', () => {
+  seed(7);
+  const S = newHand({ ...DEFAULT_SETTINGS, seats: 9 }, 8); // button on Seat 9
+  seed(null);
+  assert.deepEqual(S.players.map(p => posOf(S, p)), ['SB', 'BB', 'UTG', 'UTG+1', 'MP', 'LJ', 'HJ', 'CO', 'BTN']);
+  assert.equal(S.players[8].committed, 0);
+  assert.equal(S.players[0].committed, S.sb, 'seat 1 is the small blind');
+  assert.equal(S.players[1].committed, S.bb, 'seat 2 is the big blind');
+  assert.ok(S.players.every(p => p.hole.length === 4));
+  assert.equal(S.deck.length, 52 - 36);
+  assert.equal(S.streetStart.length, 9);
 });

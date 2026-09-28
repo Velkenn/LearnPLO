@@ -58,6 +58,9 @@ page.on('pageerror', e => errors.push(String(e)));
 await page.goto(url.href);
 await page.evaluate(() => { const orig = window.setTimeout; window.setTimeout = (f, ms) => orig(f, Math.min(ms || 0, 4)); });
 await page.waitForSelector('#dailyStrip:not([hidden]) #dailyOpen');
+// A member who plays nine-handed still gets the six-handed challenge.
+await page.click('#gear'); await page.click('#seatsSeg button[data-v="9"]'); await page.click('#gear');
+check(await page.evaluate(() => window.__app.settings.seats === 9), 'member can pick nine-handed');
 await page.click('#dailyOpen');
 await page.waitForSelector('#daily.open #dailyStart');
 await shoot(page, 'daily-start');
@@ -80,6 +83,7 @@ for (let hand = 0; hand < 5; hand++) {
     await page.click('[data-deal]');
   }
   check((await page.innerText('#dailyStrip')).includes(`Hand ${hand + 1} of 5`), `strip shows hand ${hand + 1}`);
+  check(await page.evaluate(() => window.__app.S.players.length === 6), 'challenge hands are six-handed');
   let done = false;
   for (let tick = 0; tick < 8000 && !done; tick++) {
     await page.waitForTimeout(8);
@@ -144,6 +148,7 @@ check(graded.right === asked - wrong && graded.total === asked, `server graded $
 check(await page.isVisible('#daily .lboard li.me'), 'your row is on the leaderboard');
 check(!await page.evaluate(() => window.__app.challenge), 'challenge over');
 check(!await page.$eval('#training', f => f.disabled), 'your settings are back');
+check(await page.evaluate(() => window.__app.settings.seats === 9), 'nine-handed is back after the challenge');
 const logged = await page.evaluate(() => window.__inserted.filter(r => r.detail?.daily).length);
 check(logged === asked, `every challenge answer logged with the day (${logged} of ${asked})`);
 await page.click('#dailyShare');

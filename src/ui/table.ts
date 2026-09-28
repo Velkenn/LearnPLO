@@ -1,7 +1,7 @@
 // Draws the felt: seats, bets, pot piles, board, dealer button, and chip motion.
 import { app, nextHandLabel } from '../app.ts';
 import type { Hand } from '../engine/types.ts';
-import { posOf } from '../engine/hand.ts';
+import { posOf, tableSize } from '../engine/hand.ts';
 import { cutSum, potName } from '../engine/pots.ts';
 import { fmt } from '../util.ts';
 import { $ } from './dom.ts';
@@ -9,9 +9,26 @@ import { cardHTML, chipStacks } from './cards.ts';
 import { chipClick } from './sound.ts';
 
 // Positions in % of the table box. Seats go clockwise from the dealer's left; the dealer sits at the bottom.
-export const SEAT_XY: [number, number][] = [[19, 76], [11, 40.6], [32.6, 12.2], [67.4, 12.2], [89, 40.6], [81, 76]];
-const BET_XY: [number, number][] = [[33, 70], [29, 44], [39, 33], [61, 33], [71, 44], [67, 70]];
-const PUCK_XY: [number, number][] = [[4.5, 77], [11, 27.5], [16, 13], [84, 13], [89, 27.5], [95.5, 77]];
+// Each table size has its own seat, bet, and dealer-button spots.
+type XY = [number, number];
+/** piles: where separate pots sit, by how many there are. */
+interface Layout { seat: XY[]; bet: XY[]; puck: XY[]; piles: Record<number, XY[]> }
+const LAYOUTS: Record<number, Layout> = {
+  6: {
+    seat: [[19, 76], [11, 40.6], [32.6, 12.2], [67.4, 12.2], [89, 40.6], [81, 76]],
+    bet: [[33, 70], [29, 44], [39, 33], [61, 33], [71, 44], [67, 70]],
+    puck: [[4.5, 77], [11, 27.5], [16, 13], [84, 13], [89, 27.5], [95.5, 77]],
+    piles: { 1: [[50, 41]], 2: [[35, 41], [62, 41]], 3: [[50, 29], [35, 42], [65, 42]], 4: [[36, 29], [64, 29], [36, 42], [64, 42]] },
+  },
+  9: {
+    seat: [[24.5, 83.5], [10.5, 62.5], [10.5, 38], [24, 17], [50, 7.5], [76, 17], [89.5, 38], [89.5, 62.5], [75.5, 83.5]],
+    bet: [[40, 77], [25, 74], [25.5, 49.5], [34, 31.5], [50, 22], [66, 31.5], [74.5, 49.5], [75, 74], [60, 77]],
+    puck: [[37.5, 88], [10.5, 74], [10.5, 26.5], [11.5, 17], [36, 5.5], [64, 5.5], [88.5, 17], [89.5, 26.5], [89.5, 74]],
+    piles: { 1: [[50, 41]], 2: [[37, 40], [63, 40]], 3: [[50, 33], [36, 42], [64, 42]], 4: [[37, 33], [63, 33], [37, 42], [63, 42]] },
+  },
+};
+/** The layout for a table of n seats (six-handed if there's no layout for n). */
+export const layoutFor = (n: number): Layout => LAYOUTS[n] ?? LAYOUTS[6];
 
 export interface Pile { k: number; name: string; amt: number; x: number; y: number; open?: boolean; aw?: boolean }
 
@@ -31,11 +48,9 @@ export function piles(S: Hand | null): Pile[] | null {
     const rest = S.pot - cutSum(S);
     if (rest > 0) list.push({ k: n, name: pending ? 'Still out' : potName(n, n + 1), amt: rest, open: !pending });
   }
-  const layouts: Record<number, [number, number][]> = {
-    1: [[50, 41]], 2: [[35, 41], [62, 41]], 3: [[50, 29], [35, 42], [65, 42]], 4: [[36, 29], [64, 29], [36, 42], [64, 42]],
-  };
-  const XY = layouts[list.length] || list.map((_, j) => [20 + 60 * j / (list.length - 1), 41] as [number, number]);
-  return list.map((x, j) => ({ ...x, x: XY[j][0], y: XY[j][1] })).filter(x => !x.aw);
+  const layouts = layoutFor(S.players.length).piles;
+  const spots = layouts[list.length] || list.map((_, j) => [20 + 60 * j / (list.length - 1), 41] as XY);
+  return list.map((x, j) => ({ ...x, x: spots[j][0], y: spots[j][1] })).filter(x => !x.aw);
 }
 
 /** After a pot is read: the winners' hole cards and the board cards that play. */
@@ -62,9 +77,11 @@ const PRINT = `<svg class="print" viewBox="0 0 100 120" aria-hidden="true">
 
 export function renderTable(): void {
   const S = app.S, settings = app.settings, t = $('#table');
+  const L = layoutFor(S ? S.players.length : tableSize(settings));
+  t.classList.toggle('ring9', L === LAYOUTS[9]);
   let h = `<div class="rail"><div class="felt"></div></div>${PRINT}<div class="dealer">Dealer</div>`;
   if (!S) {
-    SEAT_XY.forEach(([x, y], i) => { h += `<div class="seat idle" style="left:${x}%;top:${y}%"><div class="sn">Seat ${i + 1}</div></div>`; });
+    L.seat.forEach(([x, y], i) => { h += `<div class="seat idle" style="left:${x}%;top:${y}%"><div class="sn">Seat ${i + 1}</div></div>`; });
     h += `<div class="board">${'<span class="slot"></span>'.repeat(5)}</div>${dealButton('Deal a hand')}`;
     t.innerHTML = h; return;
   }
@@ -74,7 +91,7 @@ export function renderTable(): void {
   const play = shownPlay(S);
   const muck = S.sd ? S.sd.mucked : null;
   S.players.forEach(p => {
-    const [x, y] = SEAT_XY[p.i], pos = posOf(S, p), gone = p.folded || (muck && muck.has(p.i));
+    const [x, y] = L.seat[p.i], pos = posOf(S, p), gone = p.folded || (muck && muck.has(p.i));
     const potting = (S.mode === 'quiz' && S.quiz && S.quiz.q.seat === p.i) ||
       (S.mode === 'cut' && S.cq && p.allin && !p.folded && p.totalIn === S.cq.pots[S.cq.j].level);
     const cls = ['seat', gone ? 'folded' : '', S.acting === p.i && S.mode === 'running' ? 'acting' : '', potting ? 'potting' : '', wonSet.has(p.i) ? 'win' : ''].join(' ');
@@ -83,11 +100,11 @@ export function renderTable(): void {
       : '<span class="back"></span>'.repeat(4);
     h += `<div class="${cls}" style="left:${x}%;top:${y}%"><div class="sn">Seat ${p.i + 1}${pos === 'SB' || pos === 'BB' ? ` <span class="badge">${pos}</span>` : ''}</div><div class="stk">${p.allin ? 'All in' : fmt(p.stack)}</div><div class="minis">${minis}</div></div>`;
     if (p.committed > 0) {
-      const [bx, by] = BET_XY[p.i];
+      const [bx, by] = L.bet[p.i];
       h += `<div class="bet" style="left:${bx}%;top:${by}%" aria-label="${fmt(p.committed)} bet">${chipStacks(p.committed, 8)}${lbl ? `<span class="amt">${fmt(p.committed)}</span>` : ''}</div>`;
     }
   });
-  const [px, py] = PUCK_XY[S.btn];
+  const [px, py] = L.puck[S.btn];
   h += `<div class="puck" style="left:${px}%;top:${py}%" title="Dealer button">D</div>`;
 
   const left = S.sd ? S.pot - S.sd.pots.filter(pt => pt.awarded).reduce((a, pt) => a + pt.amount, 0) : (S.mode === 'done' ? 0 : S.pot);
@@ -95,7 +112,7 @@ export function renderTable(): void {
   const pl = piles(S);
   const tgt = pl && pl.length ? pl[pl.length - 1] : { x: 50, y: 41 };
   if (S.sweep && S.sweep.length) S.sweep.forEach(sw => {
-    const [bx, by] = BET_XY[sw.i];
+    const [bx, by] = L.bet[sw.i];
     h += `<div class="bet sweep" style="left:${bx}%;top:${by}%;--tx:${tgt.x}%;--ty:${tgt.y}%" aria-hidden="true">${chipStacks(sw.amt, 8)}</div>`;
   });
   const justCut = S.justCut; S.justCut = false;
@@ -104,7 +121,7 @@ export function renderTable(): void {
   });
   else if (left > 0) h += `<div class="pot${S.sweep && S.sweep.length ? ' landing' : ''}">${chipStacks(left, 6)}${settings.showPot || S.sd ? `<span class="amt">Pot ${fmt(left)}</span>` : ''}</div>`;
   if (S.ship && S.ship.length) S.ship.forEach((sh, k) => {
-    const [sx, sy] = SEAT_XY[sh.i];
+    const [sx, sy] = L.seat[sh.i];
     h += `<div class="bet ship" style="--fx:${sh.fx || 50}%;--fy:${sh.fy || 41}%;--x:${sx}%;--y:${sy}%;animation-delay:${k * 120}ms" aria-hidden="true">${chipStacks(Math.max(1, sh.amt || 0), 6)}</div>`;
   });
   S.sweep = null; S.ship = null;

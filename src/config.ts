@@ -1,10 +1,15 @@
 // Game constants and defaults. Change table stakes, speeds, and timer lengths here.
-import type { Settings, Stakes, Speed, Stats, TimerLevel } from './engine/types.ts';
+import type { Settings, Stakes, Speed, Stats, TableSize, TimerLevel } from './engine/types.ts';
 
 /** This game's id in the attempts log. */
 export const GAME = 'plo';
 
-export const POS =['BTN', 'SB', 'BB', 'UTG', 'HJ', 'CO'] as const;
+/** Position names going clockwise from the button, by table size. */
+export const POSITIONS: Record<TableSize, readonly string[]> = {
+  6: ['BTN', 'SB', 'BB', 'UTG', 'HJ', 'CO'],
+  9: ['BTN', 'SB', 'BB', 'UTG', 'UTG+1', 'MP', 'LJ', 'HJ', 'CO'],
+};
+export const TABLE_SIZES: TableSize[] = [6, 9];
 export const STREETS = ['Preflop', 'Flop', 'Turn', 'River'] as const;
 
 /** [small blind, big blind, smallest bet unit] */
@@ -25,7 +30,7 @@ export const TIMERS: Record<TimerLevel, { pot: number; build: number; read: numb
 
 export const DEFAULT_SETTINGS: Settings = {
   stakes: '2/5', speed: 'normal', four: false, showPot: true, sbFull: false,
-  side: 'some', timer: 'off', potCalls: 1, chipAmt: true, sound: true,
+  side: 'some', timer: 'off', potCalls: 1, chipAmt: true, sound: true, seats: 6,
 };
 
 export const DEFAULT_STATS: Stats = { pr: 0, pt: 0, rr: 0, rt: 0, sr: 0, st: 0, streak: 0, best: 0 };

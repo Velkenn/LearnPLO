@@ -56,8 +56,11 @@ export function recordTime(kind: 'p' | 'b' | 'r', ms: number | null): void {
 export function resetStats(): void { app.stats = { ...DEFAULT_STATS }; saveStats(); }
 
 /** Log one answer (kept only for signed-in members). Challenge answers are tagged with the day. */
-export const logAttempt = (a: Attempt): void =>
-  store.recordAttempt(app.challenge ? { ...a, detail: { ...a.detail, daily: app.challenge.day } } : a);
+export const logAttempt = (a: Attempt): void => {
+  // Every answer notes the table size, and challenge answers the day.
+  const detail = { ...a.detail, seats: app.S?.players.length ?? 6, ...(app.challenge && { daily: app.challenge.day }) };
+  store.recordAttempt({ ...a, detail });
+};
 
 /** Keep a challenge answer for grading. No-op outside a challenge. */
 export function challengeAnswer(a: ChallengeAnswer, ok: boolean): void {

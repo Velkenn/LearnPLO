@@ -24,6 +24,7 @@ export function applySettings(): void {
   segOn('timerSeg', s.timer);
   segOn('potCount', String(+s.potCalls || 1));
   segOn('sideFreq', s.side);
+  segOn('seatsSeg', String(s.seats));
   const locked = !canCustomize();
   $<HTMLFieldSetElement>('#training').disabled = locked;
   $('#lockmsg').hidden = !locked;
@@ -61,6 +62,8 @@ export function initSettings(): void {
   onSeg('timerSeg', v => { s().timer = v as TimerLevel; });
   onSeg('potCount', v => { s().potCalls = +v; });
   onSeg('sideFreq', v => { s().side = v as SideFreq; });
+  // Takes effect on the next deal; an empty table redraws with the new seats right away.
+  onSeg('seatsSeg', v => { s().seats = v === '9' ? 9 : 6; if (!app.S) { renderTable(); renderPanel(); } });
   $('#reset').addEventListener('click', () => {
     if (storeMode() === 'member' && !confirm('Reset the scores on your account? This can’t be undone.')) return;
     resetStats(); renderScores();

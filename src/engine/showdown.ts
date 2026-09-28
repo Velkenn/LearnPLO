@@ -1,7 +1,7 @@
 // Showdown: who can win each pot, who mucks, grading a read, and paying the pot.
 import type { Hand, Pot, Score, Showdown } from './types.ts';
 import { bestAny, bestOmaha, bestWithPair, cmp, eval5, describe, cardTxt } from './cards.ts';
-import { active, seatName, logStreet } from './hand.ts';
+import { active, fromBtn, seatName, logStreet } from './hand.ts';
 import { buildPots } from './pots.ts';
 import { fmt, seatList } from '../util.ts';
 
@@ -34,7 +34,7 @@ export function awardPot(S: Hand, sd: Showdown, pt: Pot): void {
   const share = Math.floor(pt.amount / winners.length); pt.share = share; pt.awarded = true;
   const rem = pt.amount - share * winners.length;
   if (rem) {
-    const first = [...winners].sort((a, b) => ((a - S.btn + 6) % 6) - ((b - S.btn + 6) % 6))[0];
+    const first = [...winners].sort((a, b) => fromBtn(S, a) - fromBtn(S, b))[0];
     pt.odd = { seat: first, amt: rem }; S.players[first].stack += rem;
   }
   winners.forEach(i => { S.players[i].stack += share; });

@@ -40,3 +40,10 @@ test('first sign-in keeps settings made on this device before accounts', () => {
   assert.equal(pickMemberSettings({ timer: 'fast' }, { timer: 'relaxed' }).timer, 'fast');
   assert.deepEqual(pickMemberSettings({}, null), DEFAULT_SETTINGS);
 });
+
+test('table size is six or nine, and older settings default to six', () => {
+  assert.equal(cleanSettings({ seats: 9 }).seats, 9);
+  assert.equal(cleanSettings({ seats: 7 }).seats, 6);
+  assert.equal(cleanSettings({ seats: '9' }).seats, 6);
+  assert.equal(cleanSettings({ timer: 'fast' }).seats, 6);
+});

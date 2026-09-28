@@ -9,7 +9,7 @@ export type Score = number[];
 export interface Best { score: Score; hole: number[]; board: number[]; cards: Card[] }
 
 export interface Player {
-  i: number;            // seat index 0-5
+  i: number;            // seat index, 0 to table size - 1
   stack: number;
   committed: number;    // chips in front of the player this street
   totalIn: number;      // chips put in over the whole hand
@@ -112,10 +112,13 @@ export type Stakes = '1/2' | '2/5' | '5/10' | '25/50';
 export type Speed = 'slow' | 'normal' | 'fast';
 export type TimerLevel = 'off' | 'relaxed' | 'standard' | 'fast';
 export type SideFreq = 'off' | 'some' | 'often';
+export type TableSize = 6 | 9;
 
 export interface Settings {
   stakes: Stakes; speed: Speed; four: boolean; showPot: boolean; sbFull: boolean;
   side: SideFreq; timer: TimerLevel; potCalls: number; chipAmt: boolean; sound: boolean;
+  /** Players at the table (6-max or full ring). */
+  seats: TableSize;
 }
 
 /** Counters: pr/pt pot calls right/total, rr/rt reads, sr/st side-pot cuts, plus time sums (ptime/pn etc). */

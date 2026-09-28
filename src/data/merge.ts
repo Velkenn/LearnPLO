@@ -14,6 +14,7 @@ export function cleanSettings(raw: unknown): Settings {
       if (v !== undefined && typeof v === typeof DEFAULT_SETTINGS[k]) (out as unknown as Record<string, unknown>)[k] = v;
     }
   }
+  if (out.seats !== 6 && out.seats !== 9) out.seats = DEFAULT_SETTINGS.seats;
   return out;
 }
 

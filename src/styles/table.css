@@ -37,3 +37,17 @@
 .board{position:absolute;left:50%;top:56%;transform:translate(-50%,-50%);display:flex;gap:4px}
 .slot{width:var(--cw);height:calc(var(--cw)*1.4);border-radius:calc(var(--cw)*.1);border:1px solid rgba(233,214,160,.14)}
 .tdeal{position:absolute;left:50%;top:41%;transform:translate(-50%,-50%);z-index:4;white-space:nowrap;box-shadow:0 4px 12px rgba(0,0,0,.4)}
+
+/* Nine-handed: smaller seats, cards, and chips so nine seats fit around a phone-sized felt. */
+.ring9{--cw:clamp(29px, 9vw, 40px)}
+.ring9 .seat{width:62px;padding:3px 2px 4px;border-radius:10px}
+.ring9 .seat .sn{font-size:13px;gap:3px}
+.ring9 .seat .stk{font-size:11px}
+.ring9 .badge{font-size:9px;padding:0 2px}
+.ring9 .seat.idle{padding:5px 2px}
+.ring9 .minis{gap:1.5px;margin-top:3px;min-height:15px}
+.ring9 .back{width:10px;height:14px;border-width:1.2px}
+.ring9 .card.xs{--w:13px}
+.ring9 .bet .stacks{transform:scale(.82);transform-origin:50% 100%;margin-bottom:-2px}
+.ring9 .bet .amt{font-size:12px;padding:0 4px}
+.ring9 .puck{width:20px;height:20px;font-size:11px}

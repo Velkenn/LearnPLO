@@ -4,7 +4,7 @@
 //   npx vite preview --port 4173 &
 //   npm run e2e -- http://localhost:4173/
 //
-// Options: --hands 40  --shots (save screenshots to e2e/out)  --dark
+// Options: --hands 40  --seats 9  --shots (save screenshots to e2e/out)  --dark
 import { chromium } from 'playwright';
 import { mkdirSync } from 'node:fs';
 
@@ -12,6 +12,7 @@ const args = process.argv.slice(2);
 const url = new URL(args.find(a => a.startsWith('http')) || 'http://localhost:4173/');
 url.searchParams.set('e2e', '');
 const HANDS = +(args[args.indexOf('--hands') + 1] || 0) || 40;
+const SEATS = +(args[args.indexOf('--seats') + 1] || 0) || 6;
 const SHOTS = args.includes('--shots');
 const OUT = new URL('./out/', import.meta.url).pathname;
 if (SHOTS) mkdirSync(OUT, { recursive: true });
@@ -29,6 +30,7 @@ if (!await page.$eval('#training', f => f.disabled)) {
   await page.click('#speed button[data-v=fast]');
   await page.click('#sideFreq button[data-v=often]');
   await page.click('#potCount button[data-v="2"]');
+  await page.click(`#seatsSeg button[data-v="${SEATS}"]`);
 }
 await page.click('#gear');
 
@@ -36,10 +38,13 @@ const tally = { pot: 0, cut: 0, read: 0, chop: 0, missedChop: 0 };
 const bad = [];
 const shot = async name => { if (SHOTS) { await page.waitForTimeout(400); await page.screenshot({ path: `${OUT}${name}.png`, fullPage: true }); } };
 const shots = new Set();
-const once = async name => { if (!shots.has(name)) { shots.add(name); await shot(name); } };
+const once = async name => { if (!shots.has(name)) { shots.add(name); await shot(SEATS === 6 ? name : `${name}-${SEATS}`); } };
+const locked = await page.$eval('#training', f => f.disabled);
 
 for (let hand = 0; hand < HANDS; hand++) {
   await page.click('[data-deal]'); // the button on the felt
+  const n = await page.evaluate(() => window.__app.S.players.length);
+  if (n !== (locked ? 6 : SEATS)) bad.push(['seats', n]);
   let done = false;
   for (let tick = 0; tick < 8000 && !done; tick++) {
     await page.waitForTimeout(8);

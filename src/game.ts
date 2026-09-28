@@ -1,7 +1,7 @@
 // Starts a hand and connects the engine's hooks to the drills and the screen.
 import { app, challengeComplete } from './app.ts';
 import { SPEEDS } from './config.ts';
-import { newHand } from './engine/hand.ts';
+import { newHand, tableSize } from './engine/hand.ts';
 import { playHand, type Hooks } from './engine/loop.ts';
 import { seed } from './engine/rng.ts';
 import { dealChallengeHand } from './engine/challenge.ts';
@@ -27,7 +27,7 @@ export function startHand(): void {
     S = dealChallengeHand(c.seed, c.hand); // the rest of the hand stays on this seed
   } else {
     seed(null);
-    app.lastBtn = (app.lastBtn + 1) % 6;
+    app.lastBtn = (app.lastBtn + 1) % tableSize(app.settings);
     S = newHand(app.settings, app.lastBtn);
   }
   app.S = S;

@@ -11,6 +11,7 @@ import { CHALLENGE_HANDS, CHALLENGE_VERSION } from '../engine/challenge.ts';
 import { startHand } from '../game.ts';
 import { $, $q, sheetOpen, showSheet } from './dom.ts';
 import { openAccount } from './account.ts';
+import { dtCardHTML } from './downtracker.ts';
 import { applySettings } from './settings.ts';
 import { render } from './render.ts';
 
@@ -93,7 +94,8 @@ function bodyHTML(): string {
   const r = myResult();
   if (r) {
     return `<div class="dresult"><b>${r.right} of ${r.total} right</b><span>in ${clock(r.ms)}${myRank() ? ` · ${myRank()} today` : ''}</span></div>
-      <p class="dnext"><button class="btn ghost" id="dailyShare">${ui.shared ? 'Copied' : 'Share your score'}</button><span class="muted">Next challenge in ${untilNext()}</span></p>`;
+      <p class="dnext"><button class="btn ghost" id="dailyShare">${ui.shared ? 'Copied' : 'Share your score'}</button><span class="muted">Next challenge in ${untilNext()}</span></p>
+      ${dtCardHTML('daily')}`;
   }
   return `${how}<p class="muted">One run a day. The clock starts when you tap Start and keeps going if you leave.</p><button class="btn" id="dailyStart">Start today’s challenge</button>`;
 }

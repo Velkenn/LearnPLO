@@ -60,11 +60,12 @@ if (!QUICK) {
   const build = async (dir, env, alias) => {
     rmSync(dir, { recursive: true, force: true }); mkdirSync(dir, { recursive: true });
     await esbuild.build({ entryPoints: [join(ROOT, 'src/main.ts')], bundle: true, format: 'esm', outfile: join(dir, 'main.js'), define: { 'import.meta.env': JSON.stringify(env) }, alias, logLevel: 'warning' });
+    await esbuild.build({ entryPoints: [join(ROOT, 'src/home.ts')], bundle: true, format: 'esm', outfile: join(dir, 'home.js'), logLevel: 'warning' });
     await esbuild.build({ entryPoints: [join(ROOT, 'src/styles/main.css')], bundle: true, outfile: join(dir, 'main.css'), logLevel: 'warning' });
     // The same three pages Vite builds: home, and one per game, all on the one script.
     for (const page of ['index.html', 'plo/index.html', 'bombpot/index.html']) {
       mkdirSync(join(dir, page, '..'), { recursive: true });
-      writeFileSync(join(dir, page), readFileSync(join(ROOT, page), 'utf8').replace('/src/styles/main.css', '/main.css').replace('/src/main.ts', '/main.js'));
+      writeFileSync(join(dir, page), readFileSync(join(ROOT, page), 'utf8').replace('/src/styles/main.css', '/main.css').replace('/src/main.ts', '/main.js').replace('/src/home.ts', '/home.js'));
     }
     cpSync(join(ROOT, 'public'), dir, { recursive: true });
   };

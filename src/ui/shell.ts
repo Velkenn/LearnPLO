@@ -3,6 +3,7 @@
 // puts this in before anything else runs.
 import type { GameId } from '../config.ts';
 import { GAMES } from '../config.ts';
+import { dtFootHTML } from './downtracker.ts';
 
 const LOGO = `<svg class="logo" viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="31" fill="#1E6045"/><circle cx="32" cy="32" r="26" fill="none" stroke="#F2E8D0" stroke-width="6.5" stroke-dasharray="10.21 10.21"/><circle cx="32" cy="32" r="19" fill="#1E6045" stroke="#C99B2F" stroke-width="1.6"/><path d="M25.5 20h14v4.8h-8.6v5h7.6v4.8h-7.6V44h-5.4z" fill="#F2E8D0"/></svg>`;
 export const brandHTML = `${LOGO}<span class="wm">Felt<span>Ready</span></span>`;
@@ -70,5 +71,6 @@ export function shellHTML(game: GameId): string {
   <section class="panel" id="panel"></section>
   <div class="modal" id="modal" role="dialog" aria-modal="true" aria-labelledby="qtitle"><div class="box" id="modalBox"></div></div>
   <details class="log" id="logwrap"><summary>Hand history</summary><ol id="log"></ol></details>
-  <footer class="foot"><a class="linkbtn" href="/">All games</a><button class="linkbtn" id="feedbackOpen" hidden>Send feedback</button></footer>`;
+  <footer class="foot"><a class="linkbtn" href="/">All games</a><button class="linkbtn" id="feedbackOpen" hidden>Send feedback</button></footer>
+  ${dtFootHTML('footer')}`;
 }

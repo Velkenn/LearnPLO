@@ -6,6 +6,7 @@ import { MIN_ANSWERS, WEAK_BELOW, accuracy, drillsFor, weakSpots, type Line, typ
 import { game } from '../page.ts';
 import { $, sheetOpen, showSheet } from './dom.ts';
 import { openAccount } from './account.ts';
+import { dtCardHTML } from './downtracker.ts';
 
 const view = { loading: false, error: false, report: null as Report | null, run: 0 };
 
@@ -49,7 +50,7 @@ function reportHTML(r: Report): string {
     h += `<div class="misses"><h3>What went wrong</h3><ul>${r.misses.slice(0, 6).map(m =>
       `<li><span>${m.label} <small>${drillName(m.kind)}</small></span><b>${m.n}</b></li>`).join('')}</ul></div>`;
   }
-  return h;
+  return h + dtCardHTML('spots');
 }
 
 export function renderSpots(): void {

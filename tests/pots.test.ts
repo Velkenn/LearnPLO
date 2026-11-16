@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { newHand, potMath } from '../src/engine/hand.ts';
+import { doCall, doRaise, newHand, potMath } from '../src/engine/hand.ts';
 import { buildPots, makeCut, newCutLevels, prepareCuts, roundBets } from '../src/engine/pots.ts';
 import { seed } from '../src/engine/rng.ts';
 import { DEFAULT_SETTINGS } from '../src/config.ts';
@@ -41,6 +41,18 @@ test('raiser already has chips out: announce the total', () => {
   const q = potMath(S, S.players[2]);
   assert.equal(q.raiseTo, 62);
   assert.equal(q.addNow, 57);
+});
+
+test('out in front lists the most recent bet first, back to the blinds', () => {
+  // Button on Seat 1: Seat 2 posts $2, Seat 3 posts $5. Seat 4 calls, Seat 5 raises to $20, Seat 6 calls.
+  const S = freshHand();
+  const [, sb, bb, s4, s5, s6] = S.players;
+  doCall(S, s4); doRaise(S, s5, 20, false); doCall(S, s6);
+  const seats = (q: ReturnType<typeof potMath>) => q.bets.map(b => b.i + 1);
+  assert.deepEqual(seats(potMath(S, S.players[0])), [6, 5, 4, 3, 2]);
+  // The small blind calls the $20: now theirs is the most recent.
+  doCall(S, sb);
+  assert.deepEqual(seats(potMath(S, bb)), [2, 6, 5, 4, 3]);
 });
 
 test('main pot and side pot with dead money', () => {

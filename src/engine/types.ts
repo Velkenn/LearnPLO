@@ -18,6 +18,8 @@ export interface Player {
   acted: boolean;
   short: boolean;       // dealt a short stack to create side pots
   hole: Card[];
+  /** When the player last put chips out (a running count; higher is more recent). */
+  putAt?: number;
 }
 
 export interface LogLine { t: string; st?: boolean }
@@ -60,6 +62,7 @@ export interface Half {
 export interface PotQ {
   seat: number; pos: string; street: number; middle: number;
   cb: number; mine: number; toCall: number;
+  /** Chips out in front this round, most recent bet first. */
   bets: { i: number; amt: number; folded: boolean }[];
   total: number; after: number; raiseTo: number; addNow: number; rest: number;
   adj: number; sbSeat: number; sbAlt: number | null;

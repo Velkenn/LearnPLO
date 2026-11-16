@@ -23,9 +23,11 @@ export function say(S: Hand, p: Player, txt: string): void {
 }
 export const logStreet = (S: Hand, t: string): void => { S.log.push({ t, st: true }); };
 
+let putCount = 0;
 export function commit(p: Player, amt: number): number {
   amt = Math.min(amt, p.stack);
   p.stack -= amt; p.committed += amt; p.totalIn += amt;
+  if (amt > 0) p.putAt = ++putCount;
   if (p.stack === 0) p.allin = true;
   return amt;
 }
@@ -67,7 +69,10 @@ export function newHand(settings: Settings, btn: number): Hand {
 /** Pot-limit raise for player p: call first, then raise the size of the pot. */
 export function potMath(S: Hand, p: Player): PotQ {
   const cb = S.currentBet, mine = p.committed, toCall = cb - mine;
-  const bets = S.players.filter(x => x.committed > 0).map(x => ({ i: x.i, amt: x.committed, folded: x.folded }));
+  // Most recent bet first, back to the first (the blinds), the way a dealer reads the table.
+  const bets = S.players.filter(x => x.committed > 0)
+    .sort((a, b) => (b.putAt ?? 0) - (a.putAt ?? 0))
+    .map(x => ({ i: x.i, amt: x.committed, folded: x.folded }));
   const sumC = bets.reduce((a, b) => a + b.amt, 0);
   const sbP = S.players[leftOf(S, 1)];
   const sbApplies = S.street === 0 && sbP !== p && sbP.committed === S.sb && S.sb < S.bb;

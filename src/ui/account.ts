@@ -12,6 +12,7 @@ import { refreshDaily } from './daily.ts';
 import { renderFeedback } from './feedback.ts';
 import { openStats } from './stats.ts';
 import { isAdmin } from '../data/admin.ts';
+import { isInstructor } from '../data/teach.ts';
 
 type Step = 'email' | 'code';
 const ui = {
@@ -22,6 +23,8 @@ const ui = {
   keys: null as PasskeyInfo[] | null,
   /** The member can see the stats dashboard. */
   admin: false,
+  /** The member runs or teaches at a school, so gets a link to the instructor view. */
+  teach: false,
 };
 const shortDate = (iso: string): string => new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 
@@ -50,7 +53,7 @@ export function renderAccount(): void {
   const warn = app ? `<p class="acct-warn">You’re in ${app}’s built-in browser, which forgets sign-ins. To stay signed in, open feltready.com in ${regularBrowser(navigator.userAgent)}. Look for “Open in browser” in the app’s menu.</p>` : '';
   if (ui.loading) { box.innerHTML = `<p class="muted">Loading your account…</p>`; return; }
   if (mode === 'member') {
-    box.innerHTML = `${warn}<div class="acct-row"><p>Signed in as <b>${esc(memberEmail())}</b>. Settings and stats save to your account.</p><button class="btn ghost" id="signout">Sign out</button></div>${passkeyHTML()}${ui.admin ? '<p class="acct-note"><button class="linkbtn" id="acctStats">Open the stats dashboard</button></p>' : ''}${note}`;
+    box.innerHTML = `${warn}<div class="acct-row"><p>Signed in as <b>${esc(memberEmail())}</b>. Settings and stats save to your account.</p><button class="btn ghost" id="signout">Sign out</button></div>${passkeyHTML()}${ui.teach ? '<p class="acct-note acct-teach"><a class="linkbtn" href="/teach/">Open your instructor view</a></p>' : ''}${ui.admin ? '<p class="acct-note"><button class="linkbtn" id="acctStats">Open the stats dashboard</button></p>' : ''}${note}`;
     return;
   }
   if (ui.step === 'email') {
@@ -173,7 +176,10 @@ export function initAccount(): void {
     // A hand in progress keeps going; new settings apply from the next deal.
     applySettings(); render(); renderAccount(); refreshSpots(); refreshDaily(); renderFeedback();
     void loadKeys();
-    ui.admin = false;
-    if (storeMode() === 'member') void isAdmin().then(a => { ui.admin = a; renderAccount(); });
+    ui.admin = false; ui.teach = false;
+    if (storeMode() === 'member') {
+      void isAdmin().then(a => { ui.admin = a; renderAccount(); });
+      void isInstructor().then(t => { ui.teach = t; renderAccount(); });
+    }
   });
 }

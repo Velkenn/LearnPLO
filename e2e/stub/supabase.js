@@ -2,6 +2,7 @@
 // e2e/stub/build.sh swaps it in. The URL picks who you are:
 //   ?stub=member   signed in as a member with a few hundred sample answers per game and a daily challenge server
 //   (anything else) signed out; a passkey sign-in then signs you in as that member
+//   &teach=none    the member isn't an instructor anywhere (by default they own a sample school)
 // Passkeys only show when /auth/v1/settings says they're on; tests fake that with page.route.
 // The daily challenge grades with the real engine, like supabase/functions/daily does.
 import { CHALLENGE_HANDS, CHALLENGE_VERSION, pickDaySeed, replayChallenge } from '../../src/engine/challenge.ts';
@@ -118,6 +119,87 @@ async function daily(body) {
   return fail(400, 'action', 'Unknown action.');
 }
 
+// ---- schools: the instructor view (kept for the visit in sessionStorage) ----
+const teachNone = new URLSearchParams(location.search).get('teach') === 'none';
+const NOW = Date.now(), HOUR = 3600000, DAY_MS = 24 * HOUR;
+const iso = ms => new Date(ms).toISOString();
+const st = (answers, right, week, lastHoursAgo, drills = [], misses = []) =>
+  ({ answers, right, answers_7d: week, last_at: lastHoursAgo == null ? null : iso(NOW - lastHoursAgo * HOUR), drills, misses });
+function school() {
+  const saved = sessionStorage.getItem('stub-teach');
+  if (saved) return JSON.parse(saved);
+  return {
+    codes: 0,
+    org: { id: 'org-1', name: 'Texas Gaming Institute', kind: 'school', role: 'owner', seat_limit: 20 },
+    classes: [
+      { id: 'class-1', name: 'December PLO', join_code: 'K7Q2PMXA', code_expires_at: null, active: true, created_at: iso(NOW - 10 * DAY_MS), students: [
+        { user_id: 'u-sam', name: 'Sam Ortiz', joined_at: iso(NOW - 9 * DAY_MS), left_at: null, stats: st(142, 124, 38, 2, [
+          { game: 'plo', kind: 'pot', answers: 60, right: 55, avg_ms: 6200 },
+          { game: 'plo', kind: 'cut', answers: 22, right: 17, avg_ms: 14100 },
+          { game: 'plo', kind: 'read', answers: 50, right: 44, avg_ms: 12800 },
+          { game: 'bomb', kind: 'split', answers: 10, right: 8, avg_ms: 5100 },
+        ], [
+          { game: 'plo', kind: 'cut', miss: 'dead-money', count: 3 },
+          { game: 'plo', kind: 'pot', miss: 'skipped-call', count: 3 },
+          { game: 'plo', kind: 'read', miss: 'omaha-rule', count: 2 },
+          { game: 'bomb', kind: 'split', miss: 'odd-chip', count: 2 },
+        ]) },
+        { user_id: 'u-pat', name: 'Pat Nguyen', joined_at: iso(NOW - 8 * DAY_MS), left_at: null, stats: st(80, 51, 12, 30, [
+          { game: 'plo', kind: 'pot', answers: 40, right: 28, avg_ms: 9400 },
+          { game: 'plo', kind: 'cut', answers: 15, right: 7, avg_ms: 21000 },
+          { game: 'plo', kind: 'read', answers: 25, right: 16, avg_ms: 17300 },
+        ], [
+          { game: 'plo', kind: 'pot', miss: 'after-call', count: 6 },
+          { game: 'plo', kind: 'cut', miss: 'one-share', count: 5 },
+          { game: 'plo', kind: 'read', miss: 'missed-chop', count: 4 },
+        ]) },
+        { user_id: 'u-lee', name: 'Lee <Dealer>', joined_at: iso(NOW - DAY_MS), left_at: null, stats: st(0, 0, 0, null) },
+        { user_id: 'u-jo', name: 'Jo', joined_at: iso(NOW - 9 * DAY_MS), left_at: iso(NOW - 2 * DAY_MS), stats: null },
+      ] },
+      { id: 'class-2', name: 'Weekend bootcamp', join_code: 'HC4RW9TB', code_expires_at: null, active: false, created_at: iso(NOW - 30 * DAY_MS), students: [] },
+    ],
+  };
+}
+const saveSchool = sc => sessionStorage.setItem('stub-teach', JSON.stringify(sc));
+const seatsUsed = sc => new Set(sc.classes.flatMap(c => c.students.filter(m => !m.left_at).map(m => m.user_id))).size;
+const NEW_CODES = ['P3NDT8WX', 'R2MVQ7KC', 'W9TF4HZB', 'Y6GJ3NSE'];
+const denied = { data: null, error: { code: '42501', message: 'Only this school’s instructors can see the class' } };
+window.__teachCalls = [];
+const TEACH_CALLS = ['my_orgs', 'create_class', 'class_roster', 'set_class', 'new_class_code', 'remove_student'];
+function teach(name, args = {}) {
+  if (!TEACH_CALLS.includes(name)) return null;
+  window.__teachCalls.push({ name, args });
+  const sc = school();
+  if (name === 'my_orgs') {
+    if (teachNone) return { data: [], error: null };
+    return { data: [{ ...sc.org, seats_used: seatsUsed(sc), classes: sc.classes.map(({ students, ...c }) => ({ ...c, students: students.filter(m => !m.left_at).length })) }], error: null };
+  }
+  if (teachNone) return denied;
+  if (name === 'create_class') {
+    const c = { id: `class-${sc.classes.length + 1}`, name: String(args.class_name).trim(), join_code: NEW_CODES[sc.codes++ % NEW_CODES.length], code_expires_at: null, active: true, created_at: new Date().toISOString(), students: [] };
+    sc.classes.unshift(c); saveSchool(sc);
+    return { data: { id: c.id, name: c.name, join_code: c.join_code, code_expires_at: null }, error: null };
+  }
+  const c = sc.classes.find(k => k.id === args.class);
+  if (!c) return denied;
+  if (name === 'class_roster') {
+    const { students, ...cls } = c;
+    return { data: { class: { id: cls.id, name: cls.name, join_code: cls.join_code, code_expires_at: cls.code_expires_at, active: cls.active },
+      org: { id: sc.org.id, name: sc.org.name, seat_limit: sc.org.seat_limit, seats_used: seatsUsed(sc) }, students }, error: null };
+  }
+  if (name === 'set_class') {
+    if (args.class_name != null) c.name = String(args.class_name).trim();
+    if (args.is_active != null) c.active = args.is_active;
+    saveSchool(sc); return { data: null, error: null };
+  }
+  if (name === 'new_class_code') { c.join_code = NEW_CODES[sc.codes++ % NEW_CODES.length]; saveSchool(sc); return { data: c.join_code, error: null }; }
+  if (name === 'remove_student') {
+    const m = c.students.find(k => k.user_id === args.student && !k.left_at);
+    if (m) { m.left_at = new Date().toISOString(); m.stats = null; }
+    saveSchool(sc); return { data: null, error: null };
+  }
+}
+
 export function createClient() {
   return {
     auth: {
@@ -142,10 +224,12 @@ export function createClient() {
     },
     from: query,
     // The stand-in member is an admin, so the stats dashboard can be tested.
-    rpc: async name => {
+    rpc: async (name, args) => {
       await new Promise(r => setTimeout(r, 100));
       if (!session) return { data: null, error: { code: '42501', message: 'not allowed' } };
       if (name === 'is_admin') return { data: true, error: null };
+      const school = teach(name, args);
+      if (school) return school;
       if (name === 'admin_stats') {
         const today = '2026-09-27';
         const days = Array.from({ length: 14 }, (_, i) => {

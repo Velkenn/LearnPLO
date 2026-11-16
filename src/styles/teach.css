@@ -1,0 +1,70 @@
+/* The instructor view (/teach/): a school's classes, a class's join code, and its students. */
+.teach h2,.teach-h{font:700 26px var(--fd);margin:8px 0 4px;line-height:1.1}
+.teach h3{font:600 15px var(--fb);margin:14px 0 6px}
+.teach h4{font:600 14px var(--fb);margin:0 0 4px;color:var(--muted)}
+.teach p{line-height:1.45}
+.teach-signin{border-bottom:0}
+.teach-flash{background:var(--good-bg);border-radius:10px;padding:8px 12px;margin:2px 0 8px;font-size:15px}
+body[data-page=teach] .foot{align-items:center;flex-wrap:wrap}
+.teach-who{font-size:13px;overflow-wrap:anywhere}
+.teach-note{font-size:13px;margin:14px 0 0}
+.teach-note .linkbtn{font-size:13px;padding:0}
+.teach-empty p{margin:0 0 10px}
+.teach-empty .btn{display:inline-block;text-decoration:none}
+
+/* the school */
+.org{padding-bottom:14px;margin-bottom:10px;border-bottom:1px solid var(--line)}
+.org:last-child{border-bottom:0}
+.org-sub{font-size:14px;margin:0 0 4px}
+.cls-list{list-style:none;margin:0 0 12px;padding:0;display:grid;gap:8px}
+.cls{display:grid;gap:3px;padding:12px 30px 12px 14px;border:1px solid var(--line);border-radius:12px;background:var(--surface);color:inherit;text-decoration:none;position:relative}
+.cls::after{content:"›";position:absolute;right:14px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:20px}
+.cls-name{font:600 19px var(--fd)}
+.cls-name small{font:600 11px var(--fb);letter-spacing:.04em;color:var(--muted);border:1px solid var(--line);border-radius:5px;padding:1px 5px;margin-left:4px;vertical-align:2px}
+.cls-meta{font-size:14px;color:var(--muted)}
+.cls-meta b{color:var(--ink);font-weight:600;letter-spacing:.04em}
+.cls.closed{background:var(--surface-2)}
+.new-class{margin-top:4px}
+
+/* one class */
+.crumb{display:flex;align-items:baseline;justify-content:space-between;gap:10px;flex-wrap:wrap;margin:2px 0 0;font-size:14px}
+.crumb .linkbtn{padding:4px 0;font-size:14px}
+.cls-title{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
+.cls-title h2{overflow-wrap:anywhere}
+.rename{margin:10px 0 6px}
+.code-box{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px 14px;margin:8px 0 6px;display:grid;gap:4px}
+.code-label{font-size:13px;color:var(--muted)}
+.code{font:700 34px var(--fd);letter-spacing:.08em;font-variant-numeric:tabular-nums;line-height:1.1}
+.code-link{font-size:14px;color:var(--muted);overflow-wrap:anywhere;user-select:all}
+.code-go{display:flex;align-items:center;gap:14px;margin-top:6px;flex-wrap:wrap}
+.code-go .linkbtn{font-size:14px}
+.code-help{font-size:13px;color:var(--muted);margin:6px 0 0}
+.confirm{background:var(--bad-bg);border-radius:10px;padding:10px 12px;margin:8px 0 2px}
+.confirm p{margin:0 0 8px;font-size:15px}
+.confirm-go{display:flex;align-items:center;gap:14px}
+.cls-open{border-bottom:1px solid var(--line);font-size:15px}
+.cls-open .btn{flex:none}
+.stu-head{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin:4px 0 6px}
+.stu-head h3{margin:0}
+.stu-head .seg button{padding:6px 9px;font-size:13px}
+.stu-list{list-style:none;margin:0;padding:0}
+.stu{border-bottom:1px solid var(--line)}
+.stu-row{appearance:none;border:0;background:none;color:inherit;width:100%;text-align:left;cursor:pointer;padding:10px 2px;display:grid;grid-template-columns:1fr auto;gap:2px 10px;align-items:baseline;font:inherit}
+.stu-name{font-weight:600;font-size:16px;overflow-wrap:anywhere}
+.stu-acc{font:600 20px var(--fd);font-variant-numeric:tabular-nums;text-align:right}
+.stu-acc.good{color:var(--good)}
+.stu-acc.weak{color:var(--bad)}
+.stu-acc.none{font:500 14px var(--fb);color:var(--muted)}
+.stu-meta{grid-column:1/-1;font-size:13px;color:var(--muted)}
+.stu.open .stu-row{padding-bottom:6px}
+.stu-more{padding:2px 2px 12px}
+.stu-game{padding:6px 0 8px}
+.stu-more .misses{padding-top:8px}
+.stu-more .misses h4{margin-bottom:2px}
+.stu-foot{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:10px 0 0;font-size:14px}
+.stu-foot .linkbtn{font-size:14px;color:var(--bad)}
+.left-list{margin-top:12px}
+.left-list summary{cursor:pointer;font-weight:600;color:var(--muted);padding:6px 0;font-size:14px}
+.left-list ul{list-style:none;margin:0;padding:0}
+.left-list li{padding:5px 0;border-bottom:1px solid var(--line);font-size:15px}
+.left-list small{color:var(--muted);margin-left:4px}

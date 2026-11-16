@@ -99,6 +99,7 @@ node e2e/daily.mjs "http://localhost:4174/plo/?stub=member" --shots   # the whol
 node e2e/account.mjs http://localhost:4174/plo/ --shots               # code sign-in and passkeys
 node e2e/launch.mjs http://localhost:4174/plo/ --shots                # welcome, feedback, stats
 node e2e/pages.mjs http://localhost:4174/ --shots                     # home page and old links
+node e2e/teach.mjs http://localhost:4174/ --shots                     # the instructor view
 ```
 
 ## How the code is laid out
@@ -107,8 +108,10 @@ node e2e/pages.mjs http://localhost:4174/ --shots                     # home pag
 index.html            the home page: the list of games (static, no script)
 plo/index.html        pot limit Omaha's page: its head, and <body data-game="plo">
 bombpot/index.html    bomb pots' page: <body data-game="bomb">
+teach/index.html      the instructor view (src/teach.ts, src/ui/teach.ts)
 src/
   main.ts             entry point for both game pages (puts in the shared markup from ui/shell.ts)
+  teach.ts            entry point for the instructor view
   page.ts             which game this page deals (from <body data-game>)
   app.ts              shared state: current hand, settings, stats, a daily challenge run
   config.ts           games, stakes, antes, speeds, timer lengths, defaults
@@ -139,6 +142,7 @@ src/
     welcome.ts        first-visit welcome above the table
     feedback.ts       "Send feedback" sheet
     stats.ts          the owner's stats dashboard (admins only)
+    teach.ts          the instructor view: classes, join codes, students' progress
     events.ts         buttons and keyboard
     timer.ts          countdown per question
     sound.ts          chip clicks and vibration
@@ -146,7 +150,7 @@ src/
     dom.ts            small DOM helpers
   data/               accounts and saving: Supabase client, sign-in, storage modes, stat merging,
                       weakSpots.ts (turns logged answers into the weak spots report),
-                      daily.ts (calls to the daily challenge server)
+                      daily.ts (calls to the daily challenge server), teach.ts (schools and classes)
   styles/             CSS split by area, pulled together by main.css
 tests/                node:test unit tests and the simulation
 supabase/migrations/  database tables and row-level security
@@ -157,6 +161,7 @@ e2e/daily.mjs         Playwright browser test: the daily challenge
 e2e/account.mjs       Playwright browser test: sign-in, in-app browser notice, passkeys
 e2e/launch.mjs        Playwright browser test: first-visit welcome, feedback, stats dashboard
 e2e/pages.mjs         Playwright browser test: home page, links between pages, old links
+e2e/teach.mjs         Playwright browser test: the instructor view
 worker/               the Cloudflare Worker: link previews for shared daily scores (/share)
 e2e/stub/             stand-in for supabase-js, and a build script that uses it
 e2e/check.mjs         npm run check: every check in one command
@@ -242,8 +247,17 @@ and member storage), `merge.ts` (how device and account stats combine),
 
 ## Schools and classes
 
-A dealer school or card room links its students' accounts with a join code. Only the database
-side exists so far; the pages (join screen, instructor view) are still to build.
+A dealer school or card room links its students' accounts with a join code. Instructors work at
+**feltready.com/teach/** (linked from the account box for anyone who runs or teaches at a school).
+The student's join page (`/join/<code>`) isn't built yet.
+
+- **Instructor view** (`src/ui/teach.ts`): each school's classes and their codes, and a form to add
+  a class. A class (`/teach/#class=<id>`) shows its join code and link (copy button), a new-code
+  button (asks first), close/reopen, rename, four numbers for the class, and its students, sorted
+  by name, lowest accuracy first, or last active. Tapping a student shows each drill by game
+  (right, average time) and their most common mistakes, and a remove button (asks first).
+  Accuracy is green at 90% or better and red under 75%, once a student has 10 answers. Students
+  who left are listed apart, with no numbers. It has its own small sign-in box (code or passkey).
 
 - **Organization**: a school or card room, with an optional seat limit (students in its classes
   at once, each counted once). You create it, and its owner, from an admin account or the SQL
@@ -349,5 +363,5 @@ card on the home page, and a new migration allowing its id in `attempts.game` an
 
 1. More games: a bomb pot daily challenge, then other games (Texas Hold'em, and games beyond poker).
 2. A version for card rooms and dealer schools, with a manager view of trainee progress. The
-   database side is in (see [Schools and classes](#schools-and-classes)); next are the join
-   page (`/join/<code>`), "My classes" in the account box, and the instructor view.
+   database side and the instructor view are in (see [Schools and classes](#schools-and-classes));
+   next are the join page (`/join/<code>`) and "My classes" in the account box.

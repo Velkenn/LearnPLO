@@ -151,6 +151,7 @@ src/
 tests/                node:test unit tests and the simulation
 supabase/migrations/  database tables and row-level security
 supabase/functions/daily/  the daily challenge server (Edge Function)
+supabase/tests/       SQL tests on a throwaway local Postgres (run.sh)
 e2e/drill.mjs         Playwright browser test: hands and drills
 e2e/daily.mjs         Playwright browser test: the daily challenge
 e2e/account.mjs       Playwright browser test: sign-in, in-app browser notice, passkeys
@@ -233,10 +234,60 @@ Setup:
    `insert into public.admins select id from auth.users where email = 'you@example.com';`
 7. Before sharing widely, set up custom SMTP (for example Resend) under
    **Authentication → SMTP**. Supabase's built-in email is for testing only.
+8. Schools and card rooms (migration `20261116000000`): see [Schools and classes](#schools-and-classes).
 
 Code: `src/data/supabase.ts` (client), `auth.ts` (sign-in), `store.ts` (local, guest,
 and member storage), `merge.ts` (how device and account stats combine),
 `src/ui/account.ts` (the sign-in box).
+
+## Schools and classes
+
+A dealer school or card room links its students' accounts with a join code. Only the database
+side exists so far; the pages (join screen, instructor view) are still to build.
+
+- **Organization**: a school or card room, with an optional seat limit (students in its classes
+  at once, each counted once). You create it, and its owner, from an admin account or the SQL
+  editor. The owner and instructors need a FeltReady account first (sign in once):
+  ```sql
+  select public.admin_create_org('Texas Gaming Institute', 'school', 'owner@example.com', 20);
+  select public.admin_add_org_member('<org id>', 'instructor@example.com');  -- or 'owner'
+  ```
+- **Class**: a group of students with an 8-character join code (no 0, O, 1, I or L), shown as
+  `XXXX-XXXX`; dashes, spaces and case don't matter. Owners and instructors make classes,
+  replace codes (the old one stops working), set an expiry, close a class to new students, and
+  remove students.
+- **Joining**: the student signs in, opens the code, sees which school will see their answers,
+  and joins under the name their instructor will see. They can leave from their account.
+- **What the school sees**: for each student still in the class, their answers since they joined
+  (by game and question kind: count, right, average time) and their five most common mistakes
+  (`detail.miss` codes; label them with `MISS_LABELS`). Nothing from before they joined, and
+  nothing once they leave. Rejoining starts over from the new join.
+- **Guessing codes**: ten wrong codes in an hour and the student has to wait (`join_tries`).
+
+The tables are server-only (RLS on, no policies, no API grants). Every call is a `supabase.rpc`:
+
+| Who | Function | Returns |
+| --- | --- | --- |
+| Admins | `admin_create_org(org_name, org_kind?, owner_email?, seats?)` | the new org's id |
+| Admins | `admin_add_org_member(org, member_email, member_role?)` | |
+| Instructors | `my_orgs()` | their schools, seat counts, classes and codes |
+| Instructors | `create_class(org, class_name, expires_at?)` | `{ id, name, join_code, code_expires_at }` |
+| Instructors | `set_class(class, class_name?, is_active?)` | |
+| Instructors | `new_class_code(class, expires_at?)` | the new code |
+| Instructors | `remove_student(class, student)` | |
+| Instructors | `class_roster(class)` | the class, seats, and each student's stats |
+| Students | `class_preview(code)` | `{ ok, class, org, already_in, error }` |
+| Students | `join_class(code, student_name)` | `{ ok, class, org }` or `{ ok: false, error }` |
+| Students | `leave_class(class)` | |
+| Students | `my_classes()` | the classes they're in |
+
+Student calls return `{ ok: false, error }` rather than failing: `too_many_tries`, `not_found`,
+`expired`, `closed`, `full` or `bad_name`. Instructor calls fail with a permission error for
+anyone outside the school.
+
+Tests: `bash supabase/tests/run.sh` loads a stand-in for Supabase's auth (`stub_supabase.sql`)
+and every migration into a throwaway local Postgres, then runs `supabase/tests/*_test.sql`.
+It needs Postgres 16 or newer installed; it never touches the live project.
 
 ## Daily challenge
 
@@ -297,4 +348,6 @@ card on the home page, and a new migration allowing its id in `attempts.game` an
 ## Next up
 
 1. More games: a bomb pot daily challenge, then other games (Texas Hold'em, and games beyond poker).
-2. A version for card rooms and dealer schools, with a manager view of trainee progress.
+2. A version for card rooms and dealer schools, with a manager view of trainee progress. The
+   database side is in (see [Schools and classes](#schools-and-classes)); next are the join
+   page (`/join/<code>`), "My classes" in the account box, and the instructor view.

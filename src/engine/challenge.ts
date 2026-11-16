@@ -13,10 +13,10 @@ import { DEFAULT_SETTINGS } from '../config.ts';
 export const CHALLENGE_VERSION = 3;
 export const CHALLENGE_HANDS = 5;
 
-/** Everyone plays the same table: 2/5, side pots often, up to 2 pot calls, no countdown. */
+/** Everyone plays the same table: 2/5 true pot, side pots often, up to 2 pot calls, no countdown. */
 export const CHALLENGE_SETTINGS: Settings = {
   ...DEFAULT_SETTINGS,
-  stakes: '2/5', speed: 'normal', showPot: true, sbFull: false, side: 'often', timer: 'off', potCalls: 2, chipAmt: true,
+  stakes: '2/5', speed: 'normal', showPot: true, potStyle: 'true', side: 'often', timer: 'off', potCalls: 2, chipAmt: true,
   seats: 6, // everyone plays the same six-handed hands, whatever their own table size
 };
 

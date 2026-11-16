@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { doCall, doRaise, newHand, potMath } from '../src/engine/hand.ts';
+import { doBet, doCall, doRaise, newHand, potMath } from '../src/engine/hand.ts';
 import { buildPots, makeCut, newCutLevels, prepareCuts, roundBets } from '../src/engine/pots.ts';
 import { seed } from '../src/engine/rng.ts';
 import { DEFAULT_SETTINGS } from '../src/config.ts';
@@ -19,9 +19,51 @@ test('first in at $2/$5 pots it to $17', () => {
   assert.equal(potMath(S, utg).raiseTo, 17);
 });
 
-test('with the small blind rounded up it is $20', () => {
-  const S = freshHand({ sbFull: true });
-  assert.equal(potMath(S, S.players[3]).raiseTo, 20);
+test('rounded pot at $2/$5: each blind counts as $5, so first in pots it to $20', () => {
+  const S = freshHand({ potStyle: 'rounded' });
+  const q = potMath(S, S.players[3]);
+  assert.equal(q.exact, 17);
+  assert.equal(q.raiseTo, 20);
+});
+
+test('rounded pot at $1/$3: the bring-in is $5 and first in pots it to $15', () => {
+  const S = freshHand({ potStyle: 'rounded', stakes: '1/3' });
+  assert.equal(S.currentBet, 5, 'bring-in');
+  const [, , bb, s4, s5] = S.players;
+  assert.equal(potMath(S, s4).raiseTo, 15);
+  // Seat 4 pots it to $15; Seat 5 re-pots: blinds $5 + $15 + call $15 = $35, raise to $50.
+  doRaise(S, s4, 15, true);
+  assert.equal(potMath(S, s5).raiseTo, 50);
+  // The big blind owes $12 more to call the $15.
+  doRaise(S, s5, 50, true); S.currentBet = 15; s5.committed = 0; // (only s4's $15 stands for this check)
+  const before = bb.stack; doCall(S, bb);
+  assert.equal(before - bb.stack, 12);
+});
+
+test('rounded pot after the flop: the middle rounds up to the next $5', () => {
+  // $37 in the middle, a $10 bet, then a pot: $40 + $10 + call $10 = $60, raise to $70.
+  const S = freshHand({ potStyle: 'rounded' }); S.street = 1; S.pot = 37; S.currentBet = 10;
+  S.players.forEach(p => { p.committed = 0; });
+  S.players[1].committed = 10;
+  const q = potMath(S, S.players[2]);
+  assert.equal(q.exact, 67);
+  assert.equal(q.raiseTo, 70);
+});
+
+test('rounded pot: all in for $63 plays as $60, and the $3 goes back', () => {
+  const S = freshHand({ potStyle: 'rounded' }); S.street = 1; S.pot = 100; S.currentBet = 0;
+  S.players.forEach(p => { p.committed = 0; });
+  const p = S.players[4]; p.stack = 63;
+  doBet(S, p, 63);
+  assert.equal(p.committed, 60);
+  assert.equal(p.kept, 3);
+  assert.ok(p.allin);
+  assert.equal(S.currentBet, 60);
+  assert.match(S.log.at(-1)!.t, /\$3 back to Seat 5/);
+  // True pot keeps every chip in play.
+  const T = freshHand(); T.street = 1; T.currentBet = 0; T.players.forEach(x => { x.committed = 0; });
+  T.players[4].stack = 63; doBet(T, T.players[4], 63);
+  assert.equal(T.players[4].committed, 63);
 });
 
 test('re-pot: pot raise after a pot raise', () => {

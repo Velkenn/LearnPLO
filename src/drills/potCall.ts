@@ -2,7 +2,7 @@
 import { app, bump, challengeAnswer, logAttempt, recordTime } from '../app.ts';
 import type { Player, PotQ } from '../engine/types.ts';
 import { posOf, seatName } from '../engine/hand.ts';
-import { fmt } from '../util.ts';
+import { fmt, roundUp } from '../util.ts';
 import type { PotMiss } from '../data/weakSpots.ts';
 import { $q, readAmount } from '../ui/dom.ts';
 import { buzz } from '../ui/sound.ts';
@@ -34,7 +34,7 @@ export function gradeQuiz(timeout: boolean): void {
   const d = Q.ok || timeout ? null : diagnose(v, q);
   Q.diag = d ? d.text : '';
   challengeAnswer({ k: 'pot', v: timeout ? null : v }, Q.ok);
-  logAttempt({ kind: 'pot', correct: Q.ok, timedOut: timeout, ms: timeout ? null : ms, detail: { answer: timeout ? null : v, raiseTo: q.raiseTo, street: q.street, repot: !!q.repotOf, sbFull: S.sbFull, ...(d && { miss: d.miss }) } });
+  logAttempt({ kind: 'pot', correct: Q.ok, timedOut: timeout, ms: timeout ? null : ms, detail: { answer: timeout ? null : v, raiseTo: q.raiseTo, street: q.street, repot: !!q.repotOf, rounded: q.rounded, ...(d && { miss: d.miss }) } });
   renderModal(); renderScores();
   $q('#cont')?.focus({ preventScroll: true });
 }
@@ -43,15 +43,16 @@ export function continueQuiz(): void { app.S?.quizResolve?.(); render(); }
 
 /** Name the likely mistake behind a wrong answer, with a short code for the weak spots page. */
 export function diagnose(v: number, q: PotQ): { miss: PotMiss; text: string } {
-  const S = app.S!, n = `Seat ${q.seat + 1}`;
-  if (q.sbAlt != null && v === q.sbAlt) return { miss: 'sb-rule', text: S.sbFull
-    ? `That counts the small blind as ${fmt(S.sb)}. With the rounding rule on, it counts as a full ${fmt(S.bb)}.`
-    : `That counts the small blind as a full ${fmt(S.bb)}. With the rounding rule off, it counts as the ${fmt(S.sb)} actually posted.` };
+  const n = `Seat ${q.seat + 1}`;
+  // Rounded pot: the same mistakes, rounded up to the next $5 the way the dealer would say them.
+  const is = (x: number): boolean => v === x || (q.rounded && v === roundUp(x, 5));
+  if (q.rounded && v === q.exact) return { miss: 'not-rounded', text: `That's the exact pot. This is a rounded pot game: round up to the next $5, so it's ${fmt(q.raiseTo)}.` };
+  if (!q.rounded && v === roundUp(q.exact, 5)) return { miss: 'rounded-in-true', text: `That's rounded up to the next $5. This table plays true pot, so every chip counts as it is. (If your room rounds, switch to rounded pot in settings.)` };
   if (q.mine > 0 && v === q.addNow) return { miss: 'added-only', text: `That's what ${n} adds. Announce the total.` };
-  if (v === q.total) return { miss: 'before-call', text: `That's the pot before the call. They call first, then raise the size of the new pot.` };
-  if (q.toCall > 0 && v === q.cb + q.total) return { miss: 'skipped-call', text: `You raised by the current pot but skipped adding the ${fmt(q.toCall)} call to the pot first.` };
-  if (v === q.after) return { miss: 'after-call', text: `That's the pot after the call. The raise goes on top of the ${fmt(q.cb)} they're matching.` };
-  if (v === 3 * q.cb + q.total) return { miss: 'shortcut', text: `Close. With the 3× shortcut, "everything else" leaves out the last bet itself${q.mine ? ` and ${n}'s own ${fmt(q.mine)}` : ''}.` };
+  if (is(q.total)) return { miss: 'before-call', text: `That's the pot before the call. They call first, then raise the size of the new pot.` };
+  if (q.toCall > 0 && is(q.cb + q.total)) return { miss: 'skipped-call', text: `You raised by the current pot but skipped adding the ${fmt(q.toCall)} call to the pot first.` };
+  if (is(q.after)) return { miss: 'after-call', text: `That's the pot after the call. The raise goes on top of the ${fmt(q.cb)} they're matching.` };
+  if (is(3 * q.cb + q.total)) return { miss: 'shortcut', text: `Close. With the 3× shortcut, "everything else" leaves out the last bet itself${q.mine ? ` and ${n}'s own ${fmt(q.mine)}` : ''}.` };
   return v > q.raiseTo ? { miss: 'high', text: `Too high by ${fmt(v - q.raiseTo)}.` } : { miss: 'low', text: `Too low by ${fmt(q.raiseTo - v)}.` };
 }
 
@@ -73,15 +74,22 @@ export function quizPanel(): string {
   h += timeLine('p', Q.ms);
   const parts: string[] = [];
   if (q.middle > 0) parts.push(`${fmt(q.middle)} in the middle`);
-  q.bets.forEach(b => parts.push(q.adj && b.i === q.sbSeat
-    ? `${fmt(S.bb)} from Seat ${b.i + 1} (small blind rounded up from ${fmt(b.amt)})`
-    : `${fmt(b.amt)} from Seat ${b.i + 1}${b.folded ? ' (folded)' : ''}`));
+  q.bets.forEach(b => parts.push(`${fmt(b.amt)} from Seat ${b.i + 1}${b.folded ? ' (folded)' : ''}`));
+  // Rounded pot: after the call, the pot rounds up to the next $5 (the last bet is already a $5 amount).
+  const potUp = q.raiseTo - q.cb;
+  // The 3× rule's "everything else": rounded pot rounds it up to the next $5 (at $1/$3 the blinds
+  // are $4, under the $5 bring-in, and count as $0 on top of it; at $2/$5 the small blind counts as $5).
+  const restOut = q.raiseTo - 3 * q.cb;
+  const roundStep = !q.rounded ? ''
+    : potUp === q.after ? `<li>Rounded pot: ${fmt(q.after)} is already a $5 amount</li>`
+      : `<li>Rounded pot: round it up to the next $5: ${fmt(q.after)} → <b>${fmt(potUp)}</b></li>`;
   h += `<ol class="steps">
     <li>Count it down: ${parts.join(' + ')} = <b>${fmt(q.total)}</b></li>
     <li>${q.toCall > 0 ? `${n} calls ${fmt(q.toCall)} first${q.mine ? `, since they already have ${fmt(q.mine)} out` : ''}: ${fmt(q.total)} + ${fmt(q.toCall)} = <b>${fmt(q.after)}</b>` : `${n} has nothing to call, so the pot stays <b>${fmt(q.after)}</b>`}</li>
-    <li>Then they raise the size of the pot: ${fmt(q.cb)} + ${fmt(q.after)} = <b>${fmt(q.raiseTo)}</b></li>
+    ${roundStep}
+    <li>Then they raise the size of the pot: ${fmt(q.cb)} + ${fmt(potUp)} = <b>${fmt(q.raiseTo)}</b></li>
   </ol>
-  <p class="shortcut"><span class="k">The 3× rule:</span>Three times the last bet, plus everything else out${q.mine ? `, not counting ${n}'s own ${fmt(q.mine)}` : ''}. 3 × ${fmt(q.cb)} + ${fmt(q.rest)} = <b>${fmt(q.raiseTo)}</b>.${q.mine ? ` ${n} puts in ${fmt(q.addNow)} more.` : ''}</p>
+  <p class="shortcut"><span class="k">The 3× rule:</span>Three times the last bet, plus everything else out${q.mine ? `, not counting ${n}'s own ${fmt(q.mine)}` : ''}${q.rounded ? ', rounded up to the next $5' : ''}. 3 × ${fmt(q.cb)} + ${fmt(restOut)} = <b>${fmt(q.raiseTo)}</b>.${q.mine ? ` ${n} puts in ${fmt(q.addNow)} more.` : ''}</p>
   <button class="btn wide" id="cont">Back to the action</button>`;
   return h;
 }

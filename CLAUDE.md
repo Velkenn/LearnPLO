@@ -75,7 +75,14 @@ don't sleep a fixed time. For small fixes, it's fine to push and check at the st
 ## Poker rules the code relies on
 
 - Pot raise = last bet + pot after calling it. Shortcut: 3 × last bet + everything else out,
-  not counting the raiser's own chips. Optional rule: small blind counts as a full blind preflop.
+  not counting the raiser's own chips.
+- Pot style (`settings.potStyle`, pot limit Omaha only; the first deal asks, `ui/potStyle.ts`):
+  true pot counts every chip. Rounded pot (`S.rounded`): bets go in $5s, the bring-in is the big
+  blind rounded up (`S.minBet`: $5 at $1/$3), and the pot raise is the true-pot answer rounded up
+  to the next $5 (`PotQ.exact` before rounding, `raiseTo` after). So $1/$3 first in is $15, $2/$5
+  is $20. An all-in's last $1 to $4 doesn't play: `commit()` puts it in `p.kept`, back with the
+  player. Bomb pots and the daily challenge are always true pot; the true pot path must not change
+  (the challenge fingerprint guards it).
 - Side pots are built at the end of the betting round where a player is all in for less, from
   that round's bets only: chips from earlier rounds are already in the middle (main pot). The
   dealer is asked what each pot takes from this round (`Pot.round`: the all-in amount from each

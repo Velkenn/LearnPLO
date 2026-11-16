@@ -6,6 +6,7 @@
 //   npm run e2e -- http://localhost:4173/plo/
 //
 // Options: --hands 40  --seats 9  --shots (save screenshots to e2e/out)  --dark
+//          --rounded (answer the first deal's question with rounded pot)  --stakes 1/3
 import { chromium } from 'playwright';
 import { mkdirSync } from 'node:fs';
 
@@ -16,6 +17,8 @@ url.searchParams.set('e2e', '');
 const HANDS = +(args[args.indexOf('--hands') + 1] || 0) || 40;
 const SEATS = +(args[args.indexOf('--seats') + 1] || 0) || 6;
 const SHOTS = args.includes('--shots');
+const ROUNDED = args.includes('--rounded');
+const STAKES = args.includes('--stakes') ? args[args.indexOf('--stakes') + 1] : null;
 const OUT = new URL('./out/', import.meta.url).pathname;
 if (SHOTS) mkdirSync(OUT, { recursive: true });
 
@@ -34,6 +37,7 @@ if (!await page.$eval('#training', f => f.disabled)) {
   await page.click('#potCount button[data-v="2"]');
   await page.click(`#seatsSeg button[data-v="${SEATS}"]`);
   if (BOMB) await page.click(`#anteSeg button[data-v="${SEATS === 9 ? 25 : 10}"]`);
+  if (STAKES) await page.selectOption('#stakes', STAKES);
 }
 await page.click('#gear');
 
@@ -41,7 +45,7 @@ const tally = { pot: 0, cut: 0, read: 0, chop: 0, missedChop: 0, split: 0, botto
 const bad = [];
 const shot = async name => { if (SHOTS) { await page.waitForTimeout(400); await page.screenshot({ path: `${OUT}${name}.png`, fullPage: true }); } };
 const shots = new Set();
-const once = async name => { if (!shots.has(name)) { shots.add(name); await shot(`${BOMB ? 'bomb-' : ''}${name}${SEATS === 6 ? '' : `-${SEATS}`}`); } };
+const once = async name => { if (!shots.has(name)) { shots.add(name); await shot(`${BOMB ? 'bomb-' : ''}${name}${SEATS === 6 ? '' : `-${SEATS}`}${ROUNDED ? '-rounded' : ''}`); } };
 const locked = await page.$eval('#training', f => f.disabled);
 
 // A question pins the page where it was, so the phone keyboard can't scroll it, and closing the
@@ -74,6 +78,13 @@ async function checkUnpinned(kind) {
 
 for (let hand = 0; hand < HANDS; hand++) {
   await page.click('[data-deal]'); // the button on the felt
+  // The first pot limit Omaha deal asks how the room counts the pot; bomb pots never ask.
+  if (hand === 0 && !BOMB) {
+    await page.waitForSelector('#styleAsk.open', { timeout: 5000 }).catch(() => bad.push(['pot style', 'first deal didn’t ask']));
+    await page.click(`#styleBox [data-style="${ROUNDED ? 'rounded' : 'true'}"]`);
+  }
+  if (hand === 0 && BOMB && await page.isVisible('#styleAsk.open')) bad.push(['pot style', 'bomb pots asked']);
+  if (hand === 1 && await page.isVisible('#styleAsk.open')) bad.push(['pot style', 'asked twice']);
   await page.evaluate(() => window.scrollTo(0, 150)); // as if they'd scrolled down a little
   const n = await page.evaluate(() => window.__app.S.players.length);
   if (n !== (locked ? 6 : SEATS)) bad.push(['seats', n]);
@@ -83,11 +94,16 @@ for (let hand = 0; hand < HANDS; hand++) {
     if (await page.isVisible('#ans')) {
       const q = await page.evaluate(() => window.__app.S.quiz.q.raiseTo);
       const wrong = hand % 5 === 1;
+      if (ROUNDED && q % 5) bad.push(['rounded', 'pot not a $5 amount', q]);
       const pin = await checkPinned('pot');
       await once('pot-question');
       await page.fill('#ans', String(q + (wrong ? 7 : 0))); await page.press('#ans', 'Enter');
       const v = await page.innerText('#modalBox .verdict');
       if (wrong === v.startsWith('Good')) bad.push(['pot', wrong, v]);
+      const steps = await page.innerText('#modalBox .steps');
+      const box = await page.innerText('#modalBox');
+      if (/\$-/.test(box)) bad.push(['pot', 'negative amount in the explanation', box]);
+      if (ROUNDED !== steps.includes('Rounded pot')) bad.push(['rounded', 'explanation', ROUNDED, steps]);
       if (wrong) await once('pot-wrong');
       tally.pot++; await page.click('#cont');
       if (pin) await checkUnpinned('pot');

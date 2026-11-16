@@ -21,7 +21,7 @@ export const STREETS = ['Preflop', 'Flop', 'Turn', 'River'] as const;
 
 /** [small blind, big blind, smallest bet unit] */
 export const STAKES: Record<Stakes, [number, number, number]> = {
-  '1/2': [1, 2, 1], '2/5': [2, 5, 5], '5/10': [5, 10, 5], '25/50': [25, 50, 25],
+  '1/2': [1, 2, 1], '1/3': [1, 3, 1], '2/5': [2, 5, 5], '5/10': [5, 10, 5], '25/50': [25, 50, 25],
 };
 
 /** Bomb pots, by ante: the smallest bet after the flop, and the chip unit bets round to. */
@@ -41,7 +41,7 @@ export const TIMERS: Record<TimerLevel, { pot: number; build: number; read: numb
 };
 
 export const DEFAULT_SETTINGS: Settings = {
-  stakes: '2/5', speed: 'normal', four: false, showPot: true, sbFull: false,
+  stakes: '2/5', speed: 'normal', four: false, showPot: true, potStyle: '',
   side: 'some', timer: 'off', potCalls: 1, chipAmt: true, sound: true, seats: 6, ante: 10,
 };
 

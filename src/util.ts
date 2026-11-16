@@ -4,6 +4,8 @@ import type { Pot } from './engine/types.ts';
 export const fmt = (n: number): string => '$' + n.toLocaleString('en-US');
 export const capF = (t: string): string => t.charAt(0).toUpperCase() + t.slice(1);
 export const roundU = (x: number, u: number): number => Math.max(u, Math.round(x / u) * u);
+/** Round up to the next multiple of u (rounded pot: the pot rounds up to the next $5). */
+export const roundUp = (x: number, u: number): number => Math.ceil(x / u) * u;
 
 /** "Seat 3" or "Seats 2, 4 and 5" from zero-based seat indexes. */
 export const seatList = (ids: number[]): string => {

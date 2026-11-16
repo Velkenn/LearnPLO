@@ -1,7 +1,7 @@
 // The settings sheet: reflect current settings and save changes.
 import { app, canCustomize, resetStats, saveSettings, storeMode } from '../app.ts';
 import { TIMERS } from '../config.ts';
-import type { Ante, Settings, SideFreq, Speed, Stakes, TimerLevel } from '../engine/types.ts';
+import type { Ante, PotStyle, Settings, SideFreq, Speed, Stakes, TimerLevel } from '../engine/types.ts';
 import { $, $q, sheetOpen, showSheet } from './dom.ts';
 import { isBomb } from '../page.ts';
 import { chipClick } from './sound.ts';
@@ -14,12 +14,23 @@ const maybeBox = (id: string): HTMLInputElement | null => $q<HTMLInputElement>('
 const segOn = (id: string, value: string): void =>
   document.querySelectorAll<HTMLButtonElement>(`#${id} button`).forEach(b => b.classList.toggle('on', b.dataset.v === value));
 
+/** What each pot style means, under its switch. */
+export const POT_STYLE_HINT: Record<'true' | 'rounded', string> = {
+  true: 'Every chip counts as it is. $2/$5 first in pots it to $17.',
+  rounded: 'Bets go in $5s and the pot rounds up to the next $5. $1/$3 first in pots it to $15 (bring-in $5), $2/$5 to $20. An all-in’s last $1 to $4 doesn’t play.',
+};
+
 export function applySettings(): void {
   const s = app.settings;
   document.body.classList.toggle('four', !!s.four);
   const stakes = $q<HTMLSelectElement>('#stakes'); if (stakes) stakes.value = s.stakes;
   checkbox('showPot').checked = !!s.showPot;
-  const sbFull = maybeBox('sbFull'); if (sbFull) sbFull.checked = !!s.sbFull;
+  segOn('potStyleSeg', s.potStyle);
+  const styleSet = $q<HTMLFieldSetElement>('#potStyleSet');
+  if (styleSet) {
+    styleSet.disabled = !!app.challenge;
+    $('#potStyleHint').textContent = app.challenge ? 'The daily challenge is true pot for everyone.' : POT_STYLE_HINT[s.potStyle || 'true'];
+  }
   segOn('anteSeg', String(s.ante));
   checkbox('chipAmt').checked = s.chipAmt !== false;
   checkbox('sound').checked = s.sound !== false;
@@ -60,7 +71,7 @@ export function initSettings(): void {
   // Takes effect on the next deal; the intro before the first deal names the ante.
   onSeg('anteSeg', v => { s().ante = +v as Ante; if (!app.S) renderPanel(); });
   onCheck('showPot', v => { s().showPot = v; }, () => { if (app.S) { renderTable(); renderModal(); } });
-  onCheck('sbFull', v => { s().sbFull = v; }, () => { if (!app.S) renderPanel(); });
+  onSeg('potStyleSeg', v => { s().potStyle = v as PotStyle; if (!app.S) renderPanel(); });
   onCheck('chipAmt', v => { s().chipAmt = v; }, () => { if (app.S) { renderTable(); renderModal(); } });
   onCheck('sound', v => { s().sound = v; }, () => { if (s().sound) chipClick(2); });
   onCheck('four', v => { s().four = v; }, applySettings);

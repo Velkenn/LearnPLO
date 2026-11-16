@@ -11,7 +11,11 @@ A poker dealer trainer. The home page (`/`) lists the games:
 
 A six- or nine-handed hand plays out on its own, and you deal it:
 
-- **Pot calls.** When a player says “Pot,” announce the raise. Re-pots included.
+- **Pot calls.** When a player says “Pot,” announce the raise. Re-pots included. True pot or
+  rounded pot, which the first deal asks about (changeable in settings, guests included). Rounded
+  pot: bets go in $5s, the pot rounds up to the next $5 ($1/$3 first in is $15 with a $5 bring-in,
+  $2/$5 is $20), and an all-in's last $1 to $4 doesn't play and goes back to the player. Bomb pots
+  and the daily challenge are always true pot.
 - **Side pots.** When someone is all in for less, build the side pot at the end of that betting round: say how much of this round's bets goes in the main pot (the all-in amount from each bet, plus dead money). What's already in the middle stays in the main pot.
 - **Showdown reads.** Pick the two hole cards and three board cards that play, side pots first. Chops, odd chips, and mucking losers are handled like a real table.
 

@@ -15,6 +15,9 @@ export function cleanSettings(raw: unknown): Settings {
     }
   }
   if (out.seats !== 6 && out.seats !== 9) out.seats = DEFAULT_SETTINGS.seats;
+  if (out.potStyle !== 'true' && out.potStyle !== 'rounded') out.potStyle = '';
+  // Before pot styles, a switch counted the small blind as a full blind: those dealers play rounded pot.
+  if (!out.potStyle && raw && typeof raw === 'object' && (raw as Record<string, unknown>).sbFull === true) out.potStyle = 'rounded';
   if (out.ante !== 5 && out.ante !== 10 && out.ante !== 25) out.ante = DEFAULT_SETTINGS.ante;
   return out;
 }

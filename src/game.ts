@@ -15,6 +15,7 @@ import { isBomb } from './page.ts';
 import { render } from './ui/render.ts';
 import { timerStop } from './ui/timer.ts';
 import { showDailyResults, submitChallenge } from './ui/daily.ts';
+import { askPotStyle, needsPotStyle } from './ui/potStyle.ts';
 
 export function startHand(): void {
   const c = app.challenge;
@@ -22,6 +23,8 @@ export function startHand(): void {
   if (challengeComplete()) { showDailyResults(); return; }
   // A challenge hand is never cut short: wait for it to finish before dealing the next one.
   if (c && !c.handDone) return;
+  // The first pot limit Omaha deal asks whether the dealer's room counts true pot or rounded pot.
+  if (needsPotStyle()) { askPotStyle(startHand); return; }
   const my = ++app.runId;
   timerStop();
   let S: Hand;

@@ -8,7 +8,7 @@ import { seed } from '../src/engine/rng.ts';
 import { DEFAULT_SETTINGS } from '../src/config.ts';
 import type { Hand, Settings } from '../src/engine/types.ts';
 
-interface Tally { hands: number; potCalls: number; repots: number; cuts: number; showdowns: number; multiPot: number; chops: number; mucks: number; misreads: number }
+interface Tally { hands: number; potCalls: number; repots: number; cuts: number; showdowns: number; multiPot: number; chops: number; mucks: number; misreads: number; kept?: number }
 
 async function run(settings: Settings, hands: number, firstSeed: number, t: Tally): Promise<void> {
   for (let n = 0; n < hands; n++) {
@@ -21,8 +21,14 @@ async function run(settings: Settings, hands: number, firstSeed: number, t: Tall
       render() {}, sleep: () => Promise.resolve(), current: () => true, actionDelay: () => 0,
       async askPot(p, q) {
         t.potCalls++; if (q.repotOf) t.repots++;
-        assert.equal(q.raiseTo, q.cb + q.total + q.toCall, 'call, then raise the pot');
-        assert.equal(q.raiseTo, 3 * q.cb + q.rest, '3x rule');
+        assert.equal(q.exact, q.cb + q.total + q.toCall, 'call, then raise the pot');
+        assert.equal(q.exact, 3 * q.cb + q.rest, '3x rule');
+        if (S.rounded) {
+          assert.equal(q.raiseTo, Math.ceil(q.exact / 5) * 5, 'rounded pot: round up to the next $5');
+          assert.equal(q.cb % 5, 0, 'rounded pot: the last bet is a $5 amount');
+          const restOut = q.raiseTo - 3 * q.cb; // what the 3x rule shows as "everything else", rounded up
+          assert.ok(restOut >= 0 && restOut % 5 === 0, `rounded pot: 3x rule's everything else is a $5 amount (${restOut})`);
+        } else assert.equal(q.raiseTo, q.exact);
         assert.ok(q.addNow <= p.stack, 'raiser can afford it');
       },
       async askCuts(pots) {
@@ -82,8 +88,18 @@ async function run(settings: Settings, hands: number, firstSeed: number, t: Tall
     };
     await playHand(S, hooks);
     assert.ok(finished, 'hand finished');
-    const after = S.players.reduce((a, p) => a + p.stack, 0);
+    // Rounded pot: an all-in's odd chips went back to them (kept), so they count too.
+    const after = S.players.reduce((a, p) => a + p.stack + (p.kept || 0), 0);
     assert.equal(after, chips, `chips conserved (seed ${firstSeed + n})`);
+    if (S.rounded) {
+      for (const p of S.players) {
+        // Every bet is a $5 amount; only the blinds (and what a blind folded) can be odd.
+        const blind = posOf(S, p) === 'SB' || posOf(S, p) === 'BB';
+        if (!blind || !p.folded) assert.equal(p.totalIn % 5, 0, `rounded pot: $5 amounts (seed ${firstSeed + n}, seat ${p.i + 1}, ${p.totalIn})`);
+        assert.ok((p.kept || 0) < 5, 'at most $4 goes back');
+      }
+      t.kept = (t.kept || 0) + S.players.filter(p => p.kept).length;
+    }
     t.hands++;
   }
   seed(null);
@@ -94,7 +110,7 @@ test('thousands of hands keep chips, pots, and cuts consistent', async () => {
   const base = { ...DEFAULT_SETTINGS };
   await run({ ...base, side: 'off', potCalls: 1 }, 500, 1000, t);
   await run({ ...base, side: 'often', potCalls: 1 }, 800, 5000, t);
-  await run({ ...base, side: 'often', potCalls: 3, sbFull: true }, 800, 9000, t);
+  await run({ ...base, side: 'often', potCalls: 3 }, 800, 9000, t);
   await run({ ...base, side: 'some', potCalls: 2, stakes: '25/50' }, 500, 13000, t);
   console.log(t);
   assert.ok(t.potCalls > 1000 && t.repots > 100, 'pot calls and re-pots happen');
@@ -108,11 +124,24 @@ test('nine-handed hands play out the same way', async () => {
   const base = { ...DEFAULT_SETTINGS, seats: 9 as const };
   await run({ ...base, side: 'off', potCalls: 1 }, 400, 21000, t);
   await run({ ...base, side: 'often', potCalls: 2 }, 600, 25000, t);
-  await run({ ...base, side: 'often', potCalls: 3, sbFull: true, stakes: '1/2' }, 400, 29000, t);
+  await run({ ...base, side: 'often', potCalls: 3, stakes: '1/2' }, 400, 29000, t);
   console.log('9-handed', t);
   assert.ok(t.potCalls > 800 && t.repots > 50, 'pot calls and re-pots happen');
   assert.ok(t.cuts > 100 && t.multiPot > 100, 'side pots happen');
   assert.ok(t.chops > 0 && t.mucks > 0, 'chops and mucks happen');
+});
+
+test('rounded pot: $1/$3, $2/$5 and $5/$10, six- and nine-handed', async () => {
+  const t: Tally = { hands: 0, potCalls: 0, repots: 0, cuts: 0, showdowns: 0, multiPot: 0, chops: 0, mucks: 0, misreads: 0, kept: 0 };
+  const base = { ...DEFAULT_SETTINGS, potStyle: 'rounded' as const };
+  await run({ ...base, stakes: '1/3', side: 'often', potCalls: 3 }, 600, 41000, t);
+  await run({ ...base, stakes: '2/5', side: 'often', potCalls: 2 }, 400, 45000, t);
+  await run({ ...base, stakes: '1/3', side: 'some', potCalls: 3, seats: 9 }, 400, 49000, t);
+  await run({ ...base, stakes: '5/10', side: 'often', potCalls: 1 }, 200, 53000, t);
+  console.log('rounded', t);
+  assert.ok(t.potCalls > 800 && t.repots > 50, 'pot calls and re-pots happen');
+  assert.ok(t.cuts > 100, 'side pots happen');
+  assert.ok(t.kept! > 30, 'all-ins with odd chips happen');
 });
 
 test('nine-handed positions and blinds go around the button', () => {

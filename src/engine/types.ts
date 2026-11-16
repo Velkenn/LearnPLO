@@ -20,6 +20,8 @@ export interface Player {
   hole: Card[];
   /** When the player last put chips out (a running count; higher is more recent). */
   putAt?: number;
+  /** Rounded pot: an all-in's last $1 to $4, which don't play and went back to the player. */
+  kept?: number;
 }
 
 export interface LogLine { t: string; st?: boolean }
@@ -65,7 +67,9 @@ export interface PotQ {
   /** Chips out in front this round, most recent bet first. */
   bets: { i: number; amt: number; folded: boolean }[];
   total: number; after: number; raiseTo: number; addNow: number; rest: number;
-  adj: number; sbSeat: number; sbAlt: number | null;
+  /** Rounded pot: the raise worked out exactly, before rounding up to the next $5. Same as raiseTo in true pot. */
+  exact: number;
+  rounded: boolean;
   repotOf?: { seat: number; to: number } | null;
 }
 
@@ -108,7 +112,11 @@ export interface Showdown {
 export type Mode = 'running' | 'quiz' | 'cut' | 'showdown' | 'done';
 
 export interface Hand {
-  btn: number; sb: number; bb: number; unit: number; sbFull: boolean;
+  btn: number; sb: number; bb: number; unit: number;
+  /** Rounded pot: bets go in $5s, the pot rounds up to the next $5, and an all-in's odd $1-$4 doesn't play. */
+  rounded: boolean;
+  /** The smallest bet, and the bring-in before the flop: the big blind, or $5 at $1/$3 rounded. */
+  minBet: number;
   deck: Card[]; board: Card[]; pot: number; street: number;
   /** Double board bomb pots: the bottom board (board is the top one) and the ante each player put in. */
   bottom?: Card[]; ante?: number; freshB?: number[] | null;
@@ -137,7 +145,9 @@ export interface Hand {
   cutResolve?: () => void;
 }
 
-export type Stakes = '1/2' | '2/5' | '5/10' | '25/50';
+export type Stakes = '1/2' | '1/3' | '2/5' | '5/10' | '25/50';
+/** How the room counts the pot. '' until the dealer has picked one. */
+export type PotStyle = '' | 'true' | 'rounded';
 export type Speed = 'slow' | 'normal' | 'fast';
 export type TimerLevel = 'off' | 'relaxed' | 'standard' | 'fast';
 export type SideFreq = 'off' | 'some' | 'often';
@@ -146,7 +156,9 @@ export type TableSize = 6 | 9;
 export type Ante = 5 | 10 | 25;
 
 export interface Settings {
-  stakes: Stakes; speed: Speed; four: boolean; showPot: boolean; sbFull: boolean;
+  stakes: Stakes; speed: Speed; four: boolean; showPot: boolean;
+  /** Pot limit Omaha: true pot or rounded pot. Empty until picked (the first deal asks). */
+  potStyle: PotStyle;
   side: SideFreq; timer: TimerLevel; potCalls: number; chipAmt: boolean; sound: boolean;
   /** Players at the table (6-max or full ring). */
   seats: TableSize;

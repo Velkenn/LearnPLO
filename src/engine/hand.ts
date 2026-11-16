@@ -3,7 +3,7 @@ import type { Hand, Player, PotQ, Settings, TableSize } from './types.ts';
 import { POSITIONS, STAKES, STREETS } from '../config.ts';
 import { newDeck, cardTxt } from './cards.ts';
 import { rand, rnd, pick, shuffle } from './rng.ts';
-import { fmt, roundU } from '../util.ts';
+import { fmt, roundU, roundUp } from '../util.ts';
 
 export const active = (S: Hand): Player[] => S.players.filter(p => !p.folded);
 export const seatName = (p: Player): string => `Seat ${p.i + 1}`;
@@ -24,23 +24,43 @@ export function say(S: Hand, p: Player, txt: string): void {
 export const logStreet = (S: Hand, t: string): void => { S.log.push({ t, st: true }); };
 
 let putCount = 0;
-export function commit(p: Player, amt: number): number {
+/**
+ * Put chips in front of a player (capped at their stack). Rounded pot: a bet is always a $5
+ * amount, so when a player goes all in, the last $1 to $4 doesn't play and goes back to them
+ * (p.kept), and a player left with less than $5 is all in with it kept.
+ */
+export function commit(p: Player, amt: number, rounded = false): number {
   amt = Math.min(amt, p.stack);
+  if (rounded && amt === p.stack) {
+    const odd = Math.min((p.committed + amt) % 5, amt);
+    if (odd) { amt -= odd; p.stack -= odd; p.kept = (p.kept || 0) + odd; }
+  }
   p.stack -= amt; p.committed += amt; p.totalIn += amt;
   if (amt > 0) p.putAt = ++putCount;
+  if (rounded && p.stack > 0 && p.stack < 5) { p.kept = (p.kept || 0) + p.stack; p.stack = 0; }
   if (p.stack === 0) p.allin = true;
   return amt;
 }
 
+/** Say when an all-in's odd chips went back (rounded pot). Call after the action is logged. */
+function noteKept(S: Hand, p: Player, before: number): void {
+  const k = (p.kept || 0) - before;
+  if (k > 0) S.log.push({ t: `${fmt(k)} back to ${seatName(p)}: under $5 doesn't play` });
+}
+
 /** Deal a new hand (6 or 9 players, from settings) with the button on seat `btn`, blinds posted. */
 export function newHand(settings: Settings, btn: number): Hand {
-  const [sb, bb, unit] = STAKES[settings.stakes] || STAKES['2/5'];
+  const [sb, bb, stakesUnit] = STAKES[settings.stakes] || STAKES['2/5'];
+  // Rounded pot: everything goes in $5s, and the bring-in is the big blind rounded up ($5 at $1/$3).
+  const rounded = settings.potStyle === 'rounded';
+  const unit = rounded && stakesUnit % 5 ? 5 : stakesUnit;
+  const minBet = rounded ? roundUp(bb, 5) : bb;
   const r = rand();
   const calls = +settings.potCalls || 1;
   const n = tableSize(settings);
   const S: Hand = {
-    btn, sb, bb, unit, sbFull: !!settings.sbFull, deck: newDeck(), board: [], pot: 0, street: 0,
-    currentBet: 0, lastRaise: bb, lastAgg: null, streetActions: 0, streetBets: 0, streetRaises: 0,
+    btn, sb, bb, unit, rounded, minBet, deck: newDeck(), board: [], pot: 0, street: 0,
+    currentBet: 0, lastRaise: minBet, lastAgg: null, streetActions: 0, streetBets: 0, streetRaises: 0,
     log: [], caption: '', acting: null, mode: 'running',
     quizLeft: calls, potsThisStreet: 0, lastPot: null,
     quizStreet: calls > 1 ? (r < .5 ? 0 : r < .9 ? 1 : 2) : (r < .35 ? 0 : r < .75 ? 1 : r < .95 ? 2 : 3),
@@ -55,18 +75,25 @@ export function newHand(settings: Settings, btn: number): Hand {
   S.side = rand() < ({ off: 0, some: .35, often: .7 }[settings.side] ?? .35);
   if (S.side) {
     const seats = shuffle(S.players.map(p => p.i)), lv = [rnd(15, 40), rnd(55, 95)];
-    for (let k = 0; k < (rand() < .35 ? 2 : 1); k++) { const sp = S.players[seats[k]]; sp.short = true; sp.stack = roundU(bb * lv[k], unit); }
+    for (let k = 0; k < (rand() < .35 ? 2 : 1); k++) {
+      const sp = S.players[seats[k]]; sp.short = true; sp.stack = roundU(bb * lv[k], unit);
+      // Rounded pot: some short stacks have odd chips, so an all-in has a last $1 to $4 that doesn't play.
+      if (rounded && rand() < .5) sp.stack += rnd(1, 4);
+    }
   }
   for (let k = 0; k < 4; k++) for (let j = 1; j <= n; j++) S.players[leftOf(S, j)].hole.push(S.deck.pop()!);
-  logStreet(S, `New hand, ${settings.stakes} PLO${n === 9 ? ', 9-handed' : ''}. Button on Seat ${S.btn + 1}.${S.sbFull ? ' Small blind counts as a full blind.' : ''}`);
+  logStreet(S, `New hand, ${settings.stakes} PLO${n === 9 ? ', 9-handed' : ''}. Button on Seat ${S.btn + 1}.${rounded ? ` Rounded pot: bets go in $5s${minBet > bb ? `, and the bring-in is ${fmt(minBet)}` : ''}.` : ''}`);
   const sbP = S.players[leftOf(S, 1)], bbP = S.players[leftOf(S, 2)];
   commit(sbP, sb); say(S, sbP, `posts ${fmt(sb)}`);
   commit(bbP, bb); say(S, bbP, `posts ${fmt(bb)}`);
-  S.currentBet = bb; S.lastAgg = bbP.i; S.caption = 'Blinds are up';
+  S.currentBet = minBet; S.lastAgg = bbP.i; S.caption = 'Blinds are up';
   return S;
 }
 
-/** Pot-limit raise for player p: call first, then raise the size of the pot. */
+/**
+ * Pot-limit raise for player p: call first, then raise the size of the pot. Rounded pot: the same,
+ * rounded up to the next $5 (the pot rounds up, and the last bet is already a $5 amount).
+ */
 export function potMath(S: Hand, p: Player): PotQ {
   const cb = S.currentBet, mine = p.committed, toCall = cb - mine;
   // Most recent bet first, back to the first (the blinds), the way a dealer reads the table.
@@ -74,12 +101,9 @@ export function potMath(S: Hand, p: Player): PotQ {
     .sort((a, b) => (b.putAt ?? 0) - (a.putAt ?? 0))
     .map(x => ({ i: x.i, amt: x.committed, folded: x.folded }));
   const sumC = bets.reduce((a, b) => a + b.amt, 0);
-  const sbP = S.players[leftOf(S, 1)];
-  const sbApplies = S.street === 0 && sbP !== p && sbP.committed === S.sb && S.sb < S.bb;
-  const adj = sbApplies && S.sbFull ? S.bb - S.sb : 0;
-  const total = S.pot + sumC + adj, after = total + toCall, raiseTo = cb + after, addNow = raiseTo - mine;
-  const sbAlt = sbApplies ? (S.sbFull ? raiseTo - (S.bb - S.sb) : raiseTo + (S.bb - S.sb)) : null;
-  return { seat: p.i, pos: posOf(S, p), street: S.street, middle: S.pot, cb, mine, toCall, bets, total, after, raiseTo, addNow, rest: total - cb - mine, adj, sbSeat: sbP.i, sbAlt };
+  const total = S.pot + sumC, after = total + toCall, exact = cb + after;
+  const raiseTo = S.rounded ? roundUp(exact, 5) : exact, addNow = raiseTo - mine;
+  return { seat: p.i, pos: posOf(S, p), street: S.street, middle: S.pot, cb, mine, toCall, bets, total, after, raiseTo, addNow, rest: total - cb - mine, exact, rounded: S.rounded };
 }
 export const othersCanCall = (S: Hand, p: Player, to: number): boolean =>
   active(S).some(x => x !== p && x.stack + x.committed >= to);
@@ -87,18 +111,23 @@ export const othersCanCall = (S: Hand, p: Player, to: number): boolean =>
 export function doFold(S: Hand, p: Player): void { p.folded = true; p.acted = true; say(S, p, 'folds'); }
 export function doCheck(S: Hand, p: Player): void { p.acted = true; say(S, p, 'checks'); }
 export function doCall(S: Hand, p: Player): void {
-  const put = commit(p, S.currentBet - p.committed); p.acted = true;
+  const kept = p.kept || 0;
+  const put = commit(p, S.currentBet - p.committed, S.rounded); p.acted = true;
   say(S, p, p.allin ? `calls all in for ${fmt(put)}` : `calls ${fmt(put)}`);
+  noteKept(S, p, kept);
 }
 const resetOthers = (S: Hand, p: Player): void => { S.players.forEach(x => { if (x !== p) x.acted = false; }); };
 export function doBet(S: Hand, p: Player, amt: number): void {
-  commit(p, amt); S.currentBet = p.committed; S.lastRaise = amt; S.lastAgg = p.i; S.streetBets++; p.acted = true; resetOthers(S, p);
+  const kept = p.kept || 0;
+  amt = commit(p, amt, S.rounded); S.currentBet = p.committed; S.lastRaise = amt; S.lastAgg = p.i; S.streetBets++; p.acted = true; resetOthers(S, p);
   say(S, p, `bets ${fmt(amt)}${p.allin ? ', all in' : ''}`);
+  noteKept(S, p, kept);
 }
 export function doRaise(S: Hand, p: Player, to: number, isPot: boolean, isRepot = false): void {
-  const prev = S.currentBet; commit(p, to - p.committed);
+  const prev = S.currentBet, kept = p.kept || 0; commit(p, to - p.committed, S.rounded); to = p.committed;
   S.currentBet = to; S.lastRaise = to - prev; S.lastAgg = p.i; S.streetRaises++; p.acted = true; resetOthers(S, p);
   say(S, p, (isPot ? `${isRepot ? 're-pots' : 'pots'}, raise to ${fmt(to)}` : `raises to ${fmt(to)}`) + (p.allin ? ', all in' : ''));
+  noteKept(S, p, kept);
 }
 
 /** A raise smaller than pot (full pot raises are saved for the quiz). */
@@ -112,14 +141,15 @@ function tryRaise(S: Hand, p: Player): boolean {
   doRaise(S, p, to, false); return true;
 }
 function betSize(S: Hand, p: Player, quizHere: boolean): number {
-  const pot = S.pot;
+  // Rounded pot: the pot rounds up to the next $5, and so does the biggest bet.
+  const pot = S.rounded ? roundUp(S.pot, 5) : S.pot;
   const shortsIn = S.side && active(S).some(x => x.short);
   let b = roundU(pot * pick(shortsIn ? [.66, .75, 1] : [.33, .5, .66, .75, 1]), S.unit);
   if (b > pot) b = pot;
-  b = Math.max(b, Math.min(S.bb, pot));
+  b = Math.max(b, Math.min(S.minBet, pot));
   const pool = active(S).filter(x => !x.short && !x.allin);
   const eff = Math.min(...(pool.length ? pool : active(S)).map(x => x.stack));
-  if (quizHere) { const cap = Math.floor((eff - pot) / 4 / S.unit) * S.unit; if (cap >= S.bb) b = Math.min(b, cap); }
+  if (quizHere) { const cap = Math.floor((eff - pot) / 4 / S.unit) * S.unit; if (cap >= S.minBet) b = Math.min(b, cap); }
   return Math.max(1, Math.min(b, eff, p.stack));
 }
 function canFold(S: Hand, p: Player): boolean {
@@ -155,7 +185,7 @@ export function decide(S: Hand, p: Player): void {
   if (p.short) {
     if (toCall > 0) doCall(S, p);
     else if (S.currentBet > 0) doCheck(S, p);
-    else doBet(S, p, Math.max(1, Math.min(S.pot, p.stack)));
+    else doBet(S, p, Math.max(1, Math.min(S.rounded ? roundUp(S.pot, 5) : S.pot, p.stack)));
     S.streetActions++; return;
   }
   if (toCall > 0) {
@@ -190,7 +220,7 @@ export function roundDone(S: Hand): boolean {
 export function startStreet(S: Hand): void {
   S.streetActions = 0; S.streetBets = 0; S.streetRaises = 0; S.potsThisStreet = 0; S.lastPot = null;
   S.players.forEach(p => { p.acted = false; });
-  if (S.street > 0) { S.currentBet = 0; S.lastRaise = S.bb; S.lastAgg = null; }
+  if (S.street > 0) { S.currentBet = 0; S.lastRaise = S.minBet; S.lastAgg = null; }
   if (S.street === S.quizStreet && S.street > 0) S.quizMin = Math.min(rnd(1, 2), Math.max(1, active(S).length - 1));
 }
 

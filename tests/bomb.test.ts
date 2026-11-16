@@ -29,7 +29,7 @@ async function run(settings: Settings, hands: number, firstSeed: number, t: Tall
         assert.ok(S.street >= 1, 'no betting before the flop');
         assert.equal(q.raiseTo, q.cb + q.total + q.toCall, 'call, then raise the pot');
         assert.equal(q.raiseTo, 3 * q.cb + q.rest, '3x rule');
-        assert.equal(q.sbAlt, null, 'no blinds in a bomb pot');
+        assert.equal(q.rounded, false, 'bomb pots count the pot exactly');
         assert.ok(q.addNow <= p.stack, 'raiser can afford it');
       },
       async askCuts(pots) {

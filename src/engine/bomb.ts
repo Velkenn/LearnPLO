@@ -20,7 +20,7 @@ export function newBombHand(settings: Settings, btn: number): Hand {
   const calls = +settings.potCalls || 1;
   const n = tableSize(settings);
   const S: Hand = {
-    btn, sb: 0, bb: min, unit, sbFull: false, deck: newDeck(), board: [], bottom: [], ante, freshB: null, pot: 0, street: 0,
+    btn, sb: 0, bb: min, unit, rounded: false, minBet: min, deck: newDeck(), board: [], bottom: [], ante, freshB: null, pot: 0, street: 0,
     currentBet: 0, lastRaise: min, lastAgg: null, streetActions: 0, streetBets: 0, streetRaises: 0,
     log: [], caption: '', acting: null, mode: 'running',
     quizLeft: calls, potsThisStreet: 0, lastPot: null,

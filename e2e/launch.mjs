@@ -37,11 +37,31 @@ async function open(url) {
   check(box < 844, `welcome fits on the first phone screen (bottom at ${Math.round(box)}px)`);
   await shoot(page, 'welcome');
   await page.click('#welcomeDeal');
+  // The first deal asks how the room counts the pot, then deals.
+  await page.waitForSelector('#styleAsk.open');
+  const ask = await page.innerText('#styleBox');
+  check(ask.includes('True pot') && ask.includes('Rounded pot') && ask.includes('$17') && ask.includes('$20') && ask.includes('$15') && ask.includes('change this anytime in settings'), 'pot style question explains both and points to settings', ask);
+  const fits = await page.$eval('#styleBox', el => el.getBoundingClientRect().top >= 0);
+  check(fits, 'pot style question fits on the phone screen');
+  await shoot(page, 'pot-style');
+  await page.click('#styleBox [data-style="rounded"]');
+  await page.waitForFunction(() => !document.querySelector('#styleAsk').classList.contains('open'));
   await page.waitForFunction(() => !!document.querySelector('#welcome').hidden);
   check(await page.$eval('#table', el => !!el.querySelector('.seat, [class*=seat]')), 'a hand is being dealt');
+  check((await page.$eval('#log', el => el.textContent)).includes('Rounded pot'), 'the hand is dealt rounded pot');
   await page.reload();
   await page.waitForTimeout(500);
   check(!await page.isVisible('#welcome'), 'welcome stays gone after a reload');
+  // The pick is remembered (a guest's on this device) and shown in settings, where they can change it.
+  await page.click('#gear');
+  check(await page.$eval('#potStyleSeg [data-v="rounded"]', b => b.classList.contains('on')), 'settings show rounded pot');
+  check(!await page.$eval('#potStyleSet', f => f.disabled), 'guests can change the pot style');
+  await page.click('#potStyleSeg [data-v="true"]');
+  check((await page.innerText('#potStyleHint')).includes('$17'), 'the hint follows the pick');
+  await page.click('#gear');
+  await page.click('[data-deal]');
+  await page.waitForTimeout(300);
+  check(!await page.isVisible('#styleAsk.open'), 'it asks only once');
   await ctx.close();
 }
 {

@@ -8,6 +8,7 @@ import { initDaily } from './ui/daily.ts';
 import { initFeedback } from './ui/feedback.ts';
 import { initStats } from './ui/stats.ts';
 import { initWelcome } from './ui/welcome.ts';
+import { initPotStyle } from './ui/potStyle.ts';
 import { render } from './ui/render.ts';
 import { shellHTML } from './ui/shell.ts';
 import { app } from './app.ts';
@@ -25,6 +26,7 @@ initDaily();
 initFeedback();
 initStats();
 initWelcome();
+initPotStyle();
 render();
 
 // Browser tests read game state through this. Only exposed with ?e2e in the URL.

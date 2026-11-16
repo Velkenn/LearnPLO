@@ -45,7 +45,7 @@ await page.waitForSelector('#spotsBtn:not([hidden])');
 if (await page.isVisible('#dailyStrip')) bad.push(['daily strip for a member on the bomb pot page']);
 if (!(await page.innerText('#scores')).includes('Splits')) bad.push(['splits score missing']);
 await page.click('#gear');
-if (!await page.isVisible('#anteSeg') || await page.$('#stakes') || await page.$('#sbFull')) bad.push(['bomb settings rows']);
+if (!await page.isVisible('#anteSeg') || await page.$('#stakes') || await page.$('#potStyleSeg')) bad.push(['bomb settings rows']);
 await page.close();
 
 // Old links: the daily challenge and sign-in links that come back to the root.

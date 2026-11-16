@@ -81,10 +81,12 @@ export const localStore: Store = {
 export const guestStore: Store = {
   mode: 'guest',
   loadSettings: () => {
+    // Guests play default training settings, but keep their sound, deck colors, and pot style.
     const c = read('local', K.comfort) as Partial<Settings> | null;
-    return { ...DEFAULT_SETTINGS, sound: c?.sound ?? DEFAULT_SETTINGS.sound, four: c?.four ?? DEFAULT_SETTINGS.four };
+    const potStyle = c?.potStyle === 'true' || c?.potStyle === 'rounded' ? c.potStyle : DEFAULT_SETTINGS.potStyle;
+    return { ...DEFAULT_SETTINGS, sound: c?.sound ?? DEFAULT_SETTINGS.sound, four: c?.four ?? DEFAULT_SETTINGS.four, potStyle };
   },
-  saveSettings: s => write('local', K.comfort, { sound: s.sound, four: s.four }),
+  saveSettings: s => write('local', K.comfort, { sound: s.sound, four: s.four, potStyle: s.potStyle }),
   loadStats: () => cleanStats(read('session', K.guestStats)),
   saveStats: s => write('session', K.guestStats, s),
   recordAttempt: () => { /* guests aren't logged */ },

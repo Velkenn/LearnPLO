@@ -47,3 +47,14 @@ test('table size is six or nine, and older settings default to six', () => {
   assert.equal(cleanSettings({ seats: '9' }).seats, 6);
   assert.equal(cleanSettings({ timer: 'fast' }).seats, 6);
 });
+
+test('pot style: kept when valid, empty until picked, and the old small-blind switch means rounded pot', () => {
+  assert.equal(cleanSettings({}).potStyle, '');
+  assert.equal(cleanSettings({ potStyle: 'rounded' }).potStyle, 'rounded');
+  assert.equal(cleanSettings({ potStyle: 'true' }).potStyle, 'true');
+  assert.equal(cleanSettings({ potStyle: 'square' }).potStyle, '');
+  assert.equal(cleanSettings({ sbFull: true }).potStyle, 'rounded');
+  assert.equal(cleanSettings({ sbFull: false }).potStyle, '');
+  assert.equal(cleanSettings({ sbFull: true, potStyle: 'true' }).potStyle, 'true', 'a pick wins over the old switch');
+  assert.ok(!('sbFull' in cleanSettings({ sbFull: true })), 'the old switch is gone');
+});

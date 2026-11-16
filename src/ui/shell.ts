@@ -17,10 +17,18 @@ function stakesRows(game: GameId): { top: string; bottom: string } {
   };
   return {
     top: `<div class="row"><label for="stakes">Blinds</label>
-      <select id="stakes"><option>1/2</option><option>2/5</option><option>5/10</option><option>25/50</option></select></div>`,
-    bottom: `<div class="row"><label for="sbFull">Count the small blind as a full blind in the preflop pot</label><input type="checkbox" id="sbFull"></div>`,
+      <select id="stakes"><option>1/2</option><option>1/3</option><option>2/5</option><option>5/10</option><option>25/50</option></select></div>`,
+    bottom: '',
   };
 }
+
+/** Pot limit Omaha: true pot or rounded pot. Anyone can change it (guests too); the daily challenge is always true pot. */
+const potStyleRow = (game: GameId): string => game === 'bomb' ? '' : `<fieldset class="training" id="potStyleSet">
+    <legend class="sr">How the pot is counted</legend>
+    <div class="row"><span>Pot</span>
+      <div class="seg" id="potStyleSeg"><button data-v="true">True pot</button><button data-v="rounded">Rounded pot</button></div></div>
+    <p class="thint muted" id="potStyleHint"></p>
+    </fieldset>`;
 
 export function shellHTML(game: GameId): string {
   const rows = stakesRows(game);
@@ -35,6 +43,7 @@ export function shellHTML(game: GameId): string {
 
   <section class="sheet" id="sheet" aria-label="Settings">
     <div class="acct" id="acct" hidden></div>
+    ${potStyleRow(game)}
     <fieldset class="training" id="training">
     <legend class="sr">Training settings</legend>
     <p class="lockmsg" id="lockmsg" hidden>Sign in to change these.</p>
@@ -70,6 +79,7 @@ export function shellHTML(game: GameId): string {
   <div class="ticker"><span class="street" id="street">Ready</span><strong id="caption">Waiting on a deal</strong></div>
   <section class="panel" id="panel"></section>
   <div class="modal" id="modal" role="dialog" aria-modal="true" aria-labelledby="qtitle"><div class="box" id="modalBox"></div></div>
+  <div class="modal" id="styleAsk" role="dialog" aria-modal="true" aria-labelledby="styleTitle"><div class="box" id="styleBox"></div></div>
   <details class="log" id="logwrap"><summary>Hand history</summary><ol id="log"></ol></details>
   <footer class="foot"><a class="linkbtn" href="/">All games</a><button class="linkbtn" id="feedbackOpen" hidden>Send feedback</button></footer>
   ${dtFootHTML('footer')}`;

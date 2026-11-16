@@ -6,7 +6,7 @@ import type { GameId } from '../config.ts';
 import type { AttemptRow } from './store.ts';
 
 /** Mistake codes logged with wrong answers (see the diagnose functions in src/drills/). */
-export type PotMiss = 'sb-rule' | 'added-only' | 'before-call' | 'skipped-call' | 'after-call' | 'shortcut' | 'high' | 'low';
+export type PotMiss = 'sb-rule' | 'not-rounded' | 'rounded-in-true' | 'added-only' | 'before-call' | 'skipped-call' | 'after-call' | 'shortcut' | 'high' | 'low';
 export type CutMiss = 'dead-money' | 'everything' | 'one-share' | 'with-middle' | 'hand-total' | 'high' | 'low';
 
 export type Drill = 'pot' | 'cut' | 'read' | 'split';
@@ -39,7 +39,8 @@ export const SITUATIONS: Situation[] = [
   { key: 'pot-preflop', kind: 'pot', label: 'Preflop', test: d => num(d, 'street') === 0 && !d.repot },
   { key: 'pot-postflop', kind: 'pot', label: 'Flop, turn, and river', test: d => (num(d, 'street') ?? 0) > 0 && !d.repot },
   { key: 'pot-repot', kind: 'pot', label: 'Re-pots', test: d => d.repot === true },
-  { key: 'pot-sbfull', kind: 'pot', label: 'Small blind counted as a full blind', test: d => d.sbFull === true && num(d, 'street') === 0 },
+  // Rounded pot (before it, a $2/$5 switch that counted the small blind as $5 preflop: the same thing).
+  { key: 'pot-rounded', kind: 'pot', label: 'Rounded pot', test: d => d.rounded === true || (d.sbFull === true && num(d, 'street') === 0) },
   { key: 'cut-main', kind: 'cut', label: 'Main pot', test: d => d.pot === 'Main pot' },
   { key: 'cut-later', kind: 'cut', label: 'All in after the flop', test: d => (num(d, 'street') ?? 0) > 0 },
   { key: 'cut-side', kind: 'cut', label: 'Side pots (two or more all-ins)', test: d => typeof d.pot === 'string' && d.pot !== 'Main pot' },
@@ -63,6 +64,8 @@ export const SITUATIONS: Situation[] = [
 export const MISS_LABELS: Record<Drill, Record<string, string>> = {
   pot: {
     'sb-rule': 'Counted the small blind the wrong way',
+    'not-rounded': 'Rounded pot: forgot to round up to the next $5',
+    'rounded-in-true': 'True pot: rounded up anyway',
     'added-only': 'Said what they add, not the total',
     'before-call': 'Used the pot before the call',
     'skipped-call': 'Skipped adding the call first',

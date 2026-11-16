@@ -44,8 +44,37 @@ const shots = new Set();
 const once = async name => { if (!shots.has(name)) { shots.add(name); await shot(`${BOMB ? 'bomb-' : ''}${name}${SEATS === 6 ? '' : `-${SEATS}`}`); } };
 const locked = await page.$eval('#training', f => f.disabled);
 
+// A question pins the page where it was, so the phone keyboard can't scroll it, and closing the
+// question puts it back: no scrolling back up to the table. Checked on the first of each kind.
+let pinnedAt = 0; // where the page was when the question came up
+let pinBack = 0; // times the page was seen back in its spot after a question
+const pinChecked = new Set();
+async function checkPinned(kind) {
+  if (pinChecked.has(kind)) return false;
+  const st = await page.evaluate(() => {
+    const before = window.scrollY;
+    window.scrollTo(0, before + 300); // what the keyboard does on a phone
+    return { position: document.body.style.position, top: document.body.style.top, moved: window.scrollY - before };
+  });
+  pinnedAt = -parseInt(st.top || '0', 10);
+  if (st.position !== 'fixed' || st.moved !== 0) { bad.push(['pinned', kind, st]); return false; }
+  // At test speed the question can come up before the page was scrolled: check the next one.
+  if (!(pinnedAt > 50 && pinnedAt <= 150)) return false;
+  return true;
+}
+async function checkUnpinned(kind) {
+  pinChecked.add(kind);
+  const st = await page.evaluate(() => ({ y: window.scrollY, position: document.body.style.position, top: document.body.style.top }));
+  // Back where it was; or, at test speed, the next question is already up, holding the same spot.
+  const back = st.position === '' && st.y === pinnedAt;
+  const heldAgain = st.position === 'fixed' && st.top === `-${pinnedAt}px`;
+  if (!back && !heldAgain) bad.push(['unpinned', kind, pinnedAt, st]);
+  if (back) pinBack++;
+}
+
 for (let hand = 0; hand < HANDS; hand++) {
   await page.click('[data-deal]'); // the button on the felt
+  await page.evaluate(() => window.scrollTo(0, 150)); // as if they'd scrolled down a little
   const n = await page.evaluate(() => window.__app.S.players.length);
   if (n !== (locked ? 6 : SEATS)) bad.push(['seats', n]);
   let done = false;
@@ -54,23 +83,28 @@ for (let hand = 0; hand < HANDS; hand++) {
     if (await page.isVisible('#ans')) {
       const q = await page.evaluate(() => window.__app.S.quiz.q.raiseTo);
       const wrong = hand % 5 === 1;
+      const pin = await checkPinned('pot');
       await once('pot-question');
       await page.fill('#ans', String(q + (wrong ? 7 : 0))); await page.press('#ans', 'Enter');
       const v = await page.innerText('#modalBox .verdict');
       if (wrong === v.startsWith('Good')) bad.push(['pot', wrong, v]);
       if (wrong) await once('pot-wrong');
-      tally.pot++; await page.click('#cont'); continue;
+      tally.pot++; await page.click('#cont');
+      if (pin) await checkUnpinned('pot');
+      continue;
     }
     if (await page.isVisible('#bp')) {
       const amt = await page.evaluate(() => { const cq = window.__app.S.cq; return cq.pots[cq.j].round; });
       const wrong = hand % 4 === 1;
+      const pin = await checkPinned('cut');
       await once('cut-question');
       await page.fill('#bp', String(amt + (wrong ? 5 : 0))); await page.press('#bp', 'Enter');
       const v = await page.innerText('#modalBox .verdict');
       if (wrong === v.startsWith('Right')) bad.push(['cut', wrong, v]);
       await once('cut-answer');
       tally.cut++;
-      if (await page.$('#cont2')) await page.click('#cont2'); else await page.click('#cutDone');
+      if (await page.$('#cont2')) await page.click('#cont2');
+      else { await page.click('#cutDone'); if (pin) await checkUnpinned('cut'); }
       continue;
     }
     if (await page.isVisible('#sp')) {
@@ -136,6 +170,8 @@ if (await page.isVisible('#spotsBtn')) {
 }
 
 if (BOMB && HANDS >= 6 && (!tally.split || !tally.bottom)) bad.push(['bomb', 'no splits or bottom-board reads', tally]);
+if (tally.pot && !pinChecked.has('pot')) bad.push(['pinned', 'never checked a pot question']);
+if (pinChecked.size && !pinBack) bad.push(['pinned', 'never saw the page go back after a question']);
 
 await browser.close();
 console.log(JSON.stringify({ hands: HANDS, ...tally }));

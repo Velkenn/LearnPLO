@@ -65,6 +65,27 @@ function renderLog(): void {
   ol.scrollTop = ol.scrollHeight;
 }
 
+/**
+ * While a question is up, the page behind it is pinned where it was. On phones, the keyboard
+ * opening for the answer box would otherwise scroll the page, and after "Back to the action" the
+ * table would be out of view. When the question closes (or "Look at the table" hides it), the
+ * page goes back to exactly where it was.
+ */
+let pinnedAt: number | null = null;
+function pinPage(): void {
+  if (pinnedAt != null) return;
+  pinnedAt = window.scrollY;
+  const b = document.body.style;
+  b.position = 'fixed'; b.top = `-${pinnedAt}px`; b.left = '0'; b.right = '0';
+}
+function unpinPage(): void {
+  if (pinnedAt == null) return;
+  const y = pinnedAt; pinnedAt = null;
+  const b = document.body.style;
+  b.position = ''; b.top = ''; b.left = ''; b.right = '';
+  window.scrollTo({ top: y, left: 0, behavior: 'instant' });
+}
+
 /** The question popup for pot calls and side pots. */
 export function renderModal(): void {
   const S = app.S, m = $('#modal'), box = $('#modalBox');
@@ -77,7 +98,8 @@ export function renderModal(): void {
       fab.addEventListener('click', unpeek); document.body.appendChild(fab);
     }
   } else fab?.remove();
-  if (!show) { m.classList.remove('open'); box.innerHTML = ''; return; }
+  if (!show) { m.classList.remove('open'); box.innerHTML = ''; unpinPage(); return; }
+  pinPage();
   const old = box.querySelector('input'), keep = old ? old.value : '', oid = old ? old.id : '';
   box.innerHTML = S!.mode === 'cut' ? cutPanel() : quizPanel();
   const inp = box.querySelector('input');

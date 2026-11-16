@@ -12,7 +12,8 @@ A poker dealer trainer. The home page (`/`) lists the games:
 A six- or nine-handed hand plays out on its own, and you deal it:
 
 - **Pot calls.** When a player says “Pot,” announce the raise. Re-pots included. True pot or
-  rounded pot, which the first deal asks about (changeable in settings, guests included). Rounded
+  rounded pot, which the first deal asks about. Members switch it in settings; signed-out dealers
+  keep their first pick (it carries into the account they make) and sign in to switch. Rounded
   pot: bets go in $5s, the pot rounds up to the next $5 ($1/$3 first in is $15 with a $5 bring-in,
   $2/$5 is $20), and an all-in's last $1 to $4 doesn't play and goes back to the player. Bomb pots
   and the daily challenge are always true pot.

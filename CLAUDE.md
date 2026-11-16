@@ -76,7 +76,8 @@ don't sleep a fixed time. For small fixes, it's fine to push and check at the st
 
 - Pot raise = last bet + pot after calling it. Shortcut: 3 × last bet + everything else out,
   not counting the raiser's own chips.
-- Pot style (`settings.potStyle`, pot limit Omaha only; the first deal asks, `ui/potStyle.ts`):
+- Pot style (`settings.potStyle`, pot limit Omaha only; the first deal asks, `ui/potStyle.ts`;
+  guests keep that pick and must sign in to switch, and it carries into their new account):
   true pot counts every chip. Rounded pot (`S.rounded`): bets go in $5s, the bring-in is the big
   blind rounded up (`S.minBet`: $5 at $1/$3), and the pot raise is the true-pot answer rounded up
   to the next $5 (`PotQ.exact` before rounding, `raiseTo` after). So $1/$3 first in is $15, $2/$5

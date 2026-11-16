@@ -1,7 +1,8 @@
 // Before the first hand of pot limit Omaha: does the dealer's room count true pot or rounded pot?
-// Asked once (the choice is kept with their settings: on the account, or on this device for
-// guests), and changeable any time in settings. Bomb pots and the daily challenge don't ask.
-import { app, saveSettings } from '../app.ts';
+// Asked once. The choice is kept with their settings: on the account, or on this device for
+// guests, whose pick carries into the account they make. Members switch it in settings; guests
+// have to sign in to switch. Bomb pots and the daily challenge don't ask.
+import { app, saveSettings, storeMode } from '../app.ts';
 import type { PotStyle } from '../engine/types.ts';
 import { isBomb } from '../page.ts';
 import { $, $q } from './dom.ts';
@@ -22,7 +23,9 @@ export function askPotStyle(then: () => void): void {
       <span>Every chip counts as it is. At $2/$5, first in pots it to $17.</span></button>
     <button class="style-pick" data-style="rounded"><b>Rounded pot</b>
       <span>Bets go in $5s and the pot rounds up to the next $5. At $2/$5 each blind counts as $5, so first in pots it to $20. At $1/$3 the blinds count as $5 together and the bring-in is $5, so it’s $15. When a player is all in, their last $1 to $4 doesn’t play and goes back to them.</span></button>
-    <p class="style-note">Not sure? Ask your floor. You can change this anytime in settings. The daily challenge is always true pot, so everyone plays the same hands.</p>`;
+    <p class="style-note">Not sure? Ask your floor. ${storeMode() === 'guest'
+      ? 'To switch later, sign in free and change it in settings.'
+      : 'You can change this anytime in settings.'} The daily challenge is always true pot, so everyone plays the same hands.</p>`;
   $('#styleAsk').classList.add('open');
   $q<HTMLButtonElement>('#styleBox [data-style="true"]')?.focus({ preventScroll: true });
 }

@@ -7,6 +7,7 @@ import { isBomb } from '../page.ts';
 import { chipClick } from './sound.ts';
 import { renderModal, renderPanel, renderScores } from './render.ts';
 import { renderTable } from './table.ts';
+import { openAccount } from './account.ts';
 
 // Some rows are only on one game's page (blinds for PLO, the ante for bomb pots), so look them up with $q.
 const checkbox = (id: string): HTMLInputElement => $<HTMLInputElement>('#' + id);
@@ -28,8 +29,11 @@ export function applySettings(): void {
   segOn('potStyleSeg', s.potStyle);
   const styleSet = $q<HTMLFieldSetElement>('#potStyleSet');
   if (styleSet) {
-    styleSet.disabled = !!app.challenge;
-    $('#potStyleHint').textContent = app.challenge ? 'The daily challenge is true pot for everyone.' : POT_STYLE_HINT[s.potStyle || 'true'];
+    // Guests keep the pick they made before their first hand; switching takes a free account.
+    const guest = storeMode() === 'guest';
+    styleSet.disabled = !!app.challenge || guest;
+    $('#potStyleHint').innerHTML = app.challenge ? 'The daily challenge is true pot for everyone.'
+      : POT_STYLE_HINT[s.potStyle || 'true'] + (guest ? ' <button class="linkbtn" id="potStyleSignin">Sign in free</button> to switch.' : '');
   }
   segOn('anteSeg', String(s.ante));
   checkbox('chipAmt').checked = s.chipAmt !== false;
@@ -71,7 +75,8 @@ export function initSettings(): void {
   // Takes effect on the next deal; the intro before the first deal names the ante.
   onSeg('anteSeg', v => { s().ante = +v as Ante; if (!app.S) renderPanel(); });
   onCheck('showPot', v => { s().showPot = v; }, () => { if (app.S) { renderTable(); renderModal(); } });
-  onSeg('potStyleSeg', v => { s().potStyle = v as PotStyle; if (!app.S) renderPanel(); });
+  onSeg('potStyleSeg', v => { if (storeMode() === 'guest') return; s().potStyle = v as PotStyle; if (!app.S) renderPanel(); });
+  $q('#potStyleHint')?.addEventListener('click', e => { if ((e.target as HTMLElement).id === 'potStyleSignin') openAccount(); });
   onCheck('chipAmt', v => { s().chipAmt = v; }, () => { if (app.S) { renderTable(); renderModal(); } });
   onCheck('sound', v => { s().sound = v; }, () => { if (s().sound) chipClick(2); });
   onCheck('four', v => { s().four = v; }, applySettings);

@@ -115,6 +115,11 @@ export async function memberStore(id: string, email: string): Promise<Store> {
   const remoteSettings = s.data ? (s.data as { data: unknown }).data : null;
   const remoteStats = t.data ? cleanStats((t.data as { data: unknown }).data) : null;
   let settings = pickMemberSettings(remoteSettings, read('local', K.memberSettings(id)) ?? read('local', K.settings));
+  // Picked true pot or rounded pot while signed out? The new account keeps that pick.
+  if (!settings.potStyle) {
+    const picked = (read('local', K.comfort) as Partial<Settings> | null)?.potStyle;
+    if (picked === 'true' || picked === 'rounded') settings = { ...settings, potStyle: picked };
+  }
   let stats = pickMemberStats(remoteStats, read('local', K.memberStats(id)) as Stats | null, read('session', K.guestStats) as Stats | null, read('local', K.stats) as Stats | null);
 
   // Supabase queries only run when awaited, so each push awaits its request.

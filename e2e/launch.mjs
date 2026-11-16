@@ -40,7 +40,7 @@ async function open(url) {
   // The first deal asks how the room counts the pot, then deals.
   await page.waitForSelector('#styleAsk.open');
   const ask = await page.innerText('#styleBox');
-  check(ask.includes('True pot') && ask.includes('Rounded pot') && ask.includes('$17') && ask.includes('$20') && ask.includes('$15') && ask.includes('change this anytime in settings'), 'pot style question explains both and points to settings', ask);
+  check(ask.includes('True pot') && ask.includes('Rounded pot') && ask.includes('$17') && ask.includes('$20') && ask.includes('$15') && ask.includes('sign in free and change it in settings'), 'pot style question explains both, and that switching later takes an account', ask);
   const fits = await page.$eval('#styleBox', el => el.getBoundingClientRect().top >= 0);
   check(fits, 'pot style question fits on the phone screen');
   await shoot(page, 'pot-style');
@@ -52,12 +52,17 @@ async function open(url) {
   await page.reload();
   await page.waitForTimeout(500);
   check(!await page.isVisible('#welcome'), 'welcome stays gone after a reload');
-  // The pick is remembered (a guest's on this device) and shown in settings, where they can change it.
+  // The pick is remembered (a guest's on this device) and shown in settings, locked: switching takes an account.
   await page.click('#gear');
   check(await page.$eval('#potStyleSeg [data-v="rounded"]', b => b.classList.contains('on')), 'settings show rounded pot');
-  check(!await page.$eval('#potStyleSet', f => f.disabled), 'guests can change the pot style');
-  await page.click('#potStyleSeg [data-v="true"]');
-  check((await page.innerText('#potStyleHint')).includes('$17'), 'the hint follows the pick');
+  check(await page.$eval('#potStyleSet', f => f.disabled), 'guests can’t switch the pot style');
+  await page.click('#potStyleSeg [data-v="true"]', { force: true });
+  check(await page.$eval('#potStyleSeg [data-v="rounded"]', b => b.classList.contains('on')), 'a locked switch stays on rounded pot');
+  check((await page.innerText('#potStyleHint')).includes('Sign in free to switch'), 'the hint says to sign in to switch');
+  await shoot(page, 'pot-style-locked');
+  await page.click('#potStyleSignin');
+  await page.waitForTimeout(100);
+  check(await page.evaluate(() => document.activeElement?.id === 'acctEmail'), 'the sign-in link goes to the email box');
   await page.click('#gear');
   await page.click('[data-deal]');
   await page.waitForTimeout(300);
@@ -76,6 +81,24 @@ async function open(url) {
   const { ctx, page } = await open(memberUrl);
   await page.waitForTimeout(800);
   check(!await page.isVisible('#welcome'), 'members never see the welcome');
+  // Members can switch the pot style in settings.
+  await page.click('#gear');
+  check(!await page.$eval('#potStyleSet', f => f.disabled), 'members can switch the pot style');
+  await page.click('#potStyleSeg [data-v="rounded"]');
+  check(await page.$eval('#potStyleSeg [data-v="rounded"]', b => b.classList.contains('on')), 'a member switches to rounded pot');
+  check(!(await page.innerText('#potStyleHint')).includes('Sign in'), 'no sign-in prompt for members');
+  await ctx.close();
+}
+{
+  // Picked rounded pot while signed out, then made an account: the account keeps the pick, no second ask.
+  const { ctx, page } = await open(base.href);
+  await page.evaluate(() => localStorage.setItem('plo-dd-comfort', JSON.stringify({ potStyle: 'rounded' })));
+  await page.goto(memberUrl);
+  await page.waitForFunction(() => document.querySelector('#acct')?.textContent?.includes('Signed in as'));
+  await page.click('[data-deal]');
+  await page.waitForTimeout(300);
+  check(!await page.isVisible('#styleAsk.open'), 'a signed-out pick carries into the new account');
+  check((await page.$eval('#log', el => el.textContent)).includes('Rounded pot'), 'the new account deals rounded pot');
   await ctx.close();
 }
 

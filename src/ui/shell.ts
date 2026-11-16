@@ -22,13 +22,17 @@ function stakesRows(game: GameId): { top: string; bottom: string } {
   };
 }
 
-/** Pot limit Omaha: true pot or rounded pot. Anyone can change it (guests too); the daily challenge is always true pot. */
+/**
+ * Pot limit Omaha: true pot or rounded pot. Members (and local mode) can switch it; guests pick
+ * once before their first hand and sign in to switch. The daily challenge is always true pot.
+ * The hint sits outside the fieldset so its sign-in link still works while the row is locked.
+ */
 const potStyleRow = (game: GameId): string => game === 'bomb' ? '' : `<fieldset class="training" id="potStyleSet">
     <legend class="sr">How the pot is counted</legend>
     <div class="row"><span>Pot</span>
       <div class="seg" id="potStyleSeg"><button data-v="true">True pot</button><button data-v="rounded">Rounded pot</button></div></div>
-    <p class="thint muted" id="potStyleHint"></p>
-    </fieldset>`;
+    </fieldset>
+    <p class="thint muted" id="potStyleHint"></p>`;
 
 export function shellHTML(game: GameId): string {
   const rows = stakesRows(game);

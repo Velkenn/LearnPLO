@@ -10,6 +10,7 @@ const ui = { busy: false, sent: false, msg: '', draft: '', email: '' };
 
 export function renderFeedback(): void {
   $('#feedbackOpen').hidden = !accountsOn;
+  $('#feedbackRow').hidden = !accountsOn;
   if (!sheetOpen('feedback')) return;
   const member = storeMode() === 'member';
   const head = `<div class="spots-head"><h2>Send feedback</h2><button class="linkbtn" id="feedbackClose">Close</button></div>`;
@@ -59,6 +60,7 @@ export function initFeedback(): void {
   renderFeedback();
   if (!accountsOn) return;
   $('#feedbackOpen').addEventListener('click', openFeedback);
+  $('#feedbackSettings').addEventListener('click', openFeedback); // same form, from the settings sheet
   const box = $('#feedback');
   box.addEventListener('click', e => {
     const t = (e.target as HTMLElement).closest('button'); if (!t) return;

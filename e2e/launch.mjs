@@ -123,8 +123,14 @@ async function open(url) {
 // ---- member feedback, then the admin's stats dashboard shows it ----
 {
   const { ctx, page } = await open(memberUrl);
-  await page.click('#feedbackOpen');
+  // Members reach it from the settings sheet (guests used the footer link above).
+  await page.click('#gear');
+  await page.waitForSelector('#sheet.open #feedbackSettings');
+  await page.locator('#feedbackRow').scrollIntoViewIfNeeded();
+  await shoot(page, 'feedback-settings');
+  await page.click('#feedbackSettings');
   await page.waitForSelector('#feedback.open #fbMessage');
+  check(!await page.isVisible('#sheet.open'), 'the feedback form replaces the settings sheet');
   check(!await page.isVisible('#fbEmail'), 'members are not asked for an email');
   await page.fill('#fbMessage', 'Side pot 2 wording confused me.');
   await page.click('#feedbackForm button');

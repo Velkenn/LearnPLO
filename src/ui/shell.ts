@@ -71,6 +71,7 @@ export function shellHTML(game: GameId): string {
     <div class="row"><label for="sound">Chip sounds and vibration</label><input type="checkbox" id="sound"></div>
     <div class="row"><label for="four">Four-color deck</label><input type="checkbox" id="four"></div>
     <div class="row"><span class="muted" id="scoreNote">Scores are saved on this device.</span><button class="btn ghost" id="reset">Reset scores</button></div>
+    <div class="row" id="feedbackRow" hidden><span>Found a bug or have an idea?</span><button class="btn ghost" id="feedbackSettings">Send feedback</button></div>
   </section>
 
   <section class="sheet spots" id="spots" aria-label="Your weak spots"></section>

@@ -138,10 +138,60 @@ async function open(url) {
   const text = await page.innerText('#stats');
   check(text.includes('Members') && text.includes('14'), 'stats tiles show members');
   check(text.includes('Side pot 2 wording confused me.'), 'the new feedback shows on the dashboard');
-  check(await page.$$eval('#stats tbody tr', rows => rows.length) === 14, 'fourteen days of activity');
+  check(await page.$$eval('#stats table.days tbody tr', rows => rows.length) === 14, 'fourteen days of activity');
+  check(text.includes('Visitors') && text.includes('Asked for a code') && text.includes('reddit.com'), 'the visitors section shows the steps and sources');
+  check(text.includes('The 120 who didn’t sign up') && text.includes('Left without answering'), 'how far the visitors who left got');
+  check(await page.$$eval('#stats .funnel li', li => li.length) === 5, 'five steps from visit to sign-up');
   const wide = await page.evaluate(() => document.documentElement.scrollWidth);
   check(wide <= 390, `no sideways scrolling on a phone (${wide}px)`);
   await shoot(page, 'stats');
+  await ctx.close();
+}
+
+// ---- visitor counting: a signed-out browser reports its visit, answers, and sign-in steps ----
+{
+  // Headless Chrome says so in its user agent, and bots aren't counted; look like a phone instead.
+  const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1' });
+  await ctx.route('**/auth/v1/settings**', r => r.fulfill({ json: { passkeys_enabled: false } }));
+  const calls = [];
+  await ctx.route('**/rest/v1/rpc/**', r => { calls.push({ fn: r.request().url().split('/rpc/')[1], body: r.request().postDataJSON() }); return r.fulfill({ status: 204, body: '' }); });
+  const page = await ctx.newPage();
+  page.on('pageerror', e => errors.push(String(e)));
+  const guestUrl = new URL(base.href); guestUrl.searchParams.set('utm_source', 'Reddit'); guestUrl.searchParams.set('e2e', '');
+  await page.goto(guestUrl.href);
+  await page.waitForTimeout(300);
+  const visit = calls.find(c => c.fn === 'track_visit');
+  const id = await page.evaluate(() => localStorage.getItem('fr-visitor'));
+  check(!!visit && visit.body.v === id && visit.body.source === 'reddit' && visit.body.landing === new URL(base.href).pathname, `the visit is counted with its source (${JSON.stringify(visit)})`);
+  // Answer one question as a guest.
+  await page.evaluate(() => { const orig = window.setTimeout; window.setTimeout = (f, ms) => orig(f, Math.min(ms || 0, 4)); });
+  await page.click('#welcomeDeal');
+  await page.click('#styleBox [data-style="true"]');
+  await page.waitForSelector('#ans', { state: 'visible', timeout: 20000 });
+  await page.fill('#ans', '1'); await page.press('#ans', 'Enter');
+  await page.waitForTimeout(200);
+  // The answer's explanation is still up; the header's sign-in link sits behind it.
+  await page.evaluate(() => document.querySelector('#signin').click());
+  await page.waitForTimeout(200);
+  const guest = calls.filter(c => c.fn === 'track_guest');
+  check(guest.reduce((t, c) => t + c.body.answers, 0) >= 1 && guest.every(c => c.body.v === id), `guest answers are counted (${JSON.stringify(guest)})`);
+  check(guest.some(c => c.body.step === 'signin'), 'opening sign-in is counted');
+  await page.evaluate(() => { document.querySelector('#modal')?.classList.remove('open'); });
+  await page.fill('#acctEmail', 'new@example.com');
+  await page.click('#acctEmailForm button');
+  await page.waitForSelector('#acctCode');
+  check(calls.some(c => c.fn === 'track_guest' && c.body.step === 'code'), 'asking for a code is counted');
+  // Signing in ties the visits to the account, and the browser isn't counted as a visitor again.
+  await page.goto(memberUrl);
+  await page.waitForFunction(() => document.querySelector('#acct')?.textContent?.includes('Signed in as'));
+  await page.waitForFunction(() => window.__linked !== undefined);
+  check(await page.evaluate(() => window.__linked) === id, 'signing in links the visitor to the account');
+  await page.click('#gear'); await page.click('#signout');
+  await page.waitForFunction(() => document.querySelector('#acct')?.textContent?.includes('Signed out'));
+  const before = calls.length;
+  await page.goto(base.href);
+  await page.waitForTimeout(300);
+  check(calls.length === before, 'a browser that has signed in isn’t counted again');
   await ctx.close();
 }
 

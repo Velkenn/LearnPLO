@@ -7,6 +7,7 @@ import type { Settings, Stats } from '../engine/types.ts';
 import { DEFAULT_SETTINGS, DEFAULT_STATS } from '../config.ts';
 import { game } from '../page.ts';
 import { supabase } from './supabase.ts';
+import { countAnswer } from './visits.ts';
 import { answered, cleanSettings, cleanStats, pickMemberSettings, pickMemberStats } from './merge.ts';
 
 export type StoreMode = 'local' | 'guest' | 'member';
@@ -89,7 +90,8 @@ export const guestStore: Store = {
   saveSettings: s => write('local', K.comfort, { sound: s.sound, four: s.four, potStyle: s.potStyle }),
   loadStats: () => cleanStats(read('session', K.guestStats)),
   saveStats: s => write('session', K.guestStats, s),
-  recordAttempt: () => { /* guests aren't logged */ },
+  // Guests' answers aren't logged; only how many there were, for the owner's visitor numbers.
+  recordAttempt: () => countAnswer(),
 };
 
 // ---- member: signed in ----

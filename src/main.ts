@@ -13,6 +13,7 @@ import { render } from './ui/render.ts';
 import { shellHTML } from './ui/shell.ts';
 import { app } from './app.ts';
 import { game } from './page.ts';
+import { trackVisit } from './data/visits.ts';
 
 // The page's markup is shared by every game; put it in before anything looks for it.
 document.getElementById('app')!.innerHTML = shellHTML(game);
@@ -28,6 +29,8 @@ initStats();
 initWelcome();
 initPotStyle();
 render();
+// Signed-out visitors are counted for the owner's stats dashboard (data/visits.ts).
+trackVisit();
 
 // Browser tests read game state through this. Only exposed with ?e2e in the URL.
 if (new URLSearchParams(location.search).has('e2e')) (window as unknown as { __app: typeof app }).__app = app;

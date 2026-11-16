@@ -1,6 +1,7 @@
 // Sign-in box in the settings sheet, the header "Sign in" link, and switching stores on sign-in/out.
 import { memberEmail, storeMode, switchStore } from '../app.ts';
-import { accountsOn } from '../data/supabase.ts';
+import { accountsOn, supabase } from '../data/supabase.ts';
+import { linkVisitor, signinStep } from '../data/visits.ts';
 import { addPasskey, listPasskeys, passkeySignIn, passkeysAvailable, sendLink, signOut, verifyCode, watchAuth, type PasskeyInfo } from '../data/auth.ts';
 import { inAppBrowser, regularBrowser } from '../data/browser.ts';
 import { clearGuestStats, guestStore, memberStore, store } from '../data/store.ts';
@@ -98,6 +99,7 @@ function say(msg: string, err = false): void { ui.msg = msg; ui.err = err; rende
 
 /** Open the settings sheet on the sign-in box. */
 export function openAccount(): void {
+  if (storeMode() === 'guest') signinStep('signin');
   if (!sheetOpen('sheet')) showSheet('sheet');
   window.scrollTo({ top: 0, behavior: 'auto' });
   setTimeout(() => ($q<HTMLInputElement>('#acctEmail') || $q<HTMLInputElement>('#acctCode'))?.focus(), 30);
@@ -110,11 +112,13 @@ async function onEmail(): Promise<void> {
   const err = await sendLink(email);
   ui.busy = false;
   if (err) { say(err, true); return; }
+  signinStep('code');
   ui.step = 'code'; say('');
   $q<HTMLInputElement>('#acctCode')?.focus();
 }
 
 async function onPasskeySignIn(): Promise<void> {
+  signinStep('code');
   ui.busy = true; ui.msg = ''; renderAccount();
   const err = await passkeySignIn();
   ui.busy = false;
@@ -202,6 +206,7 @@ export function initAccount(): void {
     if (m) {
       ui.loading = true; renderAccount();
       try {
+        void linkVisitor((fn, args) => supabase!.rpc(fn, args));
         const ms = await memberStore(m.id, m.email);
         switchStore(ms);
         clearGuestStats();

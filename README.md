@@ -159,6 +159,7 @@ src/
     cards.ts          card and chip HTML
     dom.ts            small DOM helpers
   data/               accounts and saving: Supabase client, sign-in, storage modes, stat merging,
+                      visits.ts (counting signed-out visitors for the stats dashboard),
                       weakSpots.ts (turns logged answers into the weak spots report),
                       daily.ts (calls to the daily challenge server), teach.ts and classes.ts (schools and
                       classes, for instructors and for students), joinCodes.ts (join codes and links)
@@ -195,10 +196,13 @@ Pot limit Omaha used to be at `/`. The home page sends `/?daily` and sign-in lin
 back to `/` (with `#access_token=...`) on to `/plo/`. The Worker in the Cloudflare dashboard is named `learnplo`;
 keep that name in `wrangler.jsonc` to match.
 
-Visitor numbers: turn on **Cloudflare Web Analytics** for feltready.com in the Cloudflare
-dashboard (Analytics & Logs → Web Analytics, automatic setup). It's free and cookie-free,
-and needs no code here. Sign-ups, active members, answers, daily runs, and feedback are on the
-stats dashboard in the app (account box → "Open the stats dashboard", admins only).
+Visitor numbers are on the stats dashboard in the app (account box → "Open the stats dashboard",
+admins only), with sign-ups, active members, answers, daily runs, and feedback. Each signed-out
+browser gets a random id in localStorage (no cookies, no IP addresses), and `src/data/visits.ts`
+reports its visit, where it came from (`utm_source`, else the referring site), how many questions
+it answered as a guest, and whether it opened sign-in or asked for a code. Signing in ties the
+browser to the account (migration `20261116100000_visitors.sql`). Tag links you post, for example
+`https://feltready.com/?utm_source=reddit-poker`, to tell posts apart.
 
 GitHub Actions (`.github/workflows/deploy.yml`) runs the tests on every push. It also
 publishes `moved/index.html` to the old address, `https://velkenn.github.io/LearnPLO/`,
@@ -252,6 +256,8 @@ Setup:
 7. Before sharing widely, set up custom SMTP (for example Resend) under
    **Authentication → SMTP**. Supabase's built-in email is for testing only.
 8. Schools and card rooms (migration `20261116000000`): see [Schools and classes](#schools-and-classes).
+9. Visitors who haven't signed up (migration `20261116100000`): adds the Visitors section to the
+   stats dashboard. See "Visitor numbers" under [Deploying](#deploying).
 
 Code: `src/data/supabase.ts` (client), `auth.ts` (sign-in), `store.ts` (local, guest,
 and member storage), `merge.ts` (how device and account stats combine),

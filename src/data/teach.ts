@@ -55,12 +55,6 @@ export interface Roster {
   students: Student[];
 }
 
-/** "K7Q2PMXA" → "K7Q2-PMXA". */
-export const formatCode = (code: string): string => code.length === 8 ? `${code.slice(0, 4)}-${code.slice(4)}` : code;
-
-/** The link a student opens to join. */
-export const joinLink = (code: string, origin = location.origin): string => `${origin}/join/${code}`;
-
 async function call<T>(name: string, args?: Record<string, unknown>): Promise<T> {
   if (!supabase) throw new Error('Accounts aren’t set up.');
   const { data, error } = await supabase.rpc(name, args);

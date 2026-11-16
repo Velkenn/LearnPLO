@@ -100,6 +100,7 @@ node e2e/account.mjs http://localhost:4174/plo/ --shots               # code sig
 node e2e/launch.mjs http://localhost:4174/plo/ --shots                # welcome, feedback, stats
 node e2e/pages.mjs http://localhost:4174/ --shots                     # home page and old links
 node e2e/teach.mjs http://localhost:4174/ --shots                     # the instructor view
+node e2e/join.mjs http://localhost:4174/ --shots                      # joining a class
 ```
 
 ## How the code is laid out
@@ -109,9 +110,11 @@ index.html            the home page: the list of games (static, no script)
 plo/index.html        pot limit Omaha's page: its head, and <body data-game="plo">
 bombpot/index.html    bomb pots' page: <body data-game="bomb">
 teach/index.html      the instructor view (src/teach.ts, src/ui/teach.ts)
+join/index.html       the join page for students (src/join.ts, src/ui/join.ts); the Worker also serves it for /join/<code>
 src/
   main.ts             entry point for both game pages (puts in the shared markup from ui/shell.ts)
   teach.ts            entry point for the instructor view
+  join.ts             entry point for the join page
   page.ts             which game this page deals (from <body data-game>)
   app.ts              shared state: current hand, settings, stats, a daily challenge run
   config.ts           games, stakes, antes, speeds, timer lengths, defaults
@@ -143,6 +146,8 @@ src/
     feedback.ts       "Send feedback" sheet
     stats.ts          the owner's stats dashboard (admins only)
     teach.ts          the instructor view: classes, join codes, students' progress
+    join.ts           the join page: sign in, see what the school sees, give a name, join
+    signin.ts         the small sign-in box the instructor view and the join page share
     events.ts         buttons and keyboard
     timer.ts          countdown per question
     sound.ts          chip clicks and vibration
@@ -150,7 +155,8 @@ src/
     dom.ts            small DOM helpers
   data/               accounts and saving: Supabase client, sign-in, storage modes, stat merging,
                       weakSpots.ts (turns logged answers into the weak spots report),
-                      daily.ts (calls to the daily challenge server), teach.ts (schools and classes)
+                      daily.ts (calls to the daily challenge server), teach.ts and classes.ts (schools and
+                      classes, for instructors and for students), joinCodes.ts (join codes and links)
   styles/             CSS split by area, pulled together by main.css
 tests/                node:test unit tests and the simulation
 supabase/migrations/  database tables and row-level security
@@ -162,6 +168,7 @@ e2e/account.mjs       Playwright browser test: sign-in, in-app browser notice, p
 e2e/launch.mjs        Playwright browser test: first-visit welcome, feedback, stats dashboard
 e2e/pages.mjs         Playwright browser test: home page, links between pages, old links
 e2e/teach.mjs         Playwright browser test: the instructor view
+e2e/join.mjs          Playwright browser test: joining a class, and leaving it from the account box
 worker/               the Cloudflare Worker: link previews for shared daily scores (/share)
 e2e/stub/             stand-in for supabase-js, and a build script that uses it
 e2e/check.mjs         npm run check: every check in one command
@@ -248,8 +255,20 @@ and member storage), `merge.ts` (how device and account stats combine),
 ## Schools and classes
 
 A dealer school or card room links its students' accounts with a join code. Instructors work at
-**feltready.com/teach/** (linked from the account box for anyone who runs or teaches at a school).
-The student's join page (`/join/<code>`) isn't built yet.
+**feltready.com/teach/** (linked from the account box for anyone who runs or teaches at a school);
+students join at **feltready.com/join/<code>**.
+
+- **Join page** (`src/ui/join.ts`): `/join/` asks for a code (the home page links there);
+  `/join/<code>` (served by the Worker, `worker/join.ts`) asks a signed-out student to sign in,
+  then shows the class and school, what the school will see (every answer from joining on, and
+  their name) and won't (their email, anything from before), and asks for the name their
+  instructor knows them by. Wrong, expired or closed codes, a full school, and ten wrong codes
+  in an hour each get their own message. Afterward it links to the games.
+- **Your classes** (account box on the game pages): the classes a member is in, the name their
+  instructor sees, and Leave (asks first).
+- Both pages redraw whole sections with `redraw()` (`src/ui/dom.ts`), which skips redraws that
+  change nothing and keeps the cursor in its box; what's typed lives in the page's state. So a
+  background call finishing (passkeys, sign-in) never wipes a half-typed code or name.
 
 - **Instructor view** (`src/ui/teach.ts`): each school's classes and their codes, and a form to add
   a class. A class (`/teach/#class=<id>`) shows its join code and link (copy button), a new-code
@@ -363,5 +382,6 @@ card on the home page, and a new migration allowing its id in `attempts.game` an
 
 1. More games: a bomb pot daily challenge, then other games (Texas Hold'em, and games beyond poker).
 2. A version for card rooms and dealer schools, with a manager view of trainee progress. The
-   database side and the instructor view are in (see [Schools and classes](#schools-and-classes));
-   next are the join page (`/join/<code>`) and "My classes" in the account box.
+   database side, the instructor view, the join page and "Your classes" are in (see
+   [Schools and classes](#schools-and-classes)). Next: billing per seat, and a way for an owner
+   to add their own instructors.

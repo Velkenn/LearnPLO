@@ -61,12 +61,14 @@ if (!QUICK) {
     rmSync(dir, { recursive: true, force: true }); mkdirSync(dir, { recursive: true });
     await esbuild.build({ entryPoints: [join(ROOT, 'src/main.ts')], bundle: true, format: 'esm', outfile: join(dir, 'main.js'), define: { 'import.meta.env': JSON.stringify(env) }, alias, logLevel: 'warning' });
     await esbuild.build({ entryPoints: [join(ROOT, 'src/home.ts')], bundle: true, format: 'esm', outfile: join(dir, 'home.js'), logLevel: 'warning' });
-    await esbuild.build({ entryPoints: [join(ROOT, 'src/teach.ts')], bundle: true, format: 'esm', outfile: join(dir, 'teach.js'), define: { 'import.meta.env': JSON.stringify(env) }, alias, logLevel: 'warning' });
+    for (const entry of ['teach', 'join']) {
+      await esbuild.build({ entryPoints: [join(ROOT, `src/${entry}.ts`)], bundle: true, format: 'esm', outfile: join(dir, `${entry}.js`), define: { 'import.meta.env': JSON.stringify(env) }, alias, logLevel: 'warning' });
+    }
     await esbuild.build({ entryPoints: [join(ROOT, 'src/styles/main.css')], bundle: true, outfile: join(dir, 'main.css'), logLevel: 'warning' });
-    // The same pages Vite builds: home, one per game (all on the one script), and the instructor view.
-    for (const page of ['index.html', 'plo/index.html', 'bombpot/index.html', 'teach/index.html']) {
+    // The same pages Vite builds: home, one per game (all on the one script), the instructor view, and the join page.
+    for (const page of ['index.html', 'plo/index.html', 'bombpot/index.html', 'teach/index.html', 'join/index.html']) {
       mkdirSync(join(dir, page, '..'), { recursive: true });
-      writeFileSync(join(dir, page), readFileSync(join(ROOT, page), 'utf8').replace('/src/styles/main.css', '/main.css').replace('/src/main.ts', '/main.js').replace('/src/home.ts', '/home.js').replace('/src/teach.ts', '/teach.js'));
+      writeFileSync(join(dir, page), readFileSync(join(ROOT, page), 'utf8').replace('/src/styles/main.css', '/main.css').replace('/src/main.ts', '/main.js').replace('/src/home.ts', '/home.js').replace('/src/teach.ts', '/teach.js').replace('/src/join.ts', '/join.js'));
     }
     cpSync(join(ROOT, 'public'), dir, { recursive: true });
   };
@@ -82,10 +84,15 @@ if (!QUICK) {
 
   // ---- static servers ----
   const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.png': 'image/png', '.json': 'application/json', '.webmanifest': 'application/manifest+json' };
+  // The same test as worker/join.ts: a class's join link, which the Worker answers with the join page.
+  const isJoinLink = (path) => /^\/join\/[A-Za-z0-9-]{1,20}\/?$/.test(path);
   const serve = (dir) => new Promise(resolve => {
     const s = createServer((q, res) => {
-      let p = join(dir, decodeURIComponent(new URL(q.url, 'http://x').pathname));
+      const path = decodeURIComponent(new URL(q.url, 'http://x').pathname);
+      let p = join(dir, path);
       if (existsSync(p) && statSync(p).isDirectory()) p = join(p, 'index.html');
+      // Like the Worker: a class's join link gets the join page.
+      if (!existsSync(p) && isJoinLink(path)) p = join(dir, 'join/index.html');
       if (!existsSync(p)) { res.writeHead(404); res.end(); return; }
       res.writeHead(200, { 'content-type': TYPES[extname(p)] || 'application/octet-stream' });
       res.end(readFileSync(p));
@@ -109,6 +116,7 @@ if (!QUICK) {
     ['welcome, feedback, stats', 'launch.mjs', `${stub.url}plo/`, ...shots],
     ['home page and old links', 'pages.mjs', stub.url, ...shots],
     ['instructor view', 'teach.mjs', stub.url, ...shots],
+    ['join a class', 'join.mjs', stub.url, ...shots],
   ];
   const queue = [...e2e], width = Math.max(2, Math.min(4, availableParallelism()));
   await Promise.all([viteBuild, ...Array.from({ length: width }, async () => {

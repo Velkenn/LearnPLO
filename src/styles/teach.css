@@ -1,9 +1,9 @@
-/* The instructor view (/teach/): a school's classes, a class's join code, and its students. */
+/* The instructor view (/teach/) and the join page (/join/): classes, join codes, students. */
 .teach h2,.teach-h{font:700 26px var(--fd);margin:8px 0 4px;line-height:1.1}
 .teach h3{font:600 15px var(--fb);margin:14px 0 6px}
 .teach h4{font:600 14px var(--fb);margin:0 0 4px;color:var(--muted)}
 .teach p{line-height:1.45}
-.teach-signin{border-bottom:0}
+.si-box{border-bottom:0}
 .teach-flash{background:var(--good-bg);border-radius:10px;padding:8px 12px;margin:2px 0 8px;font-size:15px}
 body[data-page=teach] .foot{align-items:center;flex-wrap:wrap}
 .teach-who{font-size:13px;overflow-wrap:anywhere}
@@ -68,3 +68,23 @@ body[data-page=teach] .foot{align-items:center;flex-wrap:wrap}
 .left-list ul{list-style:none;margin:0;padding:0}
 .left-list li{padding:5px 0;border-bottom:1px solid var(--line);font-size:15px}
 .left-list small{color:var(--muted);margin-left:4px}
+
+/* the join page (/join/) */
+.join h2{font:700 26px var(--fd);margin:8px 0 4px;line-height:1.1;overflow-wrap:anywhere}
+.join h3{font:600 15px var(--fb);margin:10px 0 4px}
+.join p{line-height:1.45}
+.join-org{font-size:14px;margin:0 0 10px}
+.join-share{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:4px 14px 12px;margin:8px 0 16px}
+.join-share ul{margin:0 0 4px;padding-left:20px;line-height:1.45;font-size:15px}
+.join-share li{margin-bottom:3px}
+.join-share p{font-size:14px;color:var(--muted);margin:8px 0 0}
+.join-form label{display:block;font-weight:600;margin:0 0 6px}
+.join-games{display:flex;flex-direction:column;gap:10px;margin:8px 0 14px}
+.join-games .btn{text-align:center;text-decoration:none}
+.join-small{font-size:13px}
+.join-err{font-size:15px!important;margin-bottom:12px!important}
+.join-code-inline{letter-spacing:.06em;white-space:nowrap}
+.join-code input{text-transform:uppercase;letter-spacing:.08em}
+.join-code input::placeholder{text-transform:none;letter-spacing:0}
+.join-done{margin-top:10px}
+body[data-page=join] .foot{align-items:center;flex-wrap:wrap}

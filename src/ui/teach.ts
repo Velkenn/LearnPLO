@@ -4,14 +4,16 @@
 //   /teach/#class=<id>     one class: its code, its students, and what each one is missing
 import { GAMES, type GameId } from '../config.ts';
 import { accountsOn } from '../data/supabase.ts';
-import { passkeySignIn, passkeysAvailable, sendLink, signOut, verifyCode, watchAuth, type Member } from '../data/auth.ts';
+import { signOut, watchAuth, type Member } from '../data/auth.ts';
 import { MISS_LABELS, WEAK_BELOW, drillsFor, type Drill } from '../data/weakSpots.ts';
 import {
-  classRoster, createClass, formatCode, joinLink, myOrgs, newClassCode, notAllowed, removeStudent, renameClass, setClassOpen,
+  classRoster, createClass, myOrgs, newClassCode, notAllowed, removeStudent, renameClass, setClassOpen,
   type Org, type Roster, type Student,
 } from '../data/teach.ts';
+import { formatCode, joinLink } from '../data/joinCodes.ts';
 import { brandHTML } from './shell.ts';
-import { $, $q } from './dom.ts';
+import { $, $q, redraw } from './dom.ts';
+import { initSignIn, resetSignIn, signInClick, signInHTML, signInInput, signInSubmit } from './signin.ts';
 
 type Sort = 'name' | 'accuracy' | 'recent';
 const S = {
@@ -23,13 +25,14 @@ const S = {
   rosterFor: '' as string,
   rosterError: '' as string,
   rosterRun: 0,
-  // sign-in
-  step: 'email' as 'email' | 'code', email: '', busy: false, msg: '', msgErr: false, passkeys: false,
   // the class view
   open: new Set<string>(),
   sort: 'name' as Sort,
   confirm: '' as '' | 'code' | `remove:${string}`,
   renaming: false,
+  /** What's typed in the rename box and each school's new-class box. */
+  renameDraft: '',
+  newClass: {} as Record<string, string>,
   working: false,
   flash: '',
 };
@@ -63,28 +66,6 @@ const missLabel = (kind: string, miss: string): string => MISS_LABELS[kind as Dr
 
 const classId = (): string => new URLSearchParams(location.hash.slice(1)).get('class') || '';
 
-// ---- sign-in -------------------------------------------------------------------------------
-
-function signInHTML(): string {
-  const note = S.msg ? `<p class="acct-msg${S.msgErr ? ' err' : ''}" role="status">${esc(S.msg)}</p>` : '';
-  if (S.step === 'code') {
-    return `<div class="acct teach-signin"><p class="acct-lead">We sent a sign-in code to <b>${esc(S.email)}</b>. Enter it here. It can take a minute to arrive, so check spam too.</p>
-      <form class="acct-form" id="tCodeForm" novalidate>
-        <label class="sr" for="tCode">Code from the email</label>
-        <input id="tCode" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]*" maxlength="10" placeholder="Code from the email">
-        <button class="btn" type="submit" ${S.busy ? 'disabled' : ''}>${S.busy ? 'Checking…' : 'Sign in'}</button>
-      </form>${note}
-      <p class="acct-alt"><button class="linkbtn" id="tBack">Use a different email</button></p></div>`;
-  }
-  return `<div class="acct teach-signin"><p class="acct-lead">Sign in with the email your school set up for you. There's no password: we email you a code.</p>
-    <form class="acct-form" id="tEmailForm" novalidate>
-      <label class="sr" for="tEmail">Email</label>
-      <input type="email" id="tEmail" autocomplete="email" inputmode="email" placeholder="you@example.com" value="${esc(S.email)}" required>
-      <button class="btn" type="submit" ${S.busy ? 'disabled' : ''}>${S.busy ? 'Sending…' : 'Email me a code'}</button>
-    </form>${S.passkeys ? `<div class="acct-or" aria-hidden="true"><span>or</span></div>
-    <button class="btn ghost acct-pk-btn" id="tPasskey" ${S.busy ? 'disabled' : ''}>Sign in with a passkey</button>` : ''}${note}</div>`;
-}
-
 // ---- the school and its classes ------------------------------------------------------------
 
 function seatsText(o: { seat_limit: number | null; seats_used: number }): string {
@@ -105,7 +86,7 @@ function orgHTML(o: Org): string {
     ${classes}
     <form class="acct-form new-class" data-org="${o.id}" novalidate>
       <label class="sr" for="newClass-${o.id}">New class name</label>
-      <input id="newClass-${o.id}" name="name" maxlength="80" placeholder="New class name">
+      <input id="newClass-${o.id}" name="name" maxlength="80" placeholder="New class name" value="${esc(S.newClass[o.id] || '')}">
       <button class="btn" type="submit" ${S.working ? 'disabled' : ''}>Add class</button>
     </form>
   </section>`;
@@ -170,7 +151,7 @@ function studentHTML(s: Student, cid: string): string {
 }
 
 function classHTML(r: Roster): string {
-  const c = r.class, link = joinLink(c.join_code);
+  const c = r.class, link = joinLink(c.join_code, location.origin);
   const now = r.students.filter(s => !s.left_at), gone = r.students.filter(s => s.left_at);
   const sum = now.reduce((a, s) => ({
     answers: a.answers + (s.stats?.answers || 0), right: a.right + (s.stats?.right || 0),
@@ -179,7 +160,7 @@ function classHTML(r: Roster): string {
 
   const title = S.renaming
     ? `<form class="acct-form rename" id="renameForm" novalidate><label class="sr" for="renameInput">Class name</label>
-        <input id="renameInput" maxlength="80" value="${esc(c.name)}"><button class="btn" type="submit" ${S.working ? 'disabled' : ''}>Save</button><button class="linkbtn" type="button" id="renameCancel">Cancel</button></form>`
+        <input id="renameInput" maxlength="80" value="${esc(S.renameDraft)}"><button class="btn" type="submit" ${S.working ? 'disabled' : ''}>Save</button><button class="linkbtn" type="button" id="renameCancel">Cancel</button></form>`
     : `<div class="cls-title"><h2>${esc(c.name)}</h2><button class="linkbtn" id="renameOpen">Rename</button></div>`;
 
   const code = `<div class="code-box">
@@ -225,7 +206,7 @@ export function renderTeach(): void {
   let body: string;
   if (!accountsOn) body = `<p>Instructor accounts aren't set up on this copy of FeltReady.</p>`;
   else if (S.member === undefined) body = `<p class="muted">Loading…</p>`;
-  else if (!S.member) body = `<h2 class="teach-h">Your classes</h2><p>Join codes for your classes, and how each of your students is doing.</p>${signInHTML()}`;
+  else if (!S.member) body = `<h2 class="teach-h">Your classes</h2><p>Join codes for your classes, and how each of your students is doing.</p>${signInHTML('Sign in with the email your school set up for you. There’s no password: we email you a code.')}`;
   else if (S.orgsError) body = `<p class="acct-msg err" role="alert">Couldn’t load your school. Check your connection and try again.</p><button class="btn ghost" id="retry">Try again</button>`;
   else if (!S.orgs) body = `<p class="muted">Loading your school…</p>`;
   else if (!S.orgs.length) body = noOrgsHTML();
@@ -235,13 +216,13 @@ export function renderTeach(): void {
     else body = classHTML(S.roster);
   } else body = S.orgs.map(orgHTML).join('');
 
-  $('#app').innerHTML = `<header class="top">
+  redraw($('#app'), `<header class="top">
       <h1 class="brand"><a class="home" href="/" aria-label="FeltReady: all games">${brandHTML}</a><span class="game">Instructors</span></h1>
       ${signedIn ? '<button class="linkbtn" id="tSignOut">Sign out</button>' : ''}
     </header>
     ${S.flash ? `<p class="teach-flash" role="status">${esc(S.flash)}</p>` : ''}
     <main class="teach">${body}</main>
-    <footer class="foot"><a class="linkbtn" href="/">All games</a>${signedIn ? `<span class="muted teach-who">${esc(S.member!.email)}</span>` : ''}</footer>`;
+    <footer class="foot"><a class="linkbtn" href="/">All games</a>${signedIn ? `<span class="muted teach-who">${esc(S.member!.email)}</span>` : ''}</footer>`);
 }
 
 let flashTimer = 0;
@@ -291,7 +272,7 @@ async function change(what: () => Promise<unknown>, done: string, fail: string):
 
 async function copyLink(): Promise<void> {
   if (!S.roster) return;
-  const link = joinLink(S.roster.class.join_code);
+  const link = joinLink(S.roster.class.join_code, location.origin);
   try { await navigator.clipboard.writeText(link); flash('Join link copied.'); }
   catch {
     // No clipboard (an older browser, or permission refused): select the link so it can be copied by hand.
@@ -302,47 +283,16 @@ async function copyLink(): Promise<void> {
   }
 }
 
-async function onEmail(): Promise<void> {
-  const email = ($q<HTMLInputElement>('#tEmail')?.value || '').trim();
-  S.email = email;
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { S.msg = 'Enter the email address you want to sign in with.'; S.msgErr = true; renderTeach(); return; }
-  S.busy = true; S.msg = ''; renderTeach();
-  const err = await sendLink(email);
-  S.busy = false;
-  if (err) { S.msg = err; S.msgErr = true; renderTeach(); return; }
-  S.step = 'code'; S.msg = ''; renderTeach();
-  $q<HTMLInputElement>('#tCode')?.focus();
-}
-
-async function onCode(): Promise<void> {
-  const code = ($q<HTMLInputElement>('#tCode')?.value || '').replace(/\D/g, '');
-  if (code.length < 6) { S.msg = 'Enter the code from the email.'; S.msgErr = true; renderTeach(); return; }
-  S.busy = true; S.msg = ''; renderTeach();
-  const err = await verifyCode(S.email, code);
-  S.busy = false;
-  if (err) { S.msg = err; S.msgErr = true; }
-  renderTeach(); // on success, watchAuth takes over
-}
-
-async function onPasskey(): Promise<void> {
-  S.busy = true; S.msg = ''; renderTeach();
-  const err = await passkeySignIn();
-  S.busy = false;
-  if (err) { S.msg = err; S.msgErr = true; }
-  renderTeach();
-}
-
 export function initTeach(): void {
   renderTeach();
   if (!accountsOn) return;
-  void passkeysAvailable().then(on => { S.passkeys = on; renderTeach(); });
+  initSignIn(renderTeach);
 
   const app = $('#app');
   app.addEventListener('submit', e => {
     e.preventDefault();
     const f = e.target as HTMLFormElement;
-    if (f.id === 'tEmailForm') void onEmail();
-    if (f.id === 'tCodeForm') void onCode();
+    if (signInSubmit(f)) return;
     if (f.id === 'renameForm' && S.roster) {
       const name = ($q<HTMLInputElement>('#renameInput')?.value || '').trim();
       if (!name) return;
@@ -353,8 +303,9 @@ export function initTeach(): void {
       const name = (f.querySelector<HTMLInputElement>('input')?.value || '').trim();
       if (!name) { f.querySelector<HTMLInputElement>('input')?.focus(); return; }
       S.working = true; renderTeach();
-      void createClass(f.dataset.org!, name).then(async c => {
-        S.working = false;
+      const org = f.dataset.org!;
+      void createClass(org, name).then(async c => {
+        S.working = false; S.newClass[org] = '';
         await loadOrgs();
         location.hash = `class=${c.id}`;
         flash(`Class added. Its join code is ${formatCode(c.join_code)}.`);
@@ -366,12 +317,17 @@ export function initTeach(): void {
     }
   });
 
+  app.addEventListener('input', e => {
+    const t = e.target as HTMLInputElement;
+    if (signInInput(t)) return;
+    if (t.id === 'renameInput') S.renameDraft = t.value;
+    if (t.id.startsWith('newClass-')) S.newClass[t.id.slice('newClass-'.length)] = t.value;
+  });
   app.addEventListener('click', e => {
     const t = (e.target as HTMLElement).closest<HTMLElement>('button'); if (!t) return;
     const r = S.roster;
-    if (t.id === 'tBack') { S.step = 'email'; S.msg = ''; renderTeach(); }
-    else if (t.id === 'tPasskey') void onPasskey();
-    else if (t.id === 'tSignOut') void signOut();
+    if (signInClick(t)) return;
+    if (t.id === 'tSignOut') void signOut();
     else if (t.id === 'retry') { S.orgs = null; renderTeach(); void loadOrgs(); }
     else if (t.id === 'refresh') void loadRoster();
     else if (t.id === 'copyLink') void copyLink();
@@ -382,7 +338,7 @@ export function initTeach(): void {
       const open = !r.class.active;
       void change(() => setClassOpen(r.class.id, open), open ? 'Class reopened to new students.' : 'Class closed to new students.', 'Couldn’t change the class. Try again.');
     }
-    else if (t.id === 'renameOpen') { S.renaming = true; renderTeach(); $q<HTMLInputElement>('#renameInput')?.select(); }
+    else if (t.id === 'renameOpen') { S.renaming = true; S.renameDraft = r?.class.name || ''; renderTeach(); $q<HTMLInputElement>('#renameInput')?.select(); }
     else if (t.id === 'renameCancel') { S.renaming = false; renderTeach(); }
     else if (t.dataset.sort) { S.sort = t.dataset.sort as Sort; renderTeach(); }
     else if (t.dataset.stu) {
@@ -407,7 +363,7 @@ export function initTeach(): void {
 
   watchAuth(m => {
     S.member = m; S.orgs = null; S.roster = null; S.rosterFor = ''; S.open.clear();
-    S.step = 'email'; S.msg = ''; S.busy = false;
+    resetSignIn();
     renderTeach();
     if (m) { void loadOrgs(); if (classId()) void loadRoster(); }
   });

@@ -13,6 +13,7 @@ import { renderFeedback } from './feedback.ts';
 import { openStats } from './stats.ts';
 import { isAdmin } from '../data/admin.ts';
 import { isInstructor } from '../data/teach.ts';
+import { leaveClass, myClasses, type MyClass } from '../data/classes.ts';
 
 type Step = 'email' | 'code';
 const ui = {
@@ -25,6 +26,10 @@ const ui = {
   admin: false,
   /** The member runs or teaches at a school, so gets a link to the instructor view. */
   teach: false,
+  /** Classes the member has joined (null until loaded, or if they couldn't be). */
+  classes: null as MyClass[] | null,
+  /** The class they asked to leave, waiting for them to confirm. */
+  leaving: '',
 };
 const shortDate = (iso: string): string => new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 
@@ -41,6 +46,17 @@ function passkeyHTML(): string {
 
 const esc = (t: string): string => t.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]!));
 
+/** Signed in and in a class or more: each one, with a way to leave. */
+function classesHTML(): string {
+  if (!ui.classes?.length) return '';
+  return `<div class="acct-classes"><h3>Your classes</h3><ul>${ui.classes.map(c => {
+    const asking = ui.leaving === c.class_id;
+    return `<li><div class="acct-cls"><span><b>${esc(c.class_name)}</b><small>${esc(c.org_name)} · your instructor sees you as ${esc(c.name)}</small></span>${asking ? '' : `<button class="linkbtn" data-leave="${c.class_id}">Leave</button>`}</div>
+      ${asking ? `<div class="confirm"><p>Leave ${esc(c.class_name)}? ${esc(c.org_name)} stops seeing your answers right away. You can rejoin with the code.</p>
+        <div class="confirm-go"><button class="btn small" data-leave-yes="${c.class_id}" ${ui.busy ? 'disabled' : ''}>Leave the class</button><button class="linkbtn" data-leave-no>Cancel</button></div></div>` : ''}</li>`;
+  }).join('')}</ul></div>`;
+}
+
 export function renderAccount(): void {
   const box = $('#acct'), link = $('#signin');
   if (!accountsOn) { box.hidden = true; link.hidden = true; return; }
@@ -53,7 +69,7 @@ export function renderAccount(): void {
   const warn = app ? `<p class="acct-warn">You’re in ${app}’s built-in browser, which forgets sign-ins. To stay signed in, open feltready.com in ${regularBrowser(navigator.userAgent)}. Look for “Open in browser” in the app’s menu.</p>` : '';
   if (ui.loading) { box.innerHTML = `<p class="muted">Loading your account…</p>`; return; }
   if (mode === 'member') {
-    box.innerHTML = `${warn}<div class="acct-row"><p>Signed in as <b>${esc(memberEmail())}</b>. Settings and stats save to your account.</p><button class="btn ghost" id="signout">Sign out</button></div>${passkeyHTML()}${ui.teach ? '<p class="acct-note acct-teach"><a class="linkbtn" href="/teach/">Open your instructor view</a></p>' : ''}${ui.admin ? '<p class="acct-note"><button class="linkbtn" id="acctStats">Open the stats dashboard</button></p>' : ''}${note}`;
+    box.innerHTML = `${warn}<div class="acct-row"><p>Signed in as <b>${esc(memberEmail())}</b>. Settings and stats save to your account.</p><button class="btn ghost" id="signout">Sign out</button></div>${passkeyHTML()}${classesHTML()}${ui.teach ? '<p class="acct-note acct-teach"><a class="linkbtn" href="/teach/">Open your instructor view</a></p>' : ''}${ui.admin ? '<p class="acct-note"><button class="linkbtn" id="acctStats">Open the stats dashboard</button></p>' : ''}${note}`;
     return;
   }
   if (ui.step === 'email') {
@@ -123,6 +139,28 @@ async function loadKeys(): Promise<void> {
   renderAccount();
 }
 
+async function loadClasses(): Promise<void> {
+  ui.classes = null; ui.leaving = '';
+  if (storeMode() !== 'member') return;
+  try { ui.classes = await myClasses(); } catch (e) { console.warn('FeltReady: my_classes', e); }
+  renderAccount();
+}
+
+async function onLeave(classId: string): Promise<void> {
+  const c = ui.classes?.find(k => k.class_id === classId);
+  ui.busy = true; renderAccount();
+  try {
+    await leaveClass(classId);
+    ui.busy = false;
+    await loadClasses();
+    say(`You left ${c?.class_name || 'the class'}.`);
+  } catch (e) {
+    console.warn('FeltReady: leave_class', e);
+    ui.busy = false;
+    say('Couldn’t leave the class. Check your connection and try again.', true);
+  }
+}
+
 async function onCode(): Promise<void> {
   const code = ($q<HTMLInputElement>('#acctCode')?.value || '').replace(/\D/g, '');
   if (code.length < 6) { say('Enter the code from the email.', true); return; }
@@ -151,6 +189,9 @@ export function initAccount(): void {
     if (t.id === 'acctPasskey') void onPasskeySignIn();
     if (t.id === 'acctAddPasskey') void onAddPasskey();
     if (t.id === 'acctStats') openStats();
+    if (t.dataset.leave) { ui.leaving = t.dataset.leave; ui.msg = ''; renderAccount(); }
+    if (t.hasAttribute('data-leave-no')) { ui.leaving = ''; renderAccount(); }
+    if (t.dataset.leaveYes) void onLeave(t.dataset.leaveYes);
     if (t.id === 'signout') {
       store.close?.();
       void signOut();
@@ -177,6 +218,7 @@ export function initAccount(): void {
     applySettings(); render(); renderAccount(); refreshSpots(); refreshDaily(); renderFeedback();
     void loadKeys();
     ui.admin = false; ui.teach = false;
+    void loadClasses();
     if (storeMode() === 'member') {
       void isAdmin().then(a => { ui.admin = a; renderAccount(); });
       void isInstructor().then(t => { ui.teach = t; renderAccount(); });

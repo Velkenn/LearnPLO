@@ -41,8 +41,11 @@ framework. See README.md for the layout.
 - New tables that only the server uses (like `daily_*`, `admins`) get RLS on, no policies, and
   grants to `service_role` only. Owner-only reads go through a `security definer` function
   that checks `public.is_admin()` (see `admin_stats()`).
-- `worker/` is the Cloudflare Worker. It only sees paths with no file in `dist/` (`/share`
-  and 404s), so it never slows normal page loads. Keep it that way.
+- `worker/` is the Cloudflare Worker. It only sees paths with no file in `dist/` (`/share`,
+  class join links `/join/<code>`, and 404s), so it never slows normal page loads. Keep it that way.
+- The instructor view (`/teach/`) and the join page (`/join/`) redraw with `redraw()` from
+  `ui/dom.ts` and keep what's typed in their state (an `input` listener), so a background call
+  finishing never wipes a half-typed box. Do the same for any new text box on those pages.
 
 ## Before you commit
 

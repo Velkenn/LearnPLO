@@ -3,6 +3,8 @@
 //   ?stub=member   signed in as a member with a few hundred sample answers per game and a daily challenge server
 //   (anything else) signed out; a passkey sign-in then signs you in as that member
 //   &teach=none    the member isn't an instructor anywhere (by default they own a sample school)
+//   &seats=N       the sample school's seat limit (default 20; 3 makes it full)
+// Join codes for the sample school: K7Q2PMXA (open class), HC4RW9TB (closed class).
 // Passkeys only show when /auth/v1/settings says they're on; tests fake that with page.route.
 // The daily challenge grades with the real engine, like supabase/functions/daily does.
 import { CHALLENGE_HANDS, CHALLENGE_VERSION, pickDaySeed, replayChallenge } from '../../src/engine/challenge.ts';
@@ -130,7 +132,8 @@ function school() {
   if (saved) return JSON.parse(saved);
   return {
     codes: 0,
-    org: { id: 'org-1', name: 'Texas Gaming Institute', kind: 'school', role: 'owner', seat_limit: 20 },
+    tries: 0,
+    org: { id: 'org-1', name: 'Texas Gaming Institute', kind: 'school', role: 'owner', seat_limit: Number(new URLSearchParams(location.search).get('seats') || 20) },
     classes: [
       { id: 'class-1', name: 'December PLO', join_code: 'K7Q2PMXA', code_expires_at: null, active: true, created_at: iso(NOW - 10 * DAY_MS), students: [
         { user_id: 'u-sam', name: 'Sam Ortiz', joined_at: iso(NOW - 9 * DAY_MS), left_at: null, stats: st(142, 124, 38, 2, [
@@ -165,11 +168,48 @@ const seatsUsed = sc => new Set(sc.classes.flatMap(c => c.students.filter(m => !
 const NEW_CODES = ['P3NDT8WX', 'R2MVQ7KC', 'W9TF4HZB', 'Y6GJ3NSE'];
 const denied = { data: null, error: { code: '42501', message: 'Only this school’s instructors can see the class' } };
 window.__teachCalls = [];
-const TEACH_CALLS = ['my_orgs', 'create_class', 'class_roster', 'set_class', 'new_class_code', 'remove_student'];
+const TEACH_CALLS = ['my_orgs', 'create_class', 'class_roster', 'set_class', 'new_class_code', 'remove_student',
+  'class_preview', 'join_class', 'my_classes', 'leave_class'];
+const ok = data => ({ data, error: null });
+/** The student's side, as the member: join with a code, list classes, leave. */
+function student(name, args, sc) {
+  const me = user.id;
+  const mine = c => c.students.find(m => m.user_id === me && !m.left_at);
+  if (name === 'my_classes') {
+    return ok(sc.classes.filter(mine).map(c => ({ class_id: c.id, class_name: c.name, org_name: sc.org.name, org_kind: sc.org.kind, name: mine(c).name, joined_at: mine(c).joined_at })));
+  }
+  if (name === 'leave_class') {
+    const m = sc.classes.find(k => k.id === args.class) && mine(sc.classes.find(k => k.id === args.class));
+    if (m) { m.left_at = new Date().toISOString(); m.stats = null; }
+    saveSchool(sc); return ok(null);
+  }
+  if (sc.tries >= 10) return ok({ ok: false, error: 'too_many_tries' });
+  const code = String(args.code || '').replace(/[^A-Za-z0-9]/g, '').toUpperCase();
+  const c = sc.classes.find(k => k.join_code === code);
+  if (!c) { sc.tries++; saveSchool(sc); return ok({ ok: false, error: 'not_found' }); }
+  const org = { name: sc.org.name, kind: sc.org.kind };
+  if (name === 'class_preview') {
+    return ok({ ok: true, class: { id: c.id, name: c.name }, org, already_in: !!mine(c), error: c.active ? null : 'closed' });
+  }
+  // join_class
+  const nm = String(args.student_name || '').trim();
+  if (!nm || nm.length > 40) return ok({ ok: false, error: 'bad_name' });
+  if (mine(c)) { mine(c).name = nm; saveSchool(sc); return ok({ ok: true, class: { id: c.id, name: c.name }, org }); }
+  if (!c.active) return ok({ ok: false, error: 'closed' });
+  const atSchool = sc.classes.some(mine);
+  if (!atSchool && seatsUsed(sc) >= sc.org.seat_limit) return ok({ ok: false, error: 'full' });
+  const old = c.students.find(m => m.user_id === me);
+  const row = { user_id: me, name: nm, joined_at: new Date().toISOString(), left_at: null, stats: st(0, 0, 0, null) };
+  if (old) Object.assign(old, row); else c.students.push(row);
+  saveSchool(sc);
+  window.__joined = (window.__joined || 0) + 1;
+  return ok({ ok: true, class: { id: c.id, name: c.name }, org });
+}
 function teach(name, args = {}) {
   if (!TEACH_CALLS.includes(name)) return null;
   window.__teachCalls.push({ name, args });
   const sc = school();
+  if (['class_preview', 'join_class', 'my_classes', 'leave_class'].includes(name)) return student(name, args, sc);
   if (name === 'my_orgs') {
     if (teachNone) return { data: [], error: null };
     return { data: [{ ...sc.org, seats_used: seatsUsed(sc), classes: sc.classes.map(({ students, ...c }) => ({ ...c, students: students.filter(m => !m.left_at).length })) }], error: null };

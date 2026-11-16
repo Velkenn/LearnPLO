@@ -37,15 +37,15 @@ const text = (page, sel) => page.innerText(sel);
 // Signed out: the sign-in box.
 let page = await fresh();
 await page.goto(at('/teach/'));
-await page.waitForSelector('#tEmailForm');
+await page.waitForSelector('#siEmailForm');
 check(!(await page.$('#tSignOut')), 'no sign-out button when signed out');
-await page.fill('#tEmail', 'not-an-email');
-await page.click('#tEmailForm button[type=submit]');
-check((await text(page, '.teach-signin')).includes('Enter the email address'), 'bad email message');
-await page.fill('#tEmail', 'teacher@example.com');
-await page.click('#tEmailForm button[type=submit]');
-await page.waitForSelector('#tCodeForm');
-check((await text(page, '.teach-signin')).includes('teacher@example.com'), 'code step names the email');
+await page.fill('#siEmail', 'not-an-email');
+await page.click('#siEmailForm button[type=submit]');
+check((await text(page, '.si-box')).includes('Enter the email address'), 'bad email message');
+await page.fill('#siEmail', 'teacher@example.com');
+await page.click('#siEmailForm button[type=submit]');
+await page.waitForSelector('#siCodeForm');
+check((await text(page, '.si-box')).includes('teacher@example.com'), 'code step names the email');
 await shot(page, 'signin');
 await page.close();
 

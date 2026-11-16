@@ -21,3 +21,24 @@ export function showSheet(id: string | null): void {
 }
 
 export const reducedMotion = (): boolean => matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+/**
+ * Replace an element's markup, for pages that redraw whole sections (the instructor view, the
+ * join page). Skips the redraw when nothing changed, and keeps the cursor in the box that had it,
+ * so a redraw from something finishing in the background doesn't interrupt typing. Pages keep
+ * what's typed in their state, so the new markup carries it.
+ */
+const drawn = new WeakMap<HTMLElement, string>();
+export function redraw(el: HTMLElement, html: string): void {
+  if (drawn.get(el) === html) return;
+  const active = document.activeElement as HTMLInputElement | null;
+  const id = active && el.contains(active) ? active.id : '';
+  const sel = id && typeof active!.selectionStart === 'number' ? [active!.selectionStart, active!.selectionEnd] as const : null;
+  el.innerHTML = html;
+  drawn.set(el, html);
+  if (!id) return;
+  const again = document.getElementById(id) as HTMLInputElement | null;
+  if (!again) return;
+  again.focus();
+  if (sel) try { again.setSelectionRange(sel[0], sel[1]); } catch { /* not a text box */ }
+}

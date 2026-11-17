@@ -185,6 +185,10 @@ e2e/stub/             stand-in for supabase-js, and a build script that uses it
 e2e/check.mjs         npm run check: every check in one command
 e2e/ci-wait.mjs       npm run ci:wait: waits for GitHub's checks on a pushed commit
 marketing/promo/      the promo video, animated in code (see its README)
+marketing/og/         render.ts rebuilds the link preview images (public/og.png, og-daily.png)
+public/cards/         real-deck card images for the home page and the link previews: Byron
+                      Knoll's Vector Playing Cards, public domain. The app's own cards stay plain
+                      (src/ui/cards.ts) because they read faster at small sizes.
 ```
 
 ## Deploying

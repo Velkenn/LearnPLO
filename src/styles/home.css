@@ -1,6 +1,13 @@
 /* The home page: the list of games. */
 .home .top{margin-bottom:10px}
 .home-lead{font-size:17px;line-height:1.5;margin:4px 0 18px}
+/* A fanned hand of real cards (public domain art, public/cards/) beside the intro. */
+.home-fan{float:right;position:relative;width:146px;height:96px;margin:2px -4px 6px 18px}
+.home-fan img{position:absolute;top:6px;width:56px;height:auto;transform-origin:50% 100%;filter:drop-shadow(0 0 .5px rgba(0,0,0,.45)) drop-shadow(0 2px 4px rgba(0,0,0,.2))}
+.home-fan img:nth-child(1){left:2px;top:12px;transform:rotate(-11deg)}
+.home-fan img:nth-child(2){left:30px;transform:rotate(-3.5deg)}
+.home-fan img:nth-child(3){left:58px;transform:rotate(3.5deg)}
+.home-fan img:nth-child(4){left:86px;top:12px;transform:rotate(11deg)}
 .games{list-style:none;margin:0;padding:0;display:grid;gap:14px}
 .gamecard{background:var(--surface);border:1px solid var(--line);border-radius:14px;overflow:hidden}
 .gamelink{display:grid;gap:8px;padding:16px 16px 18px;color:inherit;text-decoration:none;background:linear-gradient(160deg, var(--felt-hi) 0%, var(--felt) 45%, var(--felt-2) 100%);color:#F2E8D8}

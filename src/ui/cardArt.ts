@@ -1,4 +1,5 @@
-// Card face art as SVG strings: the full 52-card faces for share images, flyers and promo.
+// Card face art as SVG strings: full 52-card faces (cardSVG) and the logo mark. The link previews
+// and the home page now use the real-deck images in public/cards/ instead of cardSVG.
 // The app keeps its plain index-and-suit cards, which read faster at small sizes.
 // No DOM access, so node scripts can use it.
 import type { Card, Suit } from '../engine/types.ts';

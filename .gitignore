@@ -7,3 +7,4 @@ e2e/out/
 .env.local
 e2e/stub/site/
 marketing/promo/out/
+marketing/og/out/

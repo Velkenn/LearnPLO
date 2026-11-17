@@ -5,6 +5,8 @@
 .card .ix b{font-size:calc(var(--w)*.42);font-weight:700;letter-spacing:-.04em}
 .card .ix i{font-style:normal;font-size:calc(var(--w)*.3);margin-top:1px}
 .card .pip{position:absolute;right:8%;bottom:4%;font-size:calc(var(--w)*.56);line-height:1}
+.card .pip.emb{right:5%;bottom:4%;width:calc(var(--w)*.6);height:calc(var(--w)*.6)}
+.card .pip.emb svg{display:block;width:100%;height:100%}
 .card.xs,.card.sm{box-shadow:none}
 .card.xs .pip,.card.sm .pip{display:none}
 .card.xs .ix,.card.sm .ix{left:0;right:0;top:50%;transform:translateY(-50%)}

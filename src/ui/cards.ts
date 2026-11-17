@@ -1,9 +1,12 @@
 // HTML for cards and chip stacks.
 import type { Card } from '../engine/types.ts';
 import { RC, RN, SUITN, SYM } from '../engine/cards.ts';
+import { emblemSVG } from './cardArt.ts';
 
+// Aces and court cards show a small emblem (chip, crown, tiara, chip stack) where 2 to 10 show the suit.
 const face = (c: Card): string =>
-  `<span class="ix"><b>${RC(c.r)}</b><i>${SYM[c.s]}</i></span><span class="pip" aria-hidden="true">${SYM[c.s]}</span>`;
+  `<span class="ix"><b>${RC(c.r)}</b><i>${SYM[c.s]}</i></span>`
+  + (c.r > 10 ? `<span class="pip emb">${emblemSVG(c, 'currentColor')}</span>` : `<span class="pip" aria-hidden="true">${SYM[c.s]}</span>`);
 
 export const cardHTML = (c: Card, cls = '', attrs = ''): string =>
   `<span class="card ${cls} s-${c.s}" ${attrs} role="img" aria-label="${RN[c.r]} of ${SUITN[c.s]}">${face(c)}</span>`;

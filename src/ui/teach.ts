@@ -11,7 +11,7 @@ import {
   type Org, type Roster, type Student,
 } from '../data/teach.ts';
 import { formatCode, joinLink } from '../data/joinCodes.ts';
-import { brandHTML } from './shell.ts';
+import { brandHTML, siteLinksHTML } from './shell.ts';
 import { $, $q, redraw } from './dom.ts';
 import { initSignIn, resetSignIn, signInClick, signInHTML, signInInput, signInSubmit } from './signin.ts';
 
@@ -222,7 +222,7 @@ export function renderTeach(): void {
     </header>
     ${S.flash ? `<p class="teach-flash" role="status">${esc(S.flash)}</p>` : ''}
     <main class="teach">${body}</main>
-    <footer class="foot"><a class="linkbtn" href="/">All games</a>${signedIn ? `<span class="muted teach-who">${esc(S.member!.email)}</span>` : ''}</footer>`);
+    <footer class="foot"><a class="linkbtn" href="/">All games</a>${signedIn ? `<span class="muted teach-who">${esc(S.member!.email)}</span>` : ''}</footer>${siteLinksHTML}`);
 }
 
 let flashTimer = 0;

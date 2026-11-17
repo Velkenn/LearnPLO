@@ -61,14 +61,15 @@ if (!QUICK) {
     rmSync(dir, { recursive: true, force: true }); mkdirSync(dir, { recursive: true });
     await esbuild.build({ entryPoints: [join(ROOT, 'src/main.ts')], bundle: true, format: 'esm', outfile: join(dir, 'main.js'), define: { 'import.meta.env': JSON.stringify(env) }, alias, logLevel: 'warning' });
     await esbuild.build({ entryPoints: [join(ROOT, 'src/home.ts')], bundle: true, format: 'esm', outfile: join(dir, 'home.js'), logLevel: 'warning' });
-    for (const entry of ['teach', 'join']) {
+    for (const entry of ['teach', 'join', 'schools']) {
       await esbuild.build({ entryPoints: [join(ROOT, `src/${entry}.ts`)], bundle: true, format: 'esm', outfile: join(dir, `${entry}.js`), define: { 'import.meta.env': JSON.stringify(env) }, alias, logLevel: 'warning' });
     }
     await esbuild.build({ entryPoints: [join(ROOT, 'src/styles/main.css')], bundle: true, outfile: join(dir, 'main.css'), logLevel: 'warning' });
-    // The same pages Vite builds: home, one per game (all on the one script), the instructor view, and the join page.
-    for (const page of ['index.html', 'plo/index.html', 'bombpot/index.html', 'teach/index.html', 'join/index.html']) {
+    // The same pages Vite builds: home, one per game (all on the one script), the instructor view, the join page,
+    // and the plain pages (For schools, Privacy, Terms).
+    for (const page of ['index.html', 'plo/index.html', 'bombpot/index.html', 'teach/index.html', 'join/index.html', 'schools/index.html', 'privacy/index.html', 'terms/index.html']) {
       mkdirSync(join(dir, page, '..'), { recursive: true });
-      writeFileSync(join(dir, page), readFileSync(join(ROOT, page), 'utf8').replace('/src/styles/main.css', '/main.css').replace('/src/main.ts', '/main.js').replace('/src/home.ts', '/home.js').replace('/src/teach.ts', '/teach.js').replace('/src/join.ts', '/join.js'));
+      writeFileSync(join(dir, page), readFileSync(join(ROOT, page), 'utf8').replace('/src/styles/main.css', '/main.css').replace('/src/main.ts', '/main.js').replace('/src/home.ts', '/home.js').replace('/src/teach.ts', '/teach.js').replace('/src/join.ts', '/join.js').replace('/src/schools.ts', '/schools.js'));
     }
     cpSync(join(ROOT, 'public'), dir, { recursive: true });
   };

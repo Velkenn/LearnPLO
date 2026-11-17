@@ -7,6 +7,11 @@ A poker dealer trainer. The home page (`/`) lists the games:
 - **Pot limit Omaha** at `/plo/`
 - **Double board bomb pots** at `/bombpot/` (pot limit Omaha: antes, no preflop betting, two boards)
 
+And for everyone else: **For schools** at `/schools/` (what instructors get, and a pilot request
+form; requests land in feedback tagged `context.kind = 'pilot'`), **Privacy** at `/privacy/`, and
+**Terms** at `/terms/`. Every page ends with links to those three. If what FeltReady stores or
+who sees it changes, update `/privacy/` (and its date) in the same change.
+
 ## Pot limit Omaha
 
 A six- or nine-handed hand plays out on its own, and you deal it:

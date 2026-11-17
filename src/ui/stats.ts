@@ -37,7 +37,7 @@ function statsHTML(s: Stats): string {
   const fb = s.feedback.length
     ? `<ul class="fb-list">${s.feedback.map(f => {
       const c = f.context || {};
-      const where = [c.mode, c.hand ? `hand: ${c.hand}` : '', c.challenge ? 'in the daily challenge' : '', c.width ? `${c.width}px wide` : ''].filter(Boolean).join(' · ');
+      const where = [c.kind === 'pilot' ? 'pilot request, For schools page' : '', c.mode, c.hand ? `hand: ${c.hand}` : '', c.challenge ? 'in the daily challenge' : '', c.width ? `${c.width}px wide` : ''].filter(Boolean).join(' · ');
       return `<li><p>${esc(f.message).replace(/\n/g, '<br>')}</p><small>${when(f.at)} · ${f.email ? `<a href="mailto:${esc(f.email)}">${esc(f.email)}</a>` : 'no email'}${where ? ` · ${esc(String(where))}` : ''}</small></li>`;
     }).join('')}</ul>`
     : `<p class="muted">No feedback yet.</p>`;

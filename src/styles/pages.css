@@ -1,0 +1,38 @@
+/* Plain pages: For schools (/schools/), Privacy (/privacy/), Terms (/terms/). And the site links
+   at the bottom of every page. */
+.doc .top{margin-bottom:6px}
+.doc h1{font:700 32px/1.05 var(--fd);margin:14px 0 6px}
+.doc h2{font:700 22px/1.15 var(--fd);margin:26px 0 6px}
+.doc h3{font:600 16px var(--fb);margin:16px 0 4px}
+.doc p,.doc li{line-height:1.55}
+.doc p{margin:0 0 10px}
+.doc ul{margin:0 0 12px;padding-left:20px}
+.doc li{margin:0 0 6px}
+.doc a{color:inherit;text-underline-offset:3px}
+.doc-date{font-size:14px;margin:0 0 16px}
+.doc-lead{font-size:17px}
+
+/* For schools */
+.sch-hero{margin:8px 0 18px;padding:18px 16px 20px;border-radius:14px;background:linear-gradient(160deg, var(--felt-hi) 0%, var(--felt) 45%, var(--felt-2) 100%);color:#F2E8D8}
+.sch-hero h1{margin:0 0 8px;color:#F2E8D8}
+.sch-hero p{color:rgba(242,232,216,.9);font-size:16px}
+.sch-hero .btn{display:inline-block;text-decoration:none;margin-top:4px;color:var(--brass-ink)}
+.sch-steps{list-style:none;padding:0;margin:0 0 8px;display:grid;gap:10px;counter-reset:step}
+.sch-steps li{counter-increment:step;position:relative;padding:12px 14px 12px 50px;margin:0;background:var(--surface);border:1px solid var(--line);border-radius:12px}
+.sch-steps li::before{content:counter(step);position:absolute;left:14px;top:12px;width:24px;height:24px;border-radius:50%;background:var(--brass);color:var(--brass-ink);font:700 14px/24px var(--fb);text-align:center}
+.sch-steps b{display:block}
+.sch-form{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px;margin-top:8px}
+.sch-form label{display:block;font:600 14px var(--fb);margin:0 0 4px}
+.sch-form .opt{font-weight:400;color:var(--muted)}
+.sch-form .fld{margin:0 0 12px}
+.sch-form input,.sch-form select,.sch-form textarea{width:100%;font:400 16px var(--fb);padding:10px 12px;border-radius:8px;border:1.5px solid var(--line);background:var(--surface-2);color:var(--ink)}
+.sch-form textarea{resize:vertical}
+.sch-form .btn{margin-top:2px}
+.sch-form .acct-msg{margin:10px 0 0}
+.sch-sent{background:var(--good-bg);border-radius:10px;padding:12px 14px;margin:0}
+.sch-sent b{display:block;margin-bottom:2px}
+
+/* The links at the bottom of every page */
+.site-links{display:flex;justify-content:center;flex-wrap:wrap;gap:4px 16px;margin:10px 0 0;font-size:13px}
+.site-links a{color:var(--muted);text-underline-offset:3px}
+.sch-try{font-size:14px;margin-top:12px!important}

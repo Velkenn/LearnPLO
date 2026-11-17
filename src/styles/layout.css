@@ -188,5 +188,5 @@ table.stats small{color:var(--muted)}
 .acct-cls small{display:block;color:var(--muted);font-size:13px;overflow-wrap:anywhere}
 .acct-cls .linkbtn{font-size:14px;flex:none}
 .acct-classes .confirm{margin:6px 0 2px}
-.home-join{margin-top:6px}
-.home-join a{color:inherit;font-weight:600;text-underline-offset:3px}
+.home-join,.home-teach{margin-top:6px}
+.home-join a,.home-teach a{color:inherit;font-weight:600;text-underline-offset:3px}

@@ -15,14 +15,14 @@ ENV='{"VITE_SUPABASE_URL":"https://stub.supabase.co","VITE_SUPABASE_KEY":"stub"}
 rm -rf "$OUT"; mkdir -p "$OUT"
 "$ES" src/main.ts --bundle --format=esm --outfile="$OUT/main.js" --define:import.meta.env="$ENV" \
   --alias:@supabase/supabase-js=./e2e/stub/supabase.js --log-level=warning
-for entry in teach join; do
+for entry in teach join schools; do
   "$ES" src/$entry.ts --bundle --format=esm --outfile="$OUT/$entry.js" --define:import.meta.env="$ENV" \
     --alias:@supabase/supabase-js=./e2e/stub/supabase.js --log-level=warning
 done
 "$ES" src/styles/main.css --bundle --outfile="$OUT/main.css" --log-level=warning
-for page in index.html plo/index.html bombpot/index.html teach/index.html join/index.html; do
+for page in index.html plo/index.html bombpot/index.html teach/index.html join/index.html schools/index.html privacy/index.html terms/index.html; do
   mkdir -p "$OUT/$(dirname "$page")"
-  sed -e 's#/src/styles/main.css#/main.css#' -e 's#/src/main.ts#/main.js#' -e 's#/src/teach.ts#/teach.js#' -e 's#/src/join.ts#/join.js#' "$page" > "$OUT/$page"
+  sed -e 's#/src/styles/main.css#/main.css#' -e 's#/src/main.ts#/main.js#' -e 's#/src/teach.ts#/teach.js#' -e 's#/src/join.ts#/join.js#' -e 's#/src/schools.ts#/schools.js#' "$page" > "$OUT/$page"
 done
 cp -r public/. "$OUT/"
 echo "built $OUT"

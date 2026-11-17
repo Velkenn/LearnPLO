@@ -1,5 +1,6 @@
-// Card face art as SVG strings: the full 52-card faces (share images, flyers, promo) and the
-// small emblems the app puts on aces and court cards. No DOM access, so node scripts can use it.
+// Card face art as SVG strings: the full 52-card faces for share images, flyers and promo.
+// The app keeps its plain index-and-suit cards, which read faster at small sizes.
+// No DOM access, so node scripts can use it.
 import type { Card, Suit } from '../engine/types.ts';
 import { RC, RN, SUITN } from '../engine/cards.ts';
 

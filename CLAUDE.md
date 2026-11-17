@@ -43,6 +43,9 @@ framework. See README.md for the layout.
   that checks `public.is_admin()` (see `admin_stats()`).
 - `worker/` is the Cloudflare Worker. It only sees paths with no file in `dist/` (`/share`,
   class join links `/join/<code>`, and 404s), so it never slows normal page loads. Keep it that way.
+- The privacy page (`privacy/index.html`) says exactly what's stored and who sees it. Any change
+  to that (a new table or column with personal data, what a school can see, a new outside
+  service) updates the privacy page and its "Last updated" date in the same commit.
 - The instructor view (`/teach/`) and the join page (`/join/`) redraw with `redraw()` from
   `ui/dom.ts` and keep what's typed in their state (an `input` listener), so a background call
   finishing never wipes a half-typed box. Do the same for any new text box on those pages.

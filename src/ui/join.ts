@@ -6,7 +6,7 @@ import { accountsOn } from '../data/supabase.ts';
 import { signOut, watchAuth, type Member } from '../data/auth.ts';
 import { JOIN_ERRORS, MAX_NAME, classPreview, joinClass, type ClassPreview, type JoinError } from '../data/classes.ts';
 import { cleanCode, codeFromUrl, formatCode } from '../data/joinCodes.ts';
-import { brandHTML } from './shell.ts';
+import { brandHTML, siteLinksHTML } from './shell.ts';
 import { $, $q, redraw } from './dom.ts';
 import { initSignIn, resetSignIn, signInClick, signInHTML, signInInput, signInSubmit } from './signin.ts';
 
@@ -109,7 +109,7 @@ export function renderJoin(): void {
       <h1 class="brand"><a class="home" href="/" aria-label="FeltReady: all games">${brandHTML}</a><span class="game">Classes</span></h1>
     </header>
     <main class="join">${body()}</main>
-    <footer class="foot"><a class="linkbtn" href="/">All games</a>${S.member ? `<span class="muted teach-who">${esc(S.member.email)}</span><button class="linkbtn" id="jSignOut">Sign out</button>` : ''}</footer>`);
+    <footer class="foot"><a class="linkbtn" href="/">All games</a>${S.member ? `<span class="muted teach-who">${esc(S.member.email)}</span><button class="linkbtn" id="jSignOut">Sign out</button>` : ''}</footer>${siteLinksHTML}`);
 }
 
 async function loadPreview(): Promise<void> {

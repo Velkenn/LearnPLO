@@ -42,6 +42,7 @@ if (!await page.$eval('#training', f => f.disabled)) {
 await page.click('#gear');
 
 const tally = { pot: 0, cut: 0, read: 0, chop: 0, missedChop: 0, split: 0, bottom: 0 };
+let handsDone = 0;
 const bad = [];
 const shot = async name => { if (SHOTS) { await page.waitForTimeout(400); await page.screenshot({ path: `${OUT}${name}.png`, fullPage: true }); } };
 const shots = new Set();
@@ -170,7 +171,7 @@ for (let hand = 0; hand < HANDS; hand++) {
     }
     if (await page.$('[data-deal]') && await page.evaluate(() => window.__app.S.mode === 'done')) done = true;
   }
-  if (done) await once('hand-done');
+  if (done) { handsDone++; await once('hand-done'); }
   if (!done) { bad.push(['stuck', hand, await page.evaluate(() => ({ m: window.__app.S.mode, c: window.__app.S.caption }))]); break; }
 }
 
@@ -183,6 +184,14 @@ if (await page.isVisible('#spotsBtn')) {
   await shot('weak-spots');
   await page.click('#gear'); // opening settings closes weak spots
   if (await page.isVisible('#spots')) bad.push(['spots', 'still open after opening settings']);
+}
+
+// Members' hands are counted for the stats dashboard, once each, under the page's game.
+if (url.searchParams.get('stub') === 'member') {
+  await page.waitForTimeout(300);
+  const counted = await page.evaluate(() => window.__hands ?? {});
+  const g = BOMB ? 'bomb' : 'plo';
+  if (counted[g] !== handsDone || Object.keys(counted).length !== 1) bad.push(['hands counted', { handsDone, counted }]);
 }
 
 if (BOMB && HANDS >= 6 && (!tally.split || !tally.bottom)) bad.push(['bomb', 'no splits or bottom-board reads', tally]);

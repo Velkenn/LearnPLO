@@ -1,5 +1,5 @@
 // Starts a hand and connects the engine's hooks to the drills and the screen.
-import { app, challengeComplete } from './app.ts';
+import { app, challengeComplete, logHand } from './app.ts';
 import { SPEEDS } from './config.ts';
 import { newHand, tableSize } from './engine/hand.ts';
 import { playHand, type Hooks } from './engine/loop.ts';
@@ -50,8 +50,13 @@ export function startHand(): void {
   void playHand(S, hooks);
 }
 
+/** Hands already counted as played, so a hand that ends twice still counts once. */
+const counted = new WeakSet<Hand>();
+
 /** A hand just ended (everyone folded, or the last pot was shipped). */
 export function handOver(): void {
+  const S = app.S;
+  if (S && !counted.has(S)) { counted.add(S); logHand(); }
   const c = app.challenge; if (!c || c.handDone) return;
   c.handDone = true;
   if (challengeComplete()) void submitChallenge();

@@ -23,6 +23,8 @@ export interface StatsDay {
   active: number; answers: number;
   /** Signed-out visitors' answers that day, and everyone who answered (members and visitors). Missing until the visitor_days migration has run. */
   guest_answers?: number; players?: number;
+  /** Hands played to the end that day, members and visitors (missing until the hands migration has run). */
+  hands?: number;
   daily_players: number; daily_avg: number | null;
 }
 export interface StatsFeedback { at: string; message: string; email: string | null; member: boolean; context: Record<string, unknown> | null }
@@ -39,6 +41,8 @@ export interface Stats {
   today: string; members: number; members_7d: number; daily_runs: number;
   /** Members' answers, and signed-out visitors' answers (missing until the visitor_days migration has run). */
   answers: number; guest_answers?: number;
+  /** Hands played to the end, members and visitors (missing until the hands migration has run). */
+  hands?: number;
   days: StatsDay[]; feedback: StatsFeedback[];
   /** Missing until the visitors migration has run. */
   visitors?: VisitorStats;

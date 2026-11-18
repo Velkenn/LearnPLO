@@ -1,5 +1,5 @@
 // Counting signed-out visitors for the owner's stats dashboard: how many came, how many played,
-// how far they got, and how many signed up (see supabase/migrations/20261116100000_visitors.sql).
+// how far they got, how many hands they played, and how many signed up (see supabase/migrations/20261116100000_visitors.sql).
 //
 // A signed-out browser gets a random id in localStorage. No cookies, no IP addresses, nothing that
 // names a person. Browsers that have ever signed in to a member account aren't counted again.
@@ -16,7 +16,7 @@ const set = (k: string, v: string): void => { try { localStorage.setItem(k, v); 
 
 /** Counting is on for this visit (accounts set up, signed out, a person's browser). */
 let tracking = false;
-let pending = 0;
+let pending = 0, pendingHands = 0;
 let timer: ReturnType<typeof setTimeout> | null = null;
 
 function call(fn: string, body: Record<string, unknown>, keepalive = false): void {
@@ -69,15 +69,22 @@ export function trackVisit(): void {
 
 function send(step: 'signin' | 'code' | null, keepalive = false): void {
   if (timer) { clearTimeout(timer); timer = null; }
-  if (!tracking || (!pending && !step)) return;
-  const answers = pending; pending = 0;
-  call('track_guest', { v: get(ID), answers, step }, keepalive);
+  if (!tracking || (!pending && !pendingHands && !step)) return;
+  const answers = pending, hands = pendingHands; pending = 0; pendingHands = 0;
+  call('track_guest', { v: get(ID), answers, step, hands }, keepalive);
 }
 
 /** A guest answered a question. Sent in batches, and when the page is hidden or closed. */
 export function countAnswer(): void {
   if (!tracking) return;
   pending++;
+  timer ??= setTimeout(() => send(null), 20_000);
+}
+
+/** A guest finished a hand. Sent with the answers. */
+export function countHand(): void {
+  if (!tracking) return;
+  pendingHands++;
   timer ??= setTimeout(() => send(null), 20_000);
 }
 
@@ -89,7 +96,7 @@ export const signinStep = (step: 'signin' | 'code'): void => send(step);
  * `rpc` is the signed-in Supabase client's rpc, which carries the member's session.
  */
 export async function linkVisitor(rpc: (fn: string, args: Record<string, unknown>) => PromiseLike<{ error: unknown }>): Promise<void> {
-  if (pending) send(null);
+  if (pending || pendingHands) send(null);
   tracking = false;
   set(MEMBER, '1');
   const id = get(ID);

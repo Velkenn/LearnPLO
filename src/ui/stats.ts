@@ -7,7 +7,11 @@ const view = { stats: null as Stats | null, loading: false, error: '' };
 
 const esc = (t: string): string => t.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]!));
 const n = (x: number): string => x.toLocaleString('en-US');
-const dayLabel = (d: string): string => new Date(`${d}T12:00:00Z`).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', timeZone: 'UTC' });
+// "Tue 11/17": short enough that every column of the 14-day table fits a phone.
+const dayLabel = (d: string): string => {
+  const t = new Date(`${d}T12:00:00Z`);
+  return `${t.toLocaleDateString('en-US', { weekday: 'short', timeZone: 'UTC' })} ${t.getUTCMonth() + 1}/${t.getUTCDate()}`;
+};
 const when = (iso: string): string => new Date(iso).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', timeZone: 'America/Chicago' });
 
 const pct = (x: number, of: number): string => of ? `${Math.round((x / of) * 100)}%` : '';
@@ -34,9 +38,12 @@ function visitorsHTML(v: VisitorStats): string {
 const answersOf = (d: StatsDay): number => d.answers + (d.guest_answers ?? 0);
 
 function statsHTML(s: Stats): string {
-  const tiles = [['Members', n(s.members)], ['New this week', n(s.members_7d)], ['Answers', n(s.answers + (s.guest_answers ?? 0))], ['Daily runs', n(s.daily_runs)]]
+  const hands = s.hands != null;
+  const tiles = [['Members', n(s.members)], ['New this week', n(s.members_7d)],
+    ...(hands ? [['Hands', n(s.hands!)]] : []), ['Answers', n(s.answers + (s.guest_answers ?? 0))],
+    ['Daily runs', n(s.daily_runs)], ...(hands && s.visitors ? [['Visitors this week', n(s.visitors.visitors)]] : [])]
     .map(([k, v]) => `<div class="tile"><span>${k}</span><b>${v}</b></div>`).join('');
-  const rows = s.days.map(d => `<tr${d.day === s.today ? ' class="today"' : ''}><th>${dayLabel(d.day)}</th>${s.visitors ? `<td>${d.visitors ? n(d.visitors) : ''}</td>` : ''}<td>${d.new_members || ''}</td><td>${(d.players ?? d.active) || ''}</td><td>${answersOf(d) ? n(answersOf(d)) : ''}</td><td>${d.daily_players ? `${d.daily_players}${d.daily_avg != null ? ` <small>(${d.daily_avg}%)</small>` : ''}` : ''}</td></tr>`).join('');
+  const rows = s.days.map(d => `<tr${d.day === s.today ? ' class="today"' : ''}><th>${dayLabel(d.day)}</th>${s.visitors ? `<td>${d.visitors ? n(d.visitors) : ''}</td>` : ''}<td>${d.new_members || ''}</td><td>${(d.players ?? d.active) || ''}</td>${hands ? `<td>${d.hands ? n(d.hands) : ''}</td>` : ''}<td>${answersOf(d) ? n(answersOf(d)) : ''}</td><td>${d.daily_players ? `${d.daily_players}${d.daily_avg != null ? ` <small>(${d.daily_avg}%)</small>` : ''}` : ''}</td></tr>`).join('');
   const fb = s.feedback.length
     ? `<ul class="fb-list">${s.feedback.map(f => {
       const c = f.context || {};
@@ -47,8 +54,8 @@ function statsHTML(s: Stats): string {
   return `<div class="tiles">${tiles}</div>
     ${s.visitors ? visitorsHTML(s.visitors) : ''}
     <h3>Last 14 days <small>Central time</small></h3>
-    <div class="stats-scroll"><table class="stats days"><thead><tr><th></th>${s.visitors ? '<th>Visitors</th>' : ''}<th>New</th><th>Active</th><th>Answers</th><th>Daily <small>(avg)</small></th></tr></thead><tbody>${rows}</tbody></table></div>
-    <p class="muted stats-note">New: members who signed up. ${s.days.some(d => d.players != null) ? 'Active: members and signed-out visitors who answered at least one question. Answers: everyone’s answers, signed in or out.' : 'Active: members who answered at least one question.'} Daily: challenge runs (average score).${s.visitors ? ' Visitors: signed-out browsers seen for the first time.' : ''}</p>
+    <div class="stats-scroll"><table class="stats days"><thead><tr><th></th>${s.visitors ? '<th>Visitors</th>' : ''}<th>New</th><th>Active</th>${hands ? '<th>Hands</th>' : ''}<th>Answers</th><th>Daily <small>(avg)</small></th></tr></thead><tbody>${rows}</tbody></table></div>
+    <p class="muted stats-note">New: members who signed up. ${s.days.some(d => d.players != null) ? 'Active: members and signed-out visitors who answered at least one question. Answers: everyone’s answers, signed in or out.' : 'Active: members who answered at least one question.'}${hands ? ' Hands: hands played to the end, signed in or out, counted since Nov 17, 2026.' : ''} Daily: challenge runs (average score).${s.visitors ? ' Visitors: signed-out browsers seen for the first time.' : ''}</p>
     <h3>Feedback <small>${s.feedback.length ? `latest ${s.feedback.length}` : ''}</small></h3>${fb}`;
 }
 

@@ -7,7 +7,7 @@ import type { Settings, Stats } from '../engine/types.ts';
 import { DEFAULT_SETTINGS, DEFAULT_STATS } from '../config.ts';
 import { game } from '../page.ts';
 import { supabase } from './supabase.ts';
-import { countAnswer } from './visits.ts';
+import { countAnswer, countHand } from './visits.ts';
 import { answered, cleanSettings, cleanStats, pickMemberSettings, pickMemberStats } from './merge.ts';
 
 export type StoreMode = 'local' | 'guest' | 'member';
@@ -41,6 +41,8 @@ export interface Store {
   loadStats(): Stats;
   saveStats(s: Stats): void;
   recordAttempt(a: Attempt): void;
+  /** A hand ended (counted for the owner's stats dashboard; not kept in local mode). */
+  recordHand(): void;
   /** Members only: this game's latest answers, newest first (answers not yet sent included). */
   loadAttempts?(): Promise<AttemptRow[]>;
   /** Send anything pending and stop syncing (on sign-out). */
@@ -66,6 +68,7 @@ const K = {
   memberSettings: (id: string) => `plo-dd-m-settings-${id}`,
   memberStats: (id: string) => statsKey(`m-stats-${id}`),
   queue: (id: string) => `plo-dd-m-queue-${id}`,
+  hands: (id: string) => `plo-dd-m-hands-${id}`, // hands not yet counted on the server, by game
 };
 
 // ---- local: accounts not configured ----
@@ -76,6 +79,7 @@ export const localStore: Store = {
   loadStats: () => cleanStats(read('local', K.stats)),
   saveStats: s => write('local', K.stats, s),
   recordAttempt: () => { /* not kept */ },
+  recordHand: () => { /* not kept */ },
 };
 
 // ---- guest: accounts on, signed out ----
@@ -92,6 +96,7 @@ export const guestStore: Store = {
   saveStats: s => write('session', K.guestStats, s),
   // Guests' answers aren't logged; only how many there were, for the owner's visitor numbers.
   recordAttempt: () => countAnswer(),
+  recordHand: () => countHand(),
 };
 
 // ---- member: signed in ----
@@ -159,9 +164,29 @@ export async function memberStore(id: string, email: string): Promise<Store> {
   };
   const flushQueue = debounce(sendQueue, 2000);
 
-  const flushAll = () => { pushSettings.flush(); pushStats.flush(); flushQueue.flush(); };
+  // Hands played: a count per game waits on this device until the server has it.
+  const handsWaiting = (): Record<string, number> => (read('local', K.hands(id)) as Record<string, number> | null) || {};
+  let sendingHands: Promise<void> | null = null;
+  const sendHands = (): Promise<void> => {
+    sendingHands ??= (async () => {
+      for (const [g, n] of Object.entries(handsWaiting())) {
+        if (!(n > 0)) continue;
+        const { error } = await sb.rpc('count_hands', { n, game: g });
+        if (error) { console.warn('FeltReady: counting hands failed', error); return; }
+        const left = handsWaiting();
+        left[g] = Math.max(0, (left[g] || 0) - n);
+        write('local', K.hands(id), left);
+      }
+    })()
+      .catch(e => { console.warn('FeltReady: counting hands failed', e); })
+      .finally(() => { sendingHands = null; });
+    return sendingHands;
+  };
+  const flushHands = debounce(sendHands, 2000);
+
+  const flushAll = () => { pushSettings.flush(); pushStats.flush(); flushQueue.flush(); flushHands.flush(); };
   const onHidden = () => { if (document.hidden) flushAll(); };
-  const onOnline = () => { if (settingsDirty) pushSettings.run(); if (statsDirty) pushStats.run(); flushQueue.run(); };
+  const onOnline = () => { if (settingsDirty) pushSettings.run(); if (statsDirty) pushStats.run(); flushQueue.run(); flushHands.run(); };
   addEventListener('pagehide', flushAll);
   document.addEventListener('visibilitychange', onHidden);
   addEventListener('online', onOnline);
@@ -170,6 +195,7 @@ export async function memberStore(id: string, email: string): Promise<Store> {
   if (loaded && !remoteSettings) pushSettings.run();
   if (loaded && (!remoteStats || answered(stats) > answered(remoteStats))) pushStats.run();
   flushQueue.run(); // also sends answers left over from an earlier visit
+  flushHands.run();
 
   return {
     mode: 'member',
@@ -183,6 +209,12 @@ export async function memberStore(id: string, email: string): Promise<Store> {
       q.push({ game, kind: a.kind, correct: a.correct, timed_out: a.timedOut, ms: a.ms == null ? null : Math.round(a.ms), detail: a.detail ?? null, created_at: new Date().toISOString() });
       write('local', K.queue(id), q.slice(-500));
       flushQueue.run();
+    },
+    recordHand: () => {
+      const w = handsWaiting();
+      w[game] = (w[game] || 0) + 1;
+      write('local', K.hands(id), w);
+      flushHands.run();
     },
     loadAttempts: async () => {
       // Send what's waiting first so the page counts the answers just given.

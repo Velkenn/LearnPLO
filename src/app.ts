@@ -62,6 +62,9 @@ export const logAttempt = (a: Attempt): void => {
   store.recordAttempt({ ...a, detail });
 };
 
+/** Count a hand played, for the owner's stats dashboard. */
+export const logHand = (): void => store.recordHand();
+
 /** Keep a challenge answer for grading. No-op outside a challenge. */
 export function challengeAnswer(a: ChallengeAnswer, ok: boolean): void {
   const c = app.challenge; if (!c || c.hand < 0 || c.handDone) return;

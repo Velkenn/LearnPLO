@@ -1,6 +1,6 @@
 // The owner's stats dashboard: members, activity by day, the daily challenge, and feedback.
 // Only members listed in the admins table see the button or get any numbers back.
-import { loadStats, type Stats, type VisitorStats } from '../data/admin.ts';
+import { loadStats, type Stats, type StatsDay, type VisitorStats } from '../data/admin.ts';
 import { $, sheetOpen, showSheet } from './dom.ts';
 
 const view = { stats: null as Stats | null, loading: false, error: '' };
@@ -30,10 +30,13 @@ function visitorsHTML(v: VisitorStats): string {
     <p class="muted stats-note">Counts each signed-out browser once (no cookies or IP addresses). Members already signed in aren’t counted, and neither are members signing in on a new device. Sources come from the link’s utm_source, or the site they clicked from; “direct” means no referrer, which includes most app links.</p>`;
 }
 
+/** Everyone's answers that day: members' plus signed-out visitors'. */
+const answersOf = (d: StatsDay): number => d.answers + (d.guest_answers ?? 0);
+
 function statsHTML(s: Stats): string {
-  const tiles = [['Members', n(s.members)], ['New this week', n(s.members_7d)], ['Answers', n(s.answers)], ['Daily runs', n(s.daily_runs)]]
+  const tiles = [['Members', n(s.members)], ['New this week', n(s.members_7d)], ['Answers', n(s.answers + (s.guest_answers ?? 0))], ['Daily runs', n(s.daily_runs)]]
     .map(([k, v]) => `<div class="tile"><span>${k}</span><b>${v}</b></div>`).join('');
-  const rows = s.days.map(d => `<tr${d.day === s.today ? ' class="today"' : ''}><th>${dayLabel(d.day)}</th>${s.visitors ? `<td>${d.visitors ? n(d.visitors) : ''}</td>` : ''}<td>${d.new_members || ''}</td><td>${d.active || ''}</td><td>${d.answers ? n(d.answers) : ''}</td><td>${d.daily_players ? `${d.daily_players}${d.daily_avg != null ? ` <small>(${d.daily_avg}%)</small>` : ''}` : ''}</td></tr>`).join('');
+  const rows = s.days.map(d => `<tr${d.day === s.today ? ' class="today"' : ''}><th>${dayLabel(d.day)}</th>${s.visitors ? `<td>${d.visitors ? n(d.visitors) : ''}</td>` : ''}<td>${d.new_members || ''}</td><td>${(d.players ?? d.active) || ''}</td><td>${answersOf(d) ? n(answersOf(d)) : ''}</td><td>${d.daily_players ? `${d.daily_players}${d.daily_avg != null ? ` <small>(${d.daily_avg}%)</small>` : ''}` : ''}</td></tr>`).join('');
   const fb = s.feedback.length
     ? `<ul class="fb-list">${s.feedback.map(f => {
       const c = f.context || {};
@@ -45,7 +48,7 @@ function statsHTML(s: Stats): string {
     ${s.visitors ? visitorsHTML(s.visitors) : ''}
     <h3>Last 14 days <small>Central time</small></h3>
     <div class="stats-scroll"><table class="stats days"><thead><tr><th></th>${s.visitors ? '<th>Visitors</th>' : ''}<th>New</th><th>Active</th><th>Answers</th><th>Daily <small>(avg)</small></th></tr></thead><tbody>${rows}</tbody></table></div>
-    <p class="muted stats-note">New: members who signed up. Active: members who answered at least one question. Daily: challenge runs (average score).${s.visitors ? ' Visitors: signed-out browsers seen for the first time.' : ''}</p>
+    <p class="muted stats-note">New: members who signed up. ${s.days.some(d => d.players != null) ? 'Active: members and signed-out visitors who answered at least one question. Answers: everyone’s answers, signed in or out.' : 'Active: members who answered at least one question.'} Daily: challenge runs (average score).${s.visitors ? ' Visitors: signed-out browsers seen for the first time.' : ''}</p>
     <h3>Feedback <small>${s.feedback.length ? `latest ${s.feedback.length}` : ''}</small></h3>${fb}`;
 }
 

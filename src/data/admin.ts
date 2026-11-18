@@ -17,7 +17,14 @@ export async function isAdmin(): Promise<boolean> {
   return !error && data === true;
 }
 
-export interface StatsDay { day: string; visitors?: number; new_members: number; active: number; answers: number; daily_players: number; daily_avg: number | null }
+export interface StatsDay {
+  day: string; visitors?: number; new_members: number;
+  /** Members who answered, and their answers. */
+  active: number; answers: number;
+  /** Signed-out visitors' answers that day, and everyone who answered (members and visitors). Missing until the visitor_days migration has run. */
+  guest_answers?: number; players?: number;
+  daily_players: number; daily_avg: number | null;
+}
 export interface StatsFeedback { at: string; message: string; email: string | null; member: boolean; context: Record<string, unknown> | null }
 /** Signed-out visitors over the last 7 days (Central time), and how far they got. */
 export interface VisitorStats {
@@ -29,7 +36,9 @@ export interface VisitorStats {
   sources: { source: string; visitors: number; played: number; signed_up: number }[];
 }
 export interface Stats {
-  today: string; members: number; members_7d: number; answers: number; daily_runs: number;
+  today: string; members: number; members_7d: number; daily_runs: number;
+  /** Members' answers, and signed-out visitors' answers (missing until the visitor_days migration has run). */
+  answers: number; guest_answers?: number;
   days: StatsDay[]; feedback: StatsFeedback[];
   /** Missing until the visitors migration has run. */
   visitors?: VisitorStats;

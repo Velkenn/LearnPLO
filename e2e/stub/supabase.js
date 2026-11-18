@@ -275,7 +275,7 @@ export function createClient() {
         const today = '2026-09-27';
         const days = Array.from({ length: 14 }, (_, i) => {
           const d = new Date(Date.UTC(2026, 8, 27 - i)).toISOString().slice(0, 10);
-          return { day: d, visitors: i < 7 ? 30 - i * 3 : 0, new_members: i < 3 ? 3 - i : 0, active: i < 5 ? 6 - i : 0, answers: i < 5 ? 240 - i * 40 : 0, daily_players: i < 2 ? 5 - i : 0, daily_avg: i < 2 ? 84 : null };
+          return { day: d, visitors: i < 7 ? 30 - i * 3 : 0, new_members: i < 3 ? 3 - i : 0, active: i < 5 ? 6 - i : 0, answers: i < 5 ? 240 - i * 40 : 0, guest_answers: i < 5 ? 60 - i * 10 : 0, players: i < 5 ? 9 - i : 0, daily_players: i < 2 ? 5 - i : 0, daily_avg: i < 2 ? 84 : null };
         });
         const feedback = [...window.__feedback].reverse().map(f => ({ at: new Date().toISOString(), message: f.message, email: f.email ?? user.email, member: !!session, context: f.context }))
           .concat([{ at: '2026-09-27T20:15:00Z', message: 'At my room the small blind counts as a full blind preflop. Glad that is a setting!', email: 'lupe@example.com', member: true, context: { mode: 'member', hand: 'done', width: 390 } }]);
@@ -284,7 +284,7 @@ export function createClient() {
           left_after: { none: 55, few: 38, some: 22, lots: 5 },
           sources: [{ source: 'reddit.com', visitors: 64, played: 41, signed_up: 4 }, { source: 'direct', visitors: 38, played: 19, signed_up: 2 }, { source: 'google', visitors: 24, played: 11, signed_up: 0 }],
         };
-        return { data: { today, members: 14, members_7d: 6, answers: 1480, daily_runs: 9, days, feedback, visitors }, error: null };
+        return { data: { today, members: 14, members_7d: 6, answers: 1480, guest_answers: 410, daily_runs: 9, days, feedback, visitors }, error: null };
       }
       return { data: null, error: { message: 'unknown rpc' } };
     },

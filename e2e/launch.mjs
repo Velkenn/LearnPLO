@@ -145,6 +145,9 @@ async function open(url) {
   check(text.includes('Members') && text.includes('14'), 'stats tiles show members');
   check(text.includes('Side pot 2 wording confused me.'), 'the new feedback shows on the dashboard');
   check(await page.$$eval('#stats table.days tbody tr', rows => rows.length) === 14, 'fourteen days of activity');
+  check(text.includes('1,890'), 'the answers tile counts members and signed-out visitors');
+  const today = await page.$$eval('#stats table.days tbody tr.today td', tds => tds.map(td => td.textContent));
+  check(today[2] === '9' && today[3] === '300', `today's row counts everyone who answered (${today.join(' | ')})`);
   check(text.includes('Visitors') && text.includes('Asked for a code') && text.includes('reddit.com'), 'the visitors section shows the steps and sources');
   check(text.includes('The 120 who didn’t sign up') && text.includes('Left without answering'), 'how far the visitors who left got');
   check(await page.$$eval('#stats .funnel li', li => li.length) === 5, 'five steps from visit to sign-up');

@@ -29,7 +29,7 @@ function call(fn: string, body: Record<string, unknown>, keepalive = false): voi
 }
 
 /** This browser has signed in before (now, or on an earlier visit). */
-const memberHere = (): boolean => {
+export const wasMember = (): boolean => {
   if (get(MEMBER)) return true;
   try { return Object.keys(localStorage).some(k => /^sb-.+-auth-token$/.test(k)); } catch { return false; }
 };
@@ -54,7 +54,7 @@ export function sourceOf(search: string, referrer: string, here: string): string
 /** Count this page load if the browser is signed out. Call once per page, on load. */
 export function trackVisit(): void {
   if (!url || !key || typeof window === 'undefined') return;
-  if (memberHere() || BOTS.test(navigator.userAgent)) return;
+  if (wasMember() || BOTS.test(navigator.userAgent)) return;
   // Coming back from a sign-in email: that's a member arriving, not a visitor.
   if (/access_token=/.test(location.hash)) return;
   let id = get(ID);

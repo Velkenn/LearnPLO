@@ -188,7 +188,7 @@ async function open(url) {
   check(guest.some(c => c.body.step === 'signin'), 'opening sign-in is counted');
   await page.evaluate(() => { document.querySelector('#modal')?.classList.remove('open'); });
   await page.fill('#acctEmail', 'new@example.com');
-  await page.click('#acctEmailForm button');
+  await page.click('#acctToCode'); // "Email me a code instead" sends it right away
   await page.waitForSelector('#acctCode');
   check(calls.some(c => c.fn === 'track_guest' && c.body.step === 'code'), 'asking for a code is counted');
   // Signing in ties the visits to the account, and the browser isn't counted as a visitor again.

@@ -120,6 +120,18 @@ input[type=checkbox]{width:22px;height:22px;accent-color:var(--brass)}
 .acct-or{display:flex;align-items:center;gap:10px;margin:12px 0 10px;color:var(--muted);font-size:13px}
 .acct-or::before,.acct-or::after{content:"";flex:1;border-top:1px solid var(--line)}
 .acct-pk-btn{width:100%}
+.acct-oauth{display:flex;flex-direction:column;gap:8px;margin:2px 0 0}
+.btn.oauth{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:11px 16px;font-weight:600}
+.btn.oauth svg{flex:none}
+/* Google's light button, and Apple's black one (white in dark mode): each brand's own look. */
+.btn.oauth-google{background:#fff;color:#1F1F1F;border:1px solid #747775}
+.btn.oauth-apple{background:var(--ink);color:var(--surface)}
+.acct-form.acct-stack{flex-direction:column}
+.acct-form.acct-stack input{flex:none;width:100%;box-sizing:border-box}
+.acct-form.acct-stack .btn{width:100%}
+.acct-alt span{font-size:14px;color:var(--muted)}
+.acct-pw{margin-top:10px}
+.acct-alt + .acct-pk-btn{margin-top:12px}
 .acct-pk{background:var(--surface-2);border-radius:10px;padding:12px;margin-top:12px}
 .acct-pk p{margin:0 0 10px!important;font-size:15px}
 

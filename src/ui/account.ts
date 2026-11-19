@@ -2,7 +2,8 @@
 import { memberEmail, storeMode, switchStore } from '../app.ts';
 import { accountsOn, supabase } from '../data/supabase.ts';
 import { linkVisitor, signinStep } from '../data/visits.ts';
-import { addPasskey, listPasskeys, passkeySignIn, passkeysAvailable, sendLink, signOut, verifyCode, watchAuth, type PasskeyInfo } from '../data/auth.ts';
+import { addPasskey, listPasskeys, MIN_PASSWORD, passkeysAvailable, setPassword, signOut, watchAuth, type PasskeyInfo } from '../data/auth.ts';
+import { createSignIn } from './signin.ts';
 import { inAppBrowser, regularBrowser } from '../data/browser.ts';
 import { clearGuestStats, guestStore, memberStore, store } from '../data/store.ts';
 import { $, $q, sheetOpen, showSheet } from './dom.ts';
@@ -16,9 +17,8 @@ import { isAdmin } from '../data/admin.ts';
 import { isInstructor } from '../data/teach.ts';
 import { leaveClass, myClasses, type MyClass } from '../data/classes.ts';
 
-type Step = 'email' | 'code';
 const ui = {
-  step: 'email' as Step, email: '', busy: false, msg: '', err: false, loading: false,
+  busy: false, msg: '', err: false, loading: false,
   /** Passkeys are on for the project and this browser can use them. */
   passkeys: false,
   /** The member's passkeys (null until loaded, or if they couldn't be). */
@@ -31,7 +31,23 @@ const ui = {
   classes: null as MyClass[] | null,
   /** The class they asked to leave, waiting for them to confirm. */
   leaving: '',
+  /** The set-a-password form is open, and what's typed in it. */
+  pwOpen: false, pw: '',
 };
+// Signed out: Google, Apple, email and password, an emailed code, or a passkey.
+const signin = createSignIn({ prefix: 'acct', redraw: () => renderAccount(), track: signinStep });
+
+/** Signed in: set a password (accounts made with a code or Google have none) or change it. */
+function passwordHTML(): string {
+  if (!ui.pwOpen) return `<p class="acct-note"><button class="linkbtn" id="acctSetPw">Set or change your password</button> to sign in with your email and a password.</p>`;
+  return `<form class="acct-form acct-pw" id="acctPwForm" novalidate>
+      <input type="email" autocomplete="username" value="${esc(memberEmail())}" hidden>
+      <label class="sr" for="acctNewPw">New password</label>
+      <input type="password" id="acctNewPw" autocomplete="new-password" minlength="${MIN_PASSWORD}" placeholder="New password (${MIN_PASSWORD}+ characters)" value="${esc(ui.pw)}">
+      <button class="btn" type="submit" ${ui.busy ? 'disabled' : ''}>${ui.busy ? 'Saving…' : 'Save password'}</button>
+    </form>
+    <p class="acct-alt"><button class="linkbtn" id="acctPwCancel">Cancel</button></p>`;
+}
 const shortDate = (iso: string): string => new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 
 /** Signed in: offer a passkey, or say which ones the account has. */
@@ -70,30 +86,17 @@ export function renderAccount(): void {
   const warn = app ? `<p class="acct-warn">You’re in ${app}’s built-in browser, which forgets sign-ins. To stay signed in, open feltready.com in ${regularBrowser(navigator.userAgent)}. Look for “Open in browser” in the app’s menu.</p>` : '';
   if (ui.loading) { box.innerHTML = `<p class="muted">Loading your account…</p>`; return; }
   if (mode === 'member') {
-    box.innerHTML = `${warn}<div class="acct-row"><p>Signed in as <b>${esc(memberEmail())}</b>. Settings and stats save to your account.</p><button class="btn ghost" id="signout">Sign out</button></div>${passkeyHTML()}${classesHTML()}${ui.teach ? '<p class="acct-note acct-teach"><a class="linkbtn" href="/teach/">Open your instructor view</a></p>' : ''}${ui.admin ? '<p class="acct-note"><button class="linkbtn" id="acctStats">Open the stats dashboard</button></p>' : ''}${note}`;
+    box.innerHTML = `${warn}<div class="acct-row"><p>Signed in as <b>${esc(memberEmail())}</b>. Settings and stats save to your account.</p><button class="btn ghost" id="signout">Sign out</button></div>${passkeyHTML()}${passwordHTML()}${classesHTML()}${ui.teach ? '<p class="acct-note acct-teach"><a class="linkbtn" href="/teach/">Open your instructor view</a></p>' : ''}${ui.admin ? '<p class="acct-note"><button class="linkbtn" id="acctStats">Open the stats dashboard</button></p>' : ''}${note}`;
     return;
   }
-  if (ui.step === 'email') {
-    box.innerHTML = `${warn}<p class="acct-lead">Sign in to set a timer, pick your blinds, and keep your stats on any device. It's free, and there's no password: we email you a code.</p>
-      <form class="acct-form" id="acctEmailForm" novalidate>
-        <label class="sr" for="acctEmail">Email</label>
-        <input type="email" id="acctEmail" autocomplete="email" inputmode="email" placeholder="you@example.com" value="${esc(ui.email)}" required>
-        <button class="btn" type="submit" ${ui.busy ? 'disabled' : ''}>${ui.busy ? 'Sending…' : 'Email me a code'}</button>
-      </form>${ui.passkeys ? `<div class="acct-or" aria-hidden="true"><span>or</span></div>
-      <button class="btn ghost acct-pk-btn" id="acctPasskey" ${ui.busy ? 'disabled' : ''}>Sign in with a passkey</button>` : ''}${note}`;
-  } else {
-    // The code signs in this browser, so it stays signed in. The emailed link can open in a
-    // different browser on a phone (often the Google app's), which is why it's the backup.
-    box.innerHTML = `${warn}<p class="acct-lead">We sent a sign-in code to <b>${esc(ui.email)}</b>. Enter it here and this browser stays signed in. It can take a minute to arrive, so check spam too.</p>
-      <form class="acct-form" id="acctCodeForm" novalidate>
-        <label class="sr" for="acctCode">Code from the email</label>
-        <input id="acctCode" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]*" maxlength="10" placeholder="Code from the email">
-        <button class="btn" type="submit" ${ui.busy ? 'disabled' : ''}>${ui.busy ? 'Checking…' : 'Sign in'}</button>
-      </form>${note}
-      <p class="acct-alt"><button class="linkbtn" id="acctBack">Use a different email</button></p>
-      <p class="acct-note">The email has a sign-in link too. On a phone it can open in another app’s browser, which won’t keep you signed in here.</p>`;
-  }
+  box.innerHTML = signinHTML(warn) + note;
 }
+
+const signinHTML = (warn: string): string => signin.html(
+  'Sign in to set a timer, pick your blinds, and keep your stats on any device. It’s free.',
+  // The emailed link can open in a different browser on a phone (often the Google app's), which is why the code comes first.
+  { warn, codeNote: '<p class="acct-note">The email has a sign-in link too. On a phone it can open in another app’s browser, which won’t keep you signed in here.</p>' },
+);
 
 function say(msg: string, err = false): void { ui.msg = msg; ui.err = err; renderAccount(); }
 
@@ -102,28 +105,7 @@ export function openAccount(): void {
   if (storeMode() === 'guest') signinStep('signin');
   if (!sheetOpen('sheet')) showSheet('sheet');
   window.scrollTo({ top: 0, behavior: 'auto' });
-  setTimeout(() => ($q<HTMLInputElement>('#acctEmail') || $q<HTMLInputElement>('#acctCode'))?.focus(), 30);
-}
-
-async function onEmail(): Promise<void> {
-  const email = ($q<HTMLInputElement>('#acctEmail')?.value || '').trim();
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { ui.email = email; say('Enter the email address you want to sign in with.', true); return; }
-  ui.email = email; ui.busy = true; ui.msg = ''; renderAccount();
-  const err = await sendLink(email);
-  ui.busy = false;
-  if (err) { say(err, true); return; }
-  signinStep('code');
-  ui.step = 'code'; say('');
-  $q<HTMLInputElement>('#acctCode')?.focus();
-}
-
-async function onPasskeySignIn(): Promise<void> {
-  signinStep('code');
-  ui.busy = true; ui.msg = ''; renderAccount();
-  const err = await passkeySignIn();
-  ui.busy = false;
-  if (err) say(err, true); // '' means the prompt was closed; null means signed in and watchAuth takes over
-  else renderAccount();
+  setTimeout(() => signin.focusTarget()?.focus(), 30);
 }
 
 async function onAddPasskey(): Promise<void> {
@@ -165,14 +147,15 @@ async function onLeave(classId: string): Promise<void> {
   }
 }
 
-async function onCode(): Promise<void> {
-  const code = ($q<HTMLInputElement>('#acctCode')?.value || '').replace(/\D/g, '');
-  if (code.length < 6) { say('Enter the code from the email.', true); return; }
+async function onSetPassword(): Promise<void> {
+  const pw = $q<HTMLInputElement>('#acctNewPw')?.value ?? ui.pw;
+  if (pw.length < MIN_PASSWORD) { ui.pw = pw; say(`Pick a password with at least ${MIN_PASSWORD} characters.`, true); return; }
   ui.busy = true; ui.msg = ''; renderAccount();
-  const err = await verifyCode(ui.email, code);
+  const err = await setPassword(pw);
   ui.busy = false;
-  if (err) say(err, true); // on success, watchAuth takes over
-  else renderAccount();
+  if (err) { say(err, true); return; }
+  ui.pwOpen = false; ui.pw = '';
+  say('Password saved. Next time, sign in with your email and password.');
 }
 
 export function initAccount(): void {
@@ -183,14 +166,21 @@ export function initAccount(): void {
   const box = $('#acct');
   box.addEventListener('submit', e => {
     e.preventDefault();
-    const id = (e.target as HTMLElement).id;
-    if (id === 'acctEmailForm') void onEmail();
-    if (id === 'acctCodeForm') void onCode();
+    const f = e.target as HTMLFormElement;
+    if (signin.submit(f)) { ui.msg = ''; return; }
+    if (f.id === 'acctPwForm') void onSetPassword();
+  });
+  // Keep what's typed, so a redraw (a passkey list or class list loading) doesn't wipe it.
+  box.addEventListener('input', e => {
+    const t = e.target as HTMLInputElement;
+    if (signin.input(t)) return;
+    if (t.id === 'acctNewPw') ui.pw = t.value;
   });
   box.addEventListener('click', e => {
     const t = (e.target as HTMLElement).closest('button'); if (!t) return;
-    if (t.id === 'acctBack') { ui.step = 'email'; say(''); }
-    if (t.id === 'acctPasskey') void onPasskeySignIn();
+    if (signin.click(t)) { ui.msg = ''; return; }
+    if (t.id === 'acctSetPw') { ui.pwOpen = true; ui.msg = ''; renderAccount(); $q<HTMLInputElement>('#acctNewPw')?.focus(); }
+    if (t.id === 'acctPwCancel') { ui.pwOpen = false; ui.pw = ''; ui.msg = ''; renderAccount(); }
     if (t.id === 'acctAddPasskey') void onAddPasskey();
     if (t.id === 'acctStats') openStats();
     if (t.dataset.leave) { ui.leaving = t.dataset.leave; ui.msg = ''; renderAccount(); }
@@ -210,14 +200,14 @@ export function initAccount(): void {
         const ms = await memberStore(m.id, m.email);
         switchStore(ms);
         clearGuestStats();
-        ui.step = 'email'; ui.msg = '';
+        signin.reset(); ui.msg = ''; ui.pwOpen = false; ui.pw = '';
       } catch {
         ui.msg = 'Couldn’t load your account. Check your connection and reload.'; ui.err = true;
       }
       ui.loading = false;
     } else if (storeMode() !== 'guest') {
       switchStore(guestStore);
-      ui.step = 'email'; ui.msg = 'Signed out.'; ui.err = false;
+      signin.reset('Signed out.'); ui.msg = ''; ui.pwOpen = false; ui.pw = '';
     }
     // A hand in progress keeps going; new settings apply from the next deal.
     applySettings(); render(); renderAccount(); refreshSpots(); refreshDaily(); renderFeedback();

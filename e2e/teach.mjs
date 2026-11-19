@@ -39,6 +39,8 @@ let page = await fresh();
 await page.goto(at('/teach/'));
 await page.waitForSelector('#siEmailForm');
 check(!(await page.$('#tSignOut')), 'no sign-out button when signed out');
+check(await page.isVisible('#siPassword'), 'a new browser is offered an account with a password');
+await page.click('#siToCode');
 await page.fill('#siEmail', 'not-an-email');
 await page.click('#siEmailForm button[type=submit]');
 check((await text(page, '.si-box')).includes('Enter the email address'), 'bad email message');

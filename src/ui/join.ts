@@ -54,8 +54,8 @@ function body(): string {
   if (S.member === undefined) return `<p class="muted">Loading…</p>`;
   if (!S.member) {
     return `<h2>Join your class</h2>
-      <p>Your class code is <b class="join-code-inline">${esc(code)}</b>. Sign in to join, so your instructor can see how you’re doing. New to FeltReady? The same box makes you a free account.</p>
-      ${signInHTML('Enter your email and we’ll send you a sign-in code. No password.')}`;
+      <p>Your class code is <b class="join-code-inline">${esc(code)}</b>. Sign in to join, so your instructor can see how you’re doing.</p>
+      ${signInHTML('New to FeltReady? Make a free account here. It takes a few seconds.')}`;
   }
   if (S.failed) return `<p class="acct-msg err" role="alert">Couldn’t look up that code. Check your connection and try again.</p><button class="btn ghost" id="retry">Try again</button>`;
   if (S.loading || !S.preview) return `<p class="muted">Finding your class…</p>`;

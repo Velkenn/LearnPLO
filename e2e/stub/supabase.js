@@ -1,7 +1,8 @@
 // Stand-in for @supabase/supabase-js, for browser tests without a network or a real account.
 // e2e/stub/build.sh swaps it in. The URL picks who you are:
 //   ?stub=member   signed in as a member with a few hundred sample answers per game and a daily challenge server
-//   (anything else) signed out; a passkey sign-in then signs you in as that member
+//   (anything else) signed out; a passkey or password sign-in then signs you in as that member
+//   &confirm=1     making an account with a password waits for the confirmation email
 //   &teach=none    the member isn't an instructor anywhere (by default they own a sample school)
 //   &seats=N       the sample school's seat limit (default 20; 3 makes it full)
 // Join codes for the sample school: K7Q2PMXA (open class), HC4RW9TB (closed class).
@@ -245,7 +246,29 @@ export function createClient() {
     auth: {
       getSession: async () => ({ data: { session } }),
       onAuthStateChange: cb => { listeners.push(cb); return { data: { subscription: { unsubscribe() {} } } }; },
-      signInWithOtp: async () => ({ error: null }), verifyOtp: async () => ({ error: null }),
+      signInWithOtp: async () => ({ error: null }),
+      verifyOtp: async ({ type }) => { if (type === 'signup') signIn(); return { error: null }; },
+      // Email and password: the password is "right-password", or one set earlier in the visit.
+      // taken@example.com already has an account; ?confirm=1 acts like Supabase's "Confirm email" setting.
+      signInWithPassword: async ({ password }) => {
+        await new Promise(r => setTimeout(r, 100));
+        if (password !== (sessionStorage.getItem('stub-password') || 'right-password')) return { data: {}, error: { code: 'invalid_credentials', message: 'Invalid login credentials' } };
+        signIn(); return { data: { session, user }, error: null };
+      },
+      signUp: async ({ email, password }) => {
+        await new Promise(r => setTimeout(r, 100));
+        if (email === 'taken@example.com') return { data: {}, error: { code: 'user_already_exists', message: 'User already registered' } };
+        sessionStorage.setItem('stub-password', password);
+        if (new URLSearchParams(location.search).get('confirm')) return { data: { user: { ...user, identities: [{}] }, session: null }, error: null };
+        signIn(); return { data: { user, session }, error: null };
+      },
+      updateUser: async ({ password }) => {
+        await new Promise(r => setTimeout(r, 100));
+        if (!session) return { data: {}, error: { code: 'session_missing', message: 'no session' } };
+        sessionStorage.setItem('stub-password', password); return { data: { user }, error: null };
+      },
+      // Google and Apple: record where it would go instead of leaving the page.
+      signInWithOAuth: async ({ provider, options }) => { window.__oauth = { provider, redirectTo: options?.redirectTo }; return { data: {}, error: null }; },
       signOut: async () => { session = null; sessionStorage.removeItem('stub-signed-in'); listeners.forEach(cb => cb('SIGNED_OUT', null)); return { error: null }; },
       // Passkeys: no real WebAuthn ceremony, just the outcome. A passkey added earlier in the visit signs in.
       signInWithPasskey: async () => {

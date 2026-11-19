@@ -106,7 +106,7 @@ python3 -m http.server 4174 -d e2e/stub/site &
 npm run e2e -- "http://localhost:4174/plo/?stub=member" --shots   # signed in
 npm run e2e -- http://localhost:4174/plo/ --shots                 # guest
 node e2e/daily.mjs "http://localhost:4174/plo/?stub=member" --shots   # the whole daily challenge
-node e2e/account.mjs http://localhost:4174/plo/ --shots               # code sign-in and passkeys
+node e2e/account.mjs http://localhost:4174/plo/ --shots               # sign-in (all ways) and passkeys
 node e2e/launch.mjs http://localhost:4174/plo/ --shots                # welcome, feedback, stats
 node e2e/pages.mjs http://localhost:4174/ --shots                     # home page and old links
 node e2e/teach.mjs http://localhost:4174/ --shots                     # the instructor view
@@ -157,7 +157,8 @@ src/
     stats.ts          the owner's stats dashboard (admins only)
     teach.ts          the instructor view: classes, join codes, students' progress
     join.ts           the join page: sign in, see what the school sees, give a name, join
-    signin.ts         the small sign-in box the instructor view and the join page share
+    signin.ts         the sign-in box (Google, Apple, password, code, passkey): the account box,
+                      the instructor view, and the join page each draw one
     events.ts         buttons and keyboard
     timer.ts          countdown per question
     sound.ts          chip clicks and vibration
@@ -175,7 +176,7 @@ supabase/functions/daily/  the daily challenge server (Edge Function)
 supabase/tests/       SQL tests on a throwaway local Postgres (run.sh)
 e2e/drill.mjs         Playwright browser test: hands and drills
 e2e/daily.mjs         Playwright browser test: the daily challenge
-e2e/account.mjs       Playwright browser test: sign-in, in-app browser notice, passkeys
+e2e/account.mjs       Playwright browser test: Google/Apple, passwords, codes, in-app browser notice, passkeys
 e2e/launch.mjs        Playwright browser test: first-visit welcome, feedback, stats dashboard
 e2e/pages.mjs         Playwright browser test: home page, links between pages, old links
 e2e/teach.mjs         Playwright browser test: the instructor view
@@ -226,7 +227,7 @@ Without Supabase settings the app runs device-only: everything saves in the brow
 With them:
 
 - **Guests** play the full drill with default settings; stats last for the visit.
-- **Signed-in users** (emailed sign-in code, or a passkey; no passwords) unlock the training
+- **Signed-in users** (Google, Apple, email and password, an emailed sign-in code, or a passkey) unlock the training
   settings, and settings, stats, and every answer save to their account.
   On first sign-in, the visit's stats (and any older stats on that device) carry over.
 
@@ -258,19 +259,41 @@ Setup:
    to it. The page reads `passkeys_enabled` from the public auth settings and only shows
    passkey buttons when it's on (and never in an app's built-in browser). Members add a
    passkey from the account box after signing in once with a code.
-6. Feedback and the stats dashboard (migration `20260927000600`): anyone can send feedback,
+6. Passwords: **Authentication → Sign In / Providers → Email** (on by default). "Confirm email"
+   decides what happens when someone makes an account with a password: on, Supabase emails the
+   same code-first email and the box asks for the code (or they tap its link); off, they're signed
+   in right away. Keep it on: schools add instructors by email (`admin_add_org_member`), and with it
+   off anyone could make an account with an instructor's address before they do. Accounts made with
+   a code have no password; members set one from the account box ("Set or change your password").
+   Forgot a password? The box's "Email me a code" link, then set a new one.
+7. Google and Apple: turn each on under **Authentication → Sign In / Providers**. The page reads
+   `external.google` and `external.apple` from the public auth settings and only shows a button
+   once its provider is on (never in an app's built-in browser, where Google refuses to sign in).
+   Both use Supabase's redirect flow, so the Redirect URLs from step 3 cover them. Supabase links
+   a Google or Apple sign-in to the account that already has that email (Apple's Hide My Email
+   addresses become their own account).
+   - Google: in Google Cloud, make an OAuth client (Web application) with authorized redirect URI
+     `https://uzeqcsigqnjvqsnvymfb.supabase.co/auth/v1/callback`, and paste its client ID and
+     secret into Supabase. Set the app name and logo on the consent screen.
+   - Apple: in the Apple Developer account, a Services ID (for example `com.feltready.web`) with
+     Sign in with Apple on, domain `uzeqcsigqnjvqsnvymfb.supabase.co`, and return URL
+     `https://uzeqcsigqnjvqsnvymfb.supabase.co/auth/v1/callback`; then a Sign in with Apple key
+     (.p8). Put the Services ID first under Client IDs, and the secret made from the key (Supabase's
+     Apple page has a generator) under Secret Key. **That secret expires after 6 months**: make a
+     new one from the same .p8 before then, or Apple sign-in stops working.
+8. Feedback and the stats dashboard (migration `20260927000600`): anyone can send feedback,
    nobody can read it through the API, and only members in `admins` see the dashboard. Add an
    admin in the SQL editor:
    `insert into public.admins select id from auth.users where email = 'you@example.com';`
-7. Before sharing widely, set up custom SMTP (for example Resend) under
+9. Before sharing widely, set up custom SMTP (for example Resend) under
    **Authentication → SMTP**. Supabase's built-in email is for testing only.
-8. Schools and card rooms (migration `20261116000000`): see [Schools and classes](#schools-and-classes).
-9. Visitors who haven't signed up (migration `20261116100000`): adds the Visitors section to the
+10. Schools and card rooms (migration `20261116000000`): see [Schools and classes](#schools-and-classes).
+11. Visitors who haven't signed up (migration `20261116100000`): adds the Visitors section to the
    stats dashboard. See "Visitor numbers" under [Deploying](#deploying).
 
 Code: `src/data/supabase.ts` (client), `auth.ts` (sign-in), `store.ts` (local, guest,
 and member storage), `merge.ts` (how device and account stats combine),
-`src/ui/account.ts` (the sign-in box).
+`src/ui/signin.ts` (the sign-in box), `src/ui/account.ts` (the account box around it).
 
 ## Schools and classes
 
@@ -296,7 +319,7 @@ students join at **feltready.com/join/<code>**.
   by name, lowest accuracy first, or last active. Tapping a student shows each drill by game
   (right, average time) and their most common mistakes, and a remove button (asks first).
   Accuracy is green at 90% or better and red under 75%, once a student has 10 answers. Students
-  who left are listed apart, with no numbers. It has its own small sign-in box (code or passkey).
+  who left are listed apart, with no numbers. It has its own copy of the sign-in box.
 
 - **Organization**: a school or card room, with an optional seat limit (students in its classes
   at once, each counted once). You create it, and its owner, from an admin account or the SQL

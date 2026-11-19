@@ -206,7 +206,7 @@ export function renderTeach(): void {
   let body: string;
   if (!accountsOn) body = `<p>Instructor accounts aren't set up on this copy of FeltReady.</p>`;
   else if (S.member === undefined) body = `<p class="muted">Loading…</p>`;
-  else if (!S.member) body = `<h2 class="teach-h">Your classes</h2><p>Join codes for your classes, and how each of your students is doing.</p>${signInHTML('Sign in with the email your school set up for you. There’s no password: we email you a code.')}`;
+  else if (!S.member) body = `<h2 class="teach-h">Your classes</h2><p>Join codes for your classes, and how each of your students is doing.</p>${signInHTML('Sign in with the email your school set up for you. With Google or Apple, use the account with that same email.')}`;
   else if (S.orgsError) body = `<p class="acct-msg err" role="alert">Couldn’t load your school. Check your connection and try again.</p><button class="btn ghost" id="retry">Try again</button>`;
   else if (!S.orgs) body = `<p class="muted">Loading your school…</p>`;
   else if (!S.orgs.length) body = noOrgsHTML();

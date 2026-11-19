@@ -22,10 +22,19 @@ const STAKES = args.includes('--stakes') ? args[args.indexOf('--stakes') + 1] : 
 const OUT = new URL('./out/', import.meta.url).pathname;
 if (SHOTS) mkdirSync(OUT, { recursive: true });
 
+// --guest: a signed-out visitor on a build with accounts on; checks the hands sent for the stats dashboard.
+const GUEST = args.includes('--guest');
+
 const browser = await chromium.launch();
-const page = await browser.newPage({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, colorScheme: args.includes('--dark') ? 'dark' : 'light' });
+const page = await browser.newPage({
+  viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, colorScheme: args.includes('--dark') ? 'dark' : 'light',
+  // Visitor counting skips headless browsers as bots; look like a phone so a guest is counted.
+  ...(GUEST ? { userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1' } : {}),
+});
 const errors = [];
 page.on('pageerror', e => errors.push(String(e)));
+const rpcCalls = [];
+if (GUEST) await page.route('**/rest/v1/rpc/**', r => { rpcCalls.push({ fn: r.request().url().split('/rpc/')[1], body: r.request().postDataJSON() }); return r.fulfill({ status: 204, body: '' }); });
 await page.goto(url.href);
 // Speed the table up: cap every delay at a few milliseconds.
 await page.evaluate(() => { const orig = window.setTimeout; window.setTimeout = (f, ms) => orig(f, Math.min(ms || 0, 4)); });
@@ -192,6 +201,16 @@ if (url.searchParams.get('stub') === 'member') {
   const counted = await page.evaluate(() => window.__hands ?? {});
   const g = BOMB ? 'bomb' : 'plo';
   if (counted[g] !== handsDone || Object.keys(counted).length !== 1) bad.push(['hands counted', { handsDone, counted }]);
+}
+
+// Guests' hands go out with their answers in track_guest, and the last batch when the page closes.
+if (GUEST) {
+  await page.evaluate(() => window.dispatchEvent(new Event('pagehide')));
+  await page.waitForTimeout(300);
+  if (!rpcCalls.some(c => c.fn === 'track_visit')) bad.push(['guest', 'the visit wasn’t counted, so hands can’t be']);
+  const guest = rpcCalls.filter(c => c.fn === 'track_guest');
+  const sent = guest.reduce((t, c) => t + (c.body.hands || 0), 0);
+  if (sent !== handsDone) bad.push(['guest hands counted', { handsDone, sent, calls: guest.length }]);
 }
 
 if (BOMB && HANDS >= 6 && (!tally.split || !tally.bottom)) bad.push(['bomb', 'no splits or bottom-board reads', tally]);

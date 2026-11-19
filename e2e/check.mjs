@@ -109,7 +109,7 @@ if (!QUICK) {
     ['drill, 9-handed (settings open)', 'drill.mjs', `${local.url}plo/`, '--hands', n(6, 20), '--seats', '9', ...shots],
     ['drill, member', 'drill.mjs', `${stub.url}plo/?stub=member`, '--hands', n(6, 16)],
     ['drill, rounded pot $1/$3', 'drill.mjs', `${local.url}plo/`, '--hands', n(8, 30), '--rounded', '--stakes', '1/3', ...shots],
-    ['drill, guest', 'drill.mjs', `${stub.url}plo/`, '--hands', n(4, 10)],
+    ['drill, guest', 'drill.mjs', `${stub.url}plo/`, '--hands', n(4, 10), '--guest'],
     ['bomb pots, 6-handed (settings open)', 'drill.mjs', `${local.url}bombpot/`, '--hands', n(10, 40), ...shots],
     ['bomb pots, 9-handed (settings open)', 'drill.mjs', `${local.url}bombpot/`, '--hands', n(6, 20), '--seats', '9', ...shots],
     ['bomb pots, member', 'drill.mjs', `${stub.url}bombpot/?stub=member`, '--hands', n(6, 16), ...shots],

@@ -47,23 +47,34 @@ export function awardPot(S: Hand, sd: Showdown, pt: Pot): void {
   S.log.push({ t: `${seatList(winners)} ${winners.length > 1 ? 'split' : 'wins'} ${multi ? `the ${pt.name.toLowerCase()} (${fmt(pt.amount)})` : fmt(pt.amount)}${pt.elig.length > 1 ? ` with ${describe(pt.top!)}` : ', uncontested'}` });
 }
 
+/** Every way to pick three of the board cards the dealer tapped. */
+function threes(ks: number[]): number[][] {
+  const out: number[][] = [];
+  for (let a = 0; a < ks.length; a++) for (let b = a + 1; b < ks.length; b++) for (let c = b + 1; c < ks.length; c++) out.push([ks[a], ks[b], ks[c]]);
+  return out;
+}
+
 /**
- * Grade the dealer's picks: hole cards per seat plus three board cards. `cards` is the board being
- * read (the second board in a double board hand); `pt` needs only the winners and the top hand.
+ * Grade the dealer's picks: hole cards per seat plus board cards. One winner: exactly three board
+ * cards. A chop: three to five, since the winners can play different board cards; each winner's
+ * hand is their two hole cards with the best three of those. `cards` is the board being read (the
+ * second board in a double board hand); `pt` needs only the winners and the top hand.
  */
 export function gradePicks(S: Hand, pt: Pick<Pot, 'winners' | 'top'>, holes: Record<number, number[]>, board: number[], cards: Card[] = S.board): { picks: { seat: number; score: Score }[]; ok: boolean } {
   const seats = Object.keys(holes).map(Number);
   const picks = seats.map(s => {
-    const p = S.players[s];
-    let sc = eval5([...holes[s].map(k => p.hole[k]), ...board.map(k => cards[k])]);
-    // In a chop, a second winner may play different board cards than the first.
-    if (seats.length > 1 && pt.winners!.includes(s) && cmp(sc, pt.top!) !== 0) {
+    const p = S.players[s], pair = holes[s].map(k => p.hole[k]);
+    let sc: Score | null = null;
+    for (const t of threes(board)) { const x = eval5([...pair, ...t.map(k => cards[k])]); if (!sc || cmp(x, sc) > 0) sc = x; }
+    // In a chop, a second winner may play board cards the dealer didn't tap.
+    if (seats.length > 1 && pt.winners!.includes(s) && cmp(sc!, pt.top!) !== 0) {
       const alt = bestWithPair(p.hole, holes[s], cards);
       if (cmp(alt, pt.top!) === 0) sc = alt;
     }
-    return { seat: s, score: sc };
+    return { seat: s, score: sc! };
   });
-  const ok = picks.every(x => pt.winners!.includes(x.seat) && cmp(x.score, pt.top!) === 0) && pt.winners!.every(w => seats.includes(w));
+  const shape = seats.length > 1 ? board.length >= 3 && board.length <= 5 : board.length === 3;
+  const ok = shape && picks.every(x => pt.winners!.includes(x.seat) && cmp(x.score, pt.top!) === 0) && pt.winners!.every(w => seats.includes(w));
   return { picks, ok };
 }
 

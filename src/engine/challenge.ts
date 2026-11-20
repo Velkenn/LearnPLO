@@ -61,9 +61,11 @@ const distinct = (xs: number[]): boolean => new Set(xs).size === xs.length;
 /** A read that can be graded without crashing: 3 board cards, 2 hole cards per picked seat. */
 export function validRead(a: { holes: unknown; board: unknown }): a is { holes: Record<string, number[]>; board: number[] } {
   const { holes, board } = a;
-  if (!Array.isArray(board) || board.length !== 3 || !board.every(b => isInt(b, 0, 4)) || !distinct(board)) return false;
   if (!holes || typeof holes !== 'object' || Array.isArray(holes)) return false;
   const seats = Object.entries(holes as Record<string, unknown>);
+  // Three board cards for one winner; a chop can tap up to five (winners can play different ones).
+  const most = seats.length > 1 ? 5 : 3;
+  if (!Array.isArray(board) || board.length < 3 || board.length > most || !board.every(b => isInt(b, 0, 4)) || !distinct(board)) return false;
   return seats.length >= 1 && seats.length <= 6 && seats.every(([s, h]) =>
     isInt(Number(s), 0, 5) && String(Number(s)) === s && Array.isArray(h) && h.length === 2 && h.every(x => isInt(x, 0, 3)) && distinct(h));
 }

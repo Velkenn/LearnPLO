@@ -1,7 +1,7 @@
 // Drill: read the showdown. Pick the winning five (or each winner in a chop), side pots first.
 import { app, bump, challengeAnswer, logAttempt, nextHandLabel, recordTime } from '../app.ts';
 import { handOver } from '../game.ts';
-import type { Pot } from '../engine/types.ts';
+import type { Card, Hand, Pot } from '../engine/types.ts';
 import { bestAny, cmp, describe } from '../engine/cards.ts';
 import { posOf } from '../engine/hand.ts';
 import { awardPot, buildShowdown, curPot, gradePicks, liveElig, losersOf, muckAfter, readMiss, type ReadMiss } from '../engine/showdown.ts';
@@ -54,16 +54,29 @@ function finishShowdown(): void {
     : `${seatList(sd.pots[0].winners!)} ${sd.pots[0].winners!.length > 1 ? 'chop' : 'takes'} ${fmt(sd.pots[0].amount)}`;
 }
 
+/** Board cards the dealer can tap: three for one winner, up to five in a chop (winners can play different ones). */
+const boardMax = (sel: Hand['sel']): number => Object.keys(sel.holes).length > 1 ? 5 : 3;
+
+/** Whether the picks are complete, and the status line and button under the cards. Shared with bomb pot reads. */
+export function selState(sel: Hand['sel']): { ready: boolean; html: string } {
+  const seats = Object.keys(sel.holes).map(Number), chop = seats.length > 1, n = sel.board.length;
+  const ready = (chop ? n >= 3 : n === 3) && seats.length > 0 && seats.every(s => sel.holes[s].length === 2);
+  const status = `Board ${chop ? `${n} (3 to 5)` : `${n}/3`}${seats.length ? ', ' + seats.map(s => `Seat ${s + 1} ${sel.holes[s].length}/2`).join(', ') : ''}`;
+  return { ready, html: `<div class="selbar"><span class="muted">${status}</span><button class="btn" id="gradeBtn" ${ready ? '' : 'disabled'}>${chop ? 'Chop it' : 'Ship it'}</button></div>` };
+}
+
 export function toggleSel(kind: 'board' | 'hole', seat: number | null, idx: number): void {
   const sel = app.S!.sel;
   if (kind === 'board') {
     const k = sel.board.indexOf(idx);
-    if (k >= 0) sel.board.splice(k, 1); else { sel.board.push(idx); if (sel.board.length > 3) sel.board.shift(); }
+    if (k >= 0) sel.board.splice(k, 1); else { sel.board.push(idx); if (sel.board.length > boardMax(sel)) sel.board.shift(); }
   } else if (seat != null) {
     const arr = sel.holes[seat] || (sel.holes[seat] = []);
     const k = arr.indexOf(idx);
     if (k >= 0) arr.splice(k, 1); else { arr.push(idx); if (arr.length > 2) arr.shift(); }
     if (!arr.length) delete sel.holes[seat];
+    // Back to one winner: keep the three board cards tapped last.
+    while (sel.board.length > boardMax(sel)) sel.board.shift();
   }
   renderPanel();
 }
@@ -71,7 +84,7 @@ export function toggleSel(kind: 'board' | 'hole', seat: number | null, idx: numb
 export function gradeHand(timeout: boolean): void {
   const S = app.S, sd = S && S.sd; if (!S || !sd || S.mode !== 'showdown' || sd.phase !== 'read') return;
   const sel = S.sel, pt = curPot(sd), seats = Object.keys(sel.holes).map(Number);
-  if (!timeout && (sel.board.length !== 3 || !seats.length || seats.some(s => sel.holes[s].length !== 2))) return;
+  if (!timeout && !selState(sel).ready) return;
   const ms = timerStop(); let ok = false, miss: ReadMiss | null = null;
   if (timeout) sd.results[sd.order[sd.step]] = { timeout: true, ok: false };
   else {
@@ -100,6 +113,10 @@ export function nextPot(): void {
   sd.step++; enterRead(); render(); scrollToPanel();
 }
 
+/** The board after a read, with the cards the winning hand plays outlined. Shared with bomb pot reads. */
+export const boardHTML = (cards: Card[], used: number[], title = 'Board'): string =>
+  `<div class="sdrow"><h3>${title}</h3><div class="cards">${cards.map((c, k) => cardHTML(c, 'md' + (used.includes(k) ? ' used' : ''))).join('')}</div></div>`;
+
 export function readPanel(): string {
   const S = app.S!, sd = S.sd!, sel = S.sel, pt = curPot(sd), multi = sd.pots.length > 1;
   const res = sd.results[sd.order[sd.step]];
@@ -111,7 +128,7 @@ export function readPanel(): string {
   let h = `<h2>${multi ? `${pt.name}, ${fmt(pt.amount)}` : 'Read the hands'}</h2>`;
   if (!res) {
     h += timerHTML('read');
-    h += `<p class="muted">${multi ? `${seatList(le)} ${le.length > 1 ? 'are' : 'is'} in this pot. ` : ''}Tap the two hole cards and three board cards that play for the winner. If it's a chop, tap each winner's two cards.</p>`;
+    h += `<p class="muted">${multi ? `${seatList(le)} ${le.length > 1 ? 'are' : 'is'} in this pot. ` : ''}Tap the two hole cards and three board cards that play for the winner. If it's a chop, tap each winner's two cards and every board card they play.</p>`;
     h += `<div class="sdrow"><h3>Board</h3><div class="cards">${S.board.map((c, k) => cardBtn(c, sel.board.includes(k) ? 'on' : '', `data-k="board" data-i="${k}" aria-pressed="${sel.board.includes(k)}"`)).join('')}</div></div>`;
     elig.forEach(r => {
       const p = S.players[r.i], mine = sel.holes[p.i] || [];
@@ -119,10 +136,7 @@ export function readPanel(): string {
     });
     if (mucked.length) h += `<p class="muted" style="margin-top:8px">${seatList(mucked)} mucked after losing the bigger pot.</p>`;
     if (out.length) h += `<p class="muted" style="margin-top:8px">${seatList(out.map(r => r.i))} ${out.length > 1 ? 'aren\'t' : 'isn\'t'} in this one. All in for less.</p>`;
-    const seats = Object.keys(sel.holes).map(Number);
-    const ready = sel.board.length === 3 && seats.length > 0 && seats.every(s => sel.holes[s].length === 2);
-    const status = `Board ${sel.board.length}/3${seats.length ? ', ' + seats.map(s => `Seat ${s + 1} ${sel.holes[s].length}/2`).join(', ') : ''}`;
-    h += `<div class="selbar"><span class="muted">${status}</span><button class="btn" id="gradeBtn" ${ready ? '' : 'disabled'}>${seats.length > 1 ? 'Chop it' : 'Ship it'}</button></div>`;
+    h += selState(sel).html;
     return h;
   }
   const wn = seatList(winners), split = winners.length > 1, wd = describe(pt.top!);
@@ -152,6 +166,7 @@ export function readPanel(): string {
     v = `<div class="verdict bad">${msg}<span>${why}</span></div>`;
   }
   h += v + timeLine('r', res.ms);
+  h += boardHTML(S.board, winners.flatMap(w => sd.rows.find(r => r.i === w)!.best.board));
   [...elig].sort((a, b) => cmp(b.best.score, a.best.score)).forEach(r => {
     const p = S.players[r.i], win = winners.includes(r.i);
     const got = win ? pt.share! + (pt.odd && pt.odd.seat === r.i ? pt.odd.amt : 0) : 0;

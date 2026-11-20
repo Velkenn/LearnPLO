@@ -3,6 +3,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { newHand, posOf } from '../src/engine/hand.ts';
 import { playHand, type Hooks } from '../src/engine/loop.ts';
+import { validRead } from '../src/engine/challenge.ts';
 import { awardPot, buildShowdown, curPot, gradePicks, liveElig, losersOf, readMiss } from '../src/engine/showdown.ts';
 import { seed } from '../src/engine/rng.ts';
 import { DEFAULT_SETTINGS } from '../src/config.ts';
@@ -79,6 +80,17 @@ async function run(settings: Settings, hands: number, firstSeed: number, t: Tall
             const g = gradePicks(S, pt, { [w]: holes[w] }, board);
             assert.ok(!g.ok, 'picking one winner of a chop is wrong');
             assert.equal(readMiss(S, sd, pt, g.picks).miss, 'missed-chop');
+            // Every board card any winner plays (up to five) grades right too.
+            const all = [...new Set(pt.winners!.flatMap(x => sd.rows.find(r => r.i === x)!.best.board))];
+            assert.ok(gradePicks(S, pt, holes, all).ok, 'chop with each winner\'s board cards grades right');
+            assert.ok(gradePicks(S, pt, holes, [0, 1, 2, 3, 4]).ok, 'chop with the whole board tapped grades right');
+            // The daily challenge (six-handed) accepts it.
+            if (S.players.length <= 6) assert.ok(validRead({ holes: Object.fromEntries(Object.entries(holes)), board: all }), 'chop answer with more board cards is valid');
+          } else if (live.length > 1) {
+            // One winner plays exactly three board cards: a fourth makes it wrong.
+            const w = pt.winners![0], extra = [0, 1, 2, 3, 4].find(k => !board.includes(k))!;
+            assert.ok(!gradePicks(S, pt, holes, [...board, extra]).ok, 'four board cards for one winner is wrong');
+            if (S.players.length <= 6) assert.ok(!validRead({ holes: { [String(w)]: holes[w] }, board: [...board, extra] }), 'one winner, four board cards is invalid');
           }
           awardPot(S, sd, pt);
           const lost = losersOf(sd, pt); lost.forEach(i => sd.mucked.add(i)); t.mucks += lost.length;

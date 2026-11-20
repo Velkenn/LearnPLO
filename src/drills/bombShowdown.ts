@@ -15,6 +15,7 @@ import { buzz } from '../ui/sound.ts';
 import { timeLine, timerHTML, timerStart, timerStop } from '../ui/timer.ts';
 import { render } from '../ui/render.ts';
 import { piles } from '../ui/table.ts';
+import { boardHTML, selState } from './readHands.ts';
 
 const scrollToPanel = (smooth = false): void =>
   $q('#panel')?.scrollIntoView({ behavior: smooth && !reducedMotion() ? 'smooth' : 'auto', block: 'start' });
@@ -112,8 +113,8 @@ export function gradeSplit(timeout: boolean): void {
 
 export function gradeBombRead(timeout: boolean): void {
   const S = app.S, sd = S && S.sd; if (!S || !sd || S.mode !== 'showdown' || sd.phase !== 'read' || sd.part === 'split' || sd.part == null) return;
-  const b = sd.part, sel = S.sel, pt = curPot(sd), h = pt.halves![b], seats = Object.keys(sel.holes).map(Number);
-  if (!timeout && (sel.board.length !== 3 || !seats.length || seats.some(s => sel.holes[s].length !== 2))) return;
+  const b = sd.part, sel = S.sel, pt = curPot(sd), h = pt.halves![b];
+  if (!timeout && !selState(sel).ready) return;
   const ms = timerStop(); let ok = false, miss: ReadMiss | null = null;
   if (timeout) sd.reads![key(sd, b)] = { timeout: true, ok: false };
   else {
@@ -192,7 +193,7 @@ function readHTML(b: 0 | 1): string {
   let html = `<h2>${capF(boardRef(sd, pt, b))}, ${fmt(h.amount)}</h2>`;
   if (!res) {
     html += timerHTML('read');
-    html += `<p class="muted">Tap the two hole cards and three ${b ? 'bottom' : 'top'}-board cards that play for the winner. If it's a chop, tap each winner's two cards.</p>`;
+    html += `<p class="muted">Tap the two hole cards and three ${b ? 'bottom' : 'top'}-board cards that play for the winner. If it's a chop, tap each winner's two cards and every board card they play.</p>`;
     html += `<div class="sdrow"><h3>${capF(BOARD_NAMES[b])}</h3><div class="cards">${cards.map((c, k) => cardBtn(c, sel.board.includes(k) ? 'on' : '', `data-k="board" data-i="${k}" aria-pressed="${sel.board.includes(k)}"`)).join('')}</div></div>`;
     elig.forEach(r => {
       const p = S.players[r.i], mine = sel.holes[p.i] || [];
@@ -200,10 +201,7 @@ function readHTML(b: 0 | 1): string {
     });
     if (lostBigger.length) html += `<p class="muted" style="margin-top:8px">${seatList(lostBigger)} lost the ${BOARD_NAMES[b]} of a bigger pot, so ${lostBigger.length > 1 ? 'they can\'t' : 'can\'t'} win this one.</p>`;
     if (out.length) html += `<p class="muted" style="margin-top:8px">${seatList(out.map(r => r.i))} ${out.length > 1 ? 'aren\'t' : 'isn\'t'} in this pot. All in for less.</p>`;
-    const seats = Object.keys(sel.holes).map(Number);
-    const ready = sel.board.length === 3 && seats.length > 0 && seats.every(s => sel.holes[s].length === 2);
-    const status = `Board ${sel.board.length}/3${seats.length ? ', ' + seats.map(s => `Seat ${s + 1} ${sel.holes[s].length}/2`).join(', ') : ''}`;
-    html += `<div class="selbar"><span class="muted">${status}</span><button class="btn" id="gradeBtn" ${ready ? '' : 'disabled'}>${seats.length > 1 ? 'Chop it' : 'Ship it'}</button></div>`;
+    html += selState(sel).html;
     return html;
   }
   const wn = seatList(winners), split = winners.length > 1, wd = describe(h.top);
@@ -233,6 +231,7 @@ function readHTML(b: 0 | 1): string {
     v = `<div class="verdict bad">${msg}<span>${why}</span></div>`;
   }
   html += v + timeLine('r', res.ms);
+  html += boardHTML(cards, winners.flatMap(w => rowBest(sd.rows.find(r => r.i === w)!, b).board), capF(BOARD_NAMES[b]));
   [...elig].sort((x, y) => cmp(rowBest(y, b).score, rowBest(x, b).score)).forEach(r => {
     const p = S.players[r.i], win = winners.includes(r.i), best = rowBest(r, b);
     const got = win ? h.share! + (h.odd && h.odd.seat === r.i ? h.odd.amt : 0) : 0;

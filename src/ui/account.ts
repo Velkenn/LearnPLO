@@ -11,7 +11,7 @@ import { applySettings } from './settings.ts';
 import { render } from './render.ts';
 import { refreshSpots } from './weakSpots.ts';
 import { refreshDaily } from './daily.ts';
-import { renderFeedback } from './feedback.ts';
+import { refreshReplies, renderFeedback } from './feedback.ts';
 import { openStats } from './stats.ts';
 import { isAdmin } from '../data/admin.ts';
 import { isInstructor } from '../data/teach.ts';
@@ -212,6 +212,7 @@ export function initAccount(): void {
     // A hand in progress keeps going; new settings apply from the next deal.
     applySettings(); render(); renderAccount(); refreshSpots(); refreshDaily(); renderFeedback();
     void loadKeys();
+    void refreshReplies();
     ui.admin = false; ui.teach = false;
     void loadClasses();
     if (storeMode() === 'member') {

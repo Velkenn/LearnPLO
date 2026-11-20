@@ -285,6 +285,12 @@ Setup:
    nobody can read it through the API, and only members in `admins` see the dashboard. Add an
    admin in the SQL editor:
    `insert into public.admins select id from auth.users where email = 'you@example.com';`
+   Answering feedback (migration `20261120000000`): admins reply from the dashboard's Feedback
+   section (Waiting / All; replying marks a message done, and the sender writing back reopens it).
+   The sender sees a "You have a reply" note on their next visit and the thread in the feedback
+   sheet, where they can write back. Members' threads follow their account; signed-out senders'
+   follow a random id their browser keeps (`fr-feedback` in localStorage, `src/data/replies.ts`).
+   Messages sent before this migration from signed-out visitors can only be answered by email.
 9. Before sharing widely, set up custom SMTP (for example Resend) under
    **Authentication → SMTP**. Supabase's built-in email is for testing only.
 10. Schools and card rooms (migration `20261116000000`): see [Schools and classes](#schools-and-classes).

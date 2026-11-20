@@ -50,6 +50,7 @@ export function shellHTML(game: GameId): string {
   </header>
   <div class="scores${game === 'bomb' ? ' five' : ''}" id="scores"></div>
   <div class="daily-strip" id="dailyStrip" hidden></div>
+  <div class="fb-note" id="fbNote" role="status" hidden></div>
 
   <section class="sheet" id="sheet" aria-label="Settings">
     <div class="acct" id="acct" hidden></div>

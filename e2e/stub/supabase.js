@@ -5,6 +5,8 @@
 //   &confirm=1     making an account with a password waits for the confirmation email
 //   &teach=none    the member isn't an instructor anywhere (by default they own a sample school)
 //   &seats=N       the sample school's seat limit (default 20; 3 makes it full)
+//   &replies=1     an earlier message has an unread reply from the owner: the member's, or signed
+//                  out, this browser's (the fr-feedback id in localStorage)
 // Join codes for the sample school: K7Q2PMXA (open class), HC4RW9TB (closed class).
 // Passkeys only show when /auth/v1/settings says they're on; tests fake that with page.route.
 // The daily challenge grades with the real engine, like supabase/functions/daily does.
@@ -22,6 +24,40 @@ function signIn() {
 }
 window.__inserted = [];   // attempts rows sent
 window.__feedback = [];   // feedback rows sent
+// Feedback threads, for replies (supabase/migrations/20261120000000_feedback_replies.sql).
+let threadId = 100;
+window.__threads = [
+  { id: 1, at: '2026-09-27T20:15:00Z', message: 'At my room the small blind counts as a full blind preflop. Glad that is a setting!', email: 'lupe@example.com', member: true, user: 'lupe', sender: null, context: { mode: 'member', hand: 'done', width: 390 }, seen_at: '2026-09-28T12:00:00Z', done_at: '2026-09-28T10:00:00Z',
+    replies: [{ at: '2026-09-28T10:00:00Z', body: 'Thanks Lupe! Glad it helps.', owner: true }] },
+  { id: 2, at: '2026-09-26T18:00:00Z', message: 'Old message from before replies.', email: null, member: false, user: null, sender: null, context: { mode: 'guest' }, seen_at: null, done_at: null, replies: [] },
+];
+if (new URLSearchParams(location.search).has('replies')) window.__threads.unshift(
+  { id: 3, at: '2026-11-18T22:00:00Z', message: 'The side pot drill took my answer twice.', email: null, member: !!session, user: session ? user.id : null, sender: session ? null : localStorage.getItem('fr-feedback'), context: { mode: 'member' }, seen_at: null, done_at: '2026-11-19T15:00:00Z',
+    replies: [{ at: '2026-11-19T15:00:00Z', body: 'Thanks for catching that! It’s fixed. Which phone were you on?', owner: true }] });
+const ownsThread = (t, sender) => (!!session && t.user === user.id) || (!!sender && t.sender === sender);
+function feedbackRpc(name, args) {
+  const T = window.__threads, now = new Date().toISOString();
+  const find = id => T.find(t => t.id === id);
+  if (name === 'my_feedback') return T.filter(t => ownsThread(t, args?.p_sender) && t.replies.some(r => r.owner))
+    .map(({ id, at, message, seen_at, replies }) => ({ id, at, message, seen_at, replies: replies.map(r => ({ ...r })) }));
+  if (name === 'feedback_seen') { T.filter(t => ownsThread(t, args?.p_sender)).forEach(t => { t.seen_at = now; }); window.__seen = (window.__seen || 0) + 1; return null; }
+  if (name === 'feedback_write_back') {
+    const t = find(args.p_id), body = String(args.p_body || '').trim();
+    if (!t || !ownsThread(t, args.p_sender) || !body || !t.replies.some(r => r.owner)) return false;
+    t.replies.push({ at: now, body, owner: false }); t.done_at = null; t.seen_at = now; return true;
+  }
+  return undefined;
+}
+function adminFeedbackRpc(name, args) {
+  const T = window.__threads, now = new Date().toISOString();
+  if (name === 'admin_feedback') return [...T].sort((a, b) => b.at.localeCompare(a.at)).map(t => ({
+    id: t.id, at: t.at, message: t.message, email: t.email ?? (t.user === user.id ? user.email : null), member: t.member, context: t.context,
+    in_app: !!t.user || !!t.sender, seen_at: t.seen_at, done_at: t.done_at, replies: t.replies.map(r => ({ ...r })),
+  }));
+  if (name === 'admin_reply_feedback') { const t = T.find(x => x.id === args.p_id); t.replies.push({ at: now, body: args.p_body.trim(), owner: true }); t.done_at = now; return null; }
+  if (name === 'admin_feedback_done') { const t = T.find(x => x.id === args.p_id); t.done_at = args.p_done ? now : null; return null; }
+  return undefined;
+}
 
 // ---- sample answers for the weak spots page (pot limit Omaha, or bomb pots) ----
 function rows(game) {
@@ -63,7 +99,11 @@ function query(table) {
     eq(col, v) { if (col === 'game') game = v; return q; }, order() { return q; }, limit() { return q; },
     maybeSingle() { result = { data: null, error: null }; return q; },
     upsert() { return q; },
-    insert(v) { (table === 'feedback' ? window.__feedback : window.__inserted).push(...[].concat(v)); return q; },
+    insert(v) {
+      (table === 'feedback' ? window.__feedback : window.__inserted).push(...[].concat(v));
+      if (table === 'feedback') for (const f of [].concat(v)) window.__threads.unshift({ id: ++threadId, at: new Date().toISOString(), message: f.message, email: f.email ?? null, member: !!session, user: session ? user.id : null, sender: f.sender ?? null, context: f.context, seen_at: null, done_at: null, replies: [] });
+      return q;
+    },
     then(res, rej) { return new Promise(r => setTimeout(() => r(result), 150)).then(res, rej); },
   };
   return q;
@@ -289,7 +329,11 @@ export function createClient() {
     // The stand-in member is an admin, so the stats dashboard can be tested.
     rpc: async (name, args) => {
       await new Promise(r => setTimeout(r, 100));
+      const mine = feedbackRpc(name, args);
+      if (mine !== undefined) return { data: mine, error: null };
       if (!session) return { data: null, error: { code: '42501', message: 'not allowed' } };
+      const owner = adminFeedbackRpc(name, args);
+      if (owner !== undefined) return { data: owner, error: null };
       if (name === 'is_admin') return { data: true, error: null };
       if (name === 'link_visitor') { window.__linked = args?.v ?? null; return { data: null, error: null }; }
       if (name === 'count_hands') { (window.__hands ??= {})[args.game] = (window.__hands[args.game] || 0) + args.n; return { data: null, error: null }; }

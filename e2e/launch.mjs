@@ -17,9 +17,10 @@ const browser = await chromium.launch();
 const errors = [], bad = [];
 const check = (ok, what) => { if (!ok) bad.push(what); };
 const shoot = async (page, name) => { if (SHOTS) { await page.waitForTimeout(300); await page.screenshot({ path: `${OUT}${name}.png`, fullPage: true }); } };
-async function open(url) {
+async function open(url, storage = null) {
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, colorScheme: args.includes('--dark') ? 'dark' : 'light' });
   await ctx.route('**/auth/v1/settings**', r => r.fulfill({ json: { passkeys_enabled: false } }));
+  if (storage) await ctx.addInitScript(s => { for (const [k, v] of Object.entries(s)) localStorage.setItem(k, v); }, storage);
   const page = await ctx.newPage();
   page.on('pageerror', e => errors.push(String(e)));
   await page.goto(url);
@@ -117,6 +118,39 @@ async function open(url) {
   await page.waitForSelector('.fb-sent');
   const sent = await page.evaluate(() => window.__feedback);
   check(sent.length === 1 && sent[0].email === 'dealer@example.com' && sent[0].context?.mode === 'guest', `feedback row sent with context (${JSON.stringify(sent)})`);
+  const id = await page.evaluate(() => localStorage.getItem('fr-feedback'));
+  check(/^[0-9a-f-]{36}$/.test(id || '') && sent[0].sender === id, 'the message carries this browser’s id, so a reply can find its way back');
+  check(!await page.isVisible('#fbNote'), 'no reply note before there’s a reply');
+  await ctx.close();
+}
+
+// ---- replies: a signed-out sender sees the owner's answer and writes back ----
+{
+  const sender = '7a1c2e4b-0000-4000-8000-000000000123';
+  const url = new URL(base.href); url.searchParams.set('replies', '1');
+  const { ctx, page } = await open(url.href, { 'fr-feedback': sender });
+  await page.waitForSelector('#fbNote:not([hidden])');
+  check((await page.innerText('#fbNote')).includes('You have a reply'), 'a note says there’s a reply');
+  await shoot(page, 'reply-note');
+  await page.click('#fbNoteOpen');
+  await page.waitForSelector('#feedback.open .fb-thread.new');
+  const sheet = await page.innerText('#feedback');
+  check(sheet.includes('Which phone were you on?') && sheet.includes('took my answer twice'), 'the sheet shows the reply under their message');
+  check(!await page.isVisible('#fbNote'), 'the note goes away once it’s open');
+  check(await page.waitForFunction(() => window.__seen >= 1, null, { timeout: 3000 }).then(() => true, () => false), 'opening it marks the reply read');
+  await page.click('#feedback [data-back]');
+  await page.click('.fb-back button[type=submit]');
+  check((await page.innerText('#feedback')).includes('Type a message first'), 'an empty write-back is stopped');
+  await page.fill('#fbBack', 'iPhone 15, in Safari.');
+  await page.click('.fb-back button[type=submit]');
+  await page.waitForFunction(() => !document.querySelector('#fbBack'));
+  const t = await page.evaluate(() => window.__threads.find(x => x.id === 3));
+  check(t.replies.length === 2 && t.replies[1].body === 'iPhone 15, in Safari.' && !t.replies[1].owner && t.done_at === null, `the write-back is saved and reopens it for the owner (${JSON.stringify(t)})`);
+  check((await page.innerText('#feedback')).includes('iPhone 15, in Safari.'), 'the write-back shows in the thread');
+  check(await page.isVisible('#fbMessage'), 'they can still send something new below');
+  const wide = await page.evaluate(() => document.documentElement.scrollWidth);
+  check(wide <= 390, `no sideways scrolling on a phone (${wide}px)`);
+  await shoot(page, 'reply-thread');
   await ctx.close();
 }
 
@@ -144,6 +178,25 @@ async function open(url) {
   const text = await page.innerText('#stats');
   check(text.includes('Members') && text.includes('14'), 'stats tiles show members');
   check(text.includes('Side pot 2 wording confused me.'), 'the new feedback shows on the dashboard');
+  // Answering feedback: waiting first, reply in the app, mark done by hand.
+  check(text.includes('2 waiting') && await page.$eval('#fbFilter [data-v="waiting"]', b => b.classList.contains('on')), 'feedback opens on what’s waiting');
+  check(text.includes('there’s no way to reply') && !text.includes('small blind counts'), 'messages that can’t be answered say so, and answered ones are under All');
+  const item = page.locator('#stats .fb-item', { hasText: 'Side pot 2 wording' });
+  await item.locator('[data-reply]').click();
+  await page.click('#stats .fb-back button[type=submit]');
+  check((await page.innerText('#stats')).includes('Type a reply first'), 'an empty reply is stopped');
+  await page.fill('#fbReply', 'Good catch. I reworded it.');
+  await shoot(page, 'stats-reply');
+  await page.click('#stats .fb-back button[type=submit]');
+  await page.waitForFunction(() => !document.querySelector('#fbReply'));
+  const answered = await page.evaluate(() => window.__threads.find(t => t.message === 'Side pot 2 wording confused me.'));
+  check(answered.replies[0]?.body === 'Good catch. I reworded it.' && answered.replies[0].owner && !!answered.done_at, `the reply is saved and marks it done (${JSON.stringify(answered)})`);
+  check(!(await page.innerText('#stats')).includes('Side pot 2 wording'), 'an answered message leaves the waiting list');
+  await page.click('#stats .fb-item [data-done]');
+  await page.waitForFunction(() => document.querySelector('#stats')?.textContent?.includes('all answered'));
+  await page.click('#fbFilter [data-v="all"]');
+  const all = await page.innerText('#stats');
+  check(all.includes('Good catch. I reworded it.') && all.includes('They’ve read your reply.') && all.includes('Reopen'), 'All shows the threads, whether they’ve read the reply, and Reopen');
   check(await page.$$eval('#stats table.days tbody tr', rows => rows.length) === 14, 'fourteen days of activity');
   check(text.includes('1,890'), 'the answers tile counts members and signed-out visitors');
   const today = await page.$$eval('#stats table.days tbody tr.today td', tds => tds.map(td => td.textContent));

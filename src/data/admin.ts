@@ -2,10 +2,15 @@
 // supabase/migrations/20260927000600_feedback_and_stats.sql).
 import { supabase } from './supabase.ts';
 
-/** Send a feedback message. Returns an error message, or null when sent. */
-export async function sendFeedback(message: string, email: string | null, context: Record<string, unknown>): Promise<string | null> {
+/**
+ * Send a feedback message. sender: this browser's id (data/replies.ts), so replies find their way
+ * back to a signed-out sender. Returns an error message, or null when sent.
+ */
+export async function sendFeedback(message: string, email: string | null, context: Record<string, unknown>, sender: string | null = null): Promise<string | null> {
   if (!supabase) return 'Feedback needs accounts, which aren’t set up here.';
-  const { error } = await supabase.from('feedback').insert({ message, email: email || null, context });
+  let { error } = await supabase.from('feedback').insert({ message, email: email || null, context, ...(sender ? { sender } : {}) });
+  // Before the replies migration has run there's no sender column: send it without one.
+  if (error && sender && /sender/.test(error.message || '')) ({ error } = await supabase.from('feedback').insert({ message, email: email || null, context }));
   if (error) { console.warn('FeltReady: feedback', error); return 'Couldn’t send that. Check your connection and try again.'; }
   return null;
 }

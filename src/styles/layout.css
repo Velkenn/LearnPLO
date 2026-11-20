@@ -149,6 +149,19 @@ input[type=checkbox]{width:22px;height:22px;accent-color:var(--brass)}
 .fb-form textarea,.fb-form input{font:400 16px var(--fb);padding:10px 12px;border-radius:8px;border:1.5px solid var(--line);background:var(--surface-2);color:var(--ink);width:100%;resize:vertical}
 .fb-form .btn{align-self:flex-start}
 .fb-who{margin:0!important;font-size:14px}
+.fb-note{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 12px;margin:0 0 8px;border-radius:10px;background:var(--good-bg);font-size:14px}
+.fb-note b{font-weight:600}
+.fb-note .linkbtn{font-size:14px;padding:4px 0;flex:none}
+.fb-threads{list-style:none;margin:6px 0 14px;padding:0;display:flex;flex-direction:column;gap:10px}
+.fb-thread{border:1px solid var(--line);border-radius:10px;padding:10px 12px;display:flex;flex-direction:column;gap:8px}
+.fb-thread.new{border-color:var(--good);box-shadow:inset 3px 0 0 var(--good)}
+.fb-msg small{display:block;font-size:12px;color:var(--muted);margin-bottom:2px}
+.fb-msg p{margin:0!important;line-height:1.4;overflow-wrap:anywhere}
+.fb-msg.mine p{color:var(--muted);font-size:14px}
+.fb-msg.owner{background:var(--surface-2);border-radius:8px;padding:8px 10px}
+.fb-msg.owner small{color:var(--good);font-weight:600}
+.fb-reply{align-self:flex-start;font-size:14px;padding:2px 0}
+.fb-acts{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
 .foot{display:flex;justify-content:center;gap:18px;padding:18px 0 4px}
 .foot .linkbtn{font-size:14px;color:var(--muted)}
 

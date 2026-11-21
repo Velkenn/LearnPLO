@@ -28,10 +28,14 @@ export function dtFootHTML(spot: DtSpot): string {
   return `<p class="dt-foot muted">Dealing live? Track your downs and true hourly with <a ${attrs(spot)}>DownTracker</a>.</p>`;
 }
 
-/** A small card for screens where a dealer has just finished something (results, weak spots). */
+/**
+ * A small card for screens where a dealer has just finished something (results, weak spots):
+ * one line of pitch, then DownTracker as it looks in the App Store (icon, name, subtitle, Get).
+ * The name and subtitle match the App Store listing; keep them in step if the listing changes.
+ */
 export function dtCardHTML(spot: DtSpot): string {
   return `<div class="dt-card"><p><b>Dealing for real?</b> DownTracker logs your shifts, downs, and tokes and shows your true hourly. Same maker as FeltReady.</p>
-    <a class="btn ghost small" ${attrs(spot)}>${isIOS() ? 'Get it on the App Store' : 'See DownTracker'}</a></div>`;
+    <a class="dt-app" ${attrs(spot)}><img src="/downtracker-icon.webp" alt="" width="60" height="60"><span class="dt-app-txt"><b>Down Tracker</b><span>Shift Tracker for Dealers</span><small>Free · App Store</small></span><span class="dt-get">${isIOS() ? 'Get' : 'View'}</span></a></div>`;
 }
 
 /** Point every static DownTracker link on the page (a[data-dt]) at the right place for this device. */

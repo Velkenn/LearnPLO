@@ -109,7 +109,7 @@ export function cutPanel(): string {
   let h = `<h2 id="qtitle">Build the side pot</h2>`;
   if (!a) {
     h += `<p class="muted">${capper ? `${seatName(capper)} is all in for ${fmt(take)}${first ? ' this round' : ' more'}. ` : ''}${middle ? `How much do this round's bets add to ${into}? Don't count the ${fmt(middle)} already in the middle.` : `How much of this round's bets goes in ${into}?`} Build it ${nextCardName()}.</p>
-    ${timerHTML('build')}<div class="recap">${middle ? `<div class="lrow"><span>Already in the middle (${pt.idx === 0 ? 'main pot' : pt.name.toLowerCase()})</span><b class="cash">${fmt(middle)}</b></div>` : ''}<div class="lhead">${first ? 'Bets this round' : `Left in front after ${potRef(prevPot!)}`}</div>${outList(rows)}</div>
+    ${timerHTML('build')}<div class="recap">${middle ? `<div class="lrow mid-row"><span>Already in the middle (${pt.idx === 0 ? 'main pot' : pt.name.toLowerCase()})</span><b class="cash mid">${fmt(middle)}</b></div>` : ''}<div class="lhead">${first ? 'Bets this round' : `Left in front after ${potRef(prevPot!)}`}</div>${outList(rows)}</div>
     <div class="ans"><span class="cur">$</span><input id="bp" inputmode="numeric" pattern="[0-9]*" autocomplete="off" placeholder="Into ${pt.idx === 0 ? 'main pot' : pt.name.toLowerCase()}" aria-label="Amount from this round into ${into}"><button class="btn" id="checkPots">Build it</button></div>
     <button class="peek" id="peek">Look at the table</button>`;
     return h;

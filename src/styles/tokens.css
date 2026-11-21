@@ -2,7 +2,7 @@
 :root{
   --bg:#E3E9E5; --surface:#FFFFFF; --surface-2:#EFF3F0; --ink:#17211C; --muted:#56645D; --line:#CAD4CE;
   --felt:#1E6045; --felt-2:#154A34; --felt-hi:#2B7757; --rail:#3A2518;
-  --brass:#C99B2F; --cash-bg:var(--brass); --cash-ink:var(--brass-ink); --brass-ink:#1F1705; --brand-ink:#8A6512; --wm-ready:#1E6045;
+  --brass:#C99B2F; --cash-bg:#1E6045; --cash-ink:#FFFFFF; --brass-ink:#1F1705; --brand-ink:#8A6512; --wm-ready:#1E6045;
   --card:#FFFDF7; --card-line:#D8D1C0; --red:#C3262E; --blk:#1A1A1A;
   --good:#1F7A48; --good-bg:#DDF1E5; --bad:#B0302A; --bad-bg:#F7E1DE;
   --sel:#2C6BDB;

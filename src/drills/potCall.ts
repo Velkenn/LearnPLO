@@ -58,12 +58,15 @@ export function diagnose(v: number, q: PotQ): { miss: PotMiss; text: string } {
 
 export function quizPanel(): string {
   const S = app.S!, settings = app.settings, Q = S.quiz!, q = Q.q, n = `Seat ${q.seat + 1}`, lbl = settings.chipAmt !== false;
-  const outs = lbl ? q.bets.map(b => `Seat ${b.i + 1} ${fmt(b.amt)}${b.folded ? ' (folded)' : ''}`).join(', ') : 'count the chips in front of each player';
-  const middle = q.street === 0 ? 'nothing yet (preflop)' : settings.showPot ? fmt(q.middle) : 'your count';
+  // Bets out in front get green pills, one seat per line; the middle is outlined, not a pill, so it reads as already in.
+  const outs = lbl
+    ? `<div class="lhead">Out in front</div>${q.bets.map(b => `<div class="lrow"><span>Seat ${b.i + 1}${b.folded ? ' (folded)' : ''}</span><b class="cash">${fmt(b.amt)}</b></div>`).join('')}`
+    : `<div class="lhead">Out in front</div><div class="muted">Count the chips in front of each player.</div>`;
+  const middle = `<div class="lrow mid-row"><span>In the middle</span>${q.street === 0 ? '<span class="muted">nothing yet (preflop)</span>' : settings.showPot ? `<b class="cash mid">${fmt(q.middle)}</b>` : '<span class="muted">your count</span>'}</div>`;
   let h = `<h2 id="qtitle">${q.repotOf ? `${n} (${q.pos}) re-pots` : `${n} (${q.pos}): “Pot.”`}</h2>`;
   if (!Q.answered) {
     h += `<p class="muted">${q.repotOf ? `Seat ${q.repotOf.seat + 1} potted it to ${fmt(q.repotOf.to)}. ${n} pots it back. ` : ''}Announce the raise.</p>
-    ${timerHTML('pot')}<div class="recap">In the middle: ${middle}<br>Out in front: ${outs}</div>
+    ${timerHTML('pot')}<div class="recap">${middle}${outs}</div>
     <div class="ans"><span class="cur">$</span><input id="ans" inputmode="numeric" pattern="[0-9]*" autocomplete="off" placeholder="Raise to" aria-label="Pot raise amount"><button class="btn" id="checkPot">Announce</button></div>
     <button class="peek" id="peek">Look at the table</button>`;
     return h;

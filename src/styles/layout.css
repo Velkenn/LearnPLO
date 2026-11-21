@@ -203,7 +203,16 @@ table.stats.days td{padding:6px 3px;white-space:nowrap}
 .home .dt-foot{text-align:left;padding:0 2px;margin-top:10px}
 .dt-card{margin:16px 0 4px;padding:12px 14px;border:1px solid var(--line);border-radius:12px;background:var(--surface-2)}
 .dt-card p{margin:0 0 10px;font-size:15px;line-height:1.45}
-.dt-card .btn{display:inline-block;text-decoration:none}
+/* DownTracker as an App Store listing row: the whole row is the link. */
+.dt-app{display:flex;align-items:center;gap:12px;padding:10px;margin:0 -2px;border-radius:14px;background:var(--surface);border:1px solid var(--line);color:inherit;text-decoration:none}
+.dt-app img{width:60px;height:60px;border-radius:13.5px;flex:none;box-shadow:0 0 0 .5px rgba(0,0,0,.12)}
+.dt-app-txt{flex:1;min-width:0;display:flex;flex-direction:column;line-height:1.25}
+.dt-app-txt b{font-size:16px;font-weight:600}
+.dt-app-txt span,.dt-app-txt small{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--muted)}
+.dt-app-txt span{font-size:13.5px}.dt-app-txt small{font-size:12px;margin-top:2px}
+.dt-get{flex:none;min-width:68px;text-align:center;padding:6px 16px;border-radius:999px;background:#E9EAEE;color:#0A6CFF;font-weight:700;font-size:15px;letter-spacing:.02em}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .dt-get{background:#2C2F33;color:#3D95FF}}
+:root[data-theme="dark"] .dt-get{background:#2C2F33;color:#3D95FF}
 
 /* account box: classes the member has joined */
 .acct-classes{margin-top:12px}

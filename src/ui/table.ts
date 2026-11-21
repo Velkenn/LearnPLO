@@ -10,6 +10,7 @@ import { fmt } from '../util.ts';
 import { $ } from './dom.ts';
 import { cardHTML, chipStacks } from './cards.ts';
 import { chipClick } from './sound.ts';
+import { playerSvg } from './players.ts';
 
 // Positions in % of the table box (a tall table, 1 wide by 1.6 high). Seats go clockwise from the
 // dealer's left; the dealer sits at the bottom. Each table size has its own seat, bet, and
@@ -53,10 +54,9 @@ function lastActions(S: Hand): Map<number, string> {
 }
 const tagClass = (t: string): string => ({ Fold: 'fold', Check: 'check', Call: 'call', 'All in': 'allin' } as Record<string, string>)[t] ?? 'raise';
 
-/** A plain player icon (head and shoulders), tinted per seat. */
-const PERSON = '<svg viewBox="0 0 40 40" aria-hidden="true"><circle cx="20" cy="15" r="7.5"/><path d="M5.5 38c1.2-8.3 7.2-13 14.5-13s13.3 4.7 14.5 13z"/></svg>';
+/** The seat's player (see players.ts) on a tinted disc. */
 const TINTS = ['#3F6E8C', '#8C5A3F', '#5E7A3F', '#7A4F86', '#3F8078', '#8C7A3F', '#86504F', '#4F5E86', '#6B6B6B'];
-const avatar = (i: number): string => `<span class="disc" style="--tint:${TINTS[i % TINTS.length]}">${PERSON}</span>`;
+const avatar = (i: number): string => `<span class="disc" style="--tint:${TINTS[i % TINTS.length]}">${playerSvg(i)}</span>`;
 /** The layout for a table of n seats (six-handed if there's no layout for n). */
 export const layoutFor = (n: number): Layout => LAYOUTS[n] ?? LAYOUTS[6];
 

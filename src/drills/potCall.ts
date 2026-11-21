@@ -58,7 +58,7 @@ export function diagnose(v: number, q: PotQ): { miss: PotMiss; text: string } {
 
 export function quizPanel(): string {
   const S = app.S!, settings = app.settings, Q = S.quiz!, q = Q.q, n = `Seat ${q.seat + 1}`, lbl = settings.chipAmt !== false;
-  const outs = lbl ? q.bets.map(b => `Seat ${b.i + 1} <b class="cash">${fmt(b.amt)}</b>${b.folded ? ' (folded)' : ''}`).join(', ') : 'count the chips in front of each player';
+  const outs = lbl ? q.bets.map(b => `<span class="outbet">Seat ${b.i + 1} <b class="cash">${fmt(b.amt)}</b>${b.folded ? ' (folded)' : ''}</span>`).join(', ') : 'count the chips in front of each player';
   const middle = q.street === 0 ? 'nothing yet (preflop)' : settings.showPot ? `<b class="cash">${fmt(q.middle)}</b>` : 'your count';
   let h = `<h2 id="qtitle">${q.repotOf ? `${n} (${q.pos}) re-pots` : `${n} (${q.pos}): “Pot.”`}</h2>`;
   if (!Q.answered) {

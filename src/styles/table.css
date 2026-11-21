@@ -15,7 +15,7 @@
 /* A seat: player icon over a name plate, cards fanned behind, the last action under the plate. */
 .seat{--sw:80px;--dd:38px;position:absolute;transform:translate(-50%,-50%);width:var(--sw);display:flex;flex-direction:column;align-items:center;transition:opacity .25s;z-index:2;color:#F2EEE6}
 .disc{position:relative;z-index:2;width:var(--dd);height:var(--dd);border-radius:50%;background:var(--tint);background:radial-gradient(circle at 50% 35%,color-mix(in srgb,var(--tint) 75%,#fff),var(--tint) 70%);border:2px solid #0E0F10;box-shadow:0 2px 5px rgba(0,0,0,.5);overflow:hidden;margin-bottom:-7px}
-.disc svg{width:100%;height:100%;display:block;fill:rgba(255,255,255,.82)}
+.disc svg{width:100%;height:100%;display:block}
 .plate{position:relative;z-index:3;width:100%;padding:5px 3px 4px;border-radius:9px;background:linear-gradient(180deg,#26282C,#18191C);border:1px solid rgba(255,255,255,.1);box-shadow:0 3px 8px rgba(0,0,0,.45);text-align:center;transition:box-shadow .2s}
 .seat .sn{font:500 12px var(--fb);color:rgba(242,238,230,.75);line-height:1.15;white-space:nowrap;display:flex;justify-content:center;align-items:center;gap:4px}
 .seat .stk{font:600 16px var(--fd);letter-spacing:.01em;line-height:1.15;font-variant-numeric:tabular-nums;color:#FFFFFF}

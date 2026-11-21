@@ -50,7 +50,7 @@
 
 .modal{position:fixed;inset:0;z-index:50;display:none;align-items:flex-end;justify-content:center;background:rgba(8,16,12,.3);padding:0 10px calc(env(safe-area-inset-bottom,0px) + 10px)}
 .modal.open{display:flex}
-.modal .box{--surface:#21170F;--surface-2:#2E2219;--ink:#F2E8D8;--muted:rgba(242,232,216,.68);--line:rgba(242,232,216,.17);--good:#8BDBA9;--bad:#F39D93;--sel:#8DB4FF;
+.modal .box{--cash:#F2C14E;--surface:#21170F;--surface-2:#2E2219;--ink:#F2E8D8;--muted:rgba(242,232,216,.68);--line:rgba(242,232,216,.17);--good:#8BDBA9;--bad:#F39D93;--sel:#8DB4FF;
   width:100%;max-width:520px;max-height:85vh;overflow:auto;overscroll-behavior:contain;color:var(--ink);background:linear-gradient(180deg,#2B1E14,#1D140D);border:1px solid #4B3423;border-top:4px solid #3A2518;border-radius:16px;padding:16px 16px 12px;box-shadow:0 -8px 30px rgba(0,0,0,.35),inset 0 1px rgba(255,255,255,.05);animation:up .22s ease-out}
 .modal .box input::placeholder{color:rgba(242,232,216,.4)}
 .modal .box h2{font:700 25px var(--fd);margin:0 0 6px;line-height:1.1}
@@ -70,8 +70,11 @@
 .thint{font-size:13px;margin:-2px 0 6px;line-height:1.4}
 .lhead{font-weight:600;margin-bottom:2px}
 .lrow{display:flex;justify-content:space-between;gap:10px}
-.lrow b{font-weight:600;font-variant-numeric:tabular-nums}
+.lrow b{font-weight:600;font-variant-numeric:tabular-nums;color:var(--cash)}
 .lrow.dead{color:var(--muted)}
+.lrow.dead b{color:var(--muted)}
+/* Dollar amounts in a recap get their own color, so "Seat 7 $35" reads as a seat and a bet at a glance. */
+.cash{font-weight:600;color:var(--cash)}
 .lrow.gone b{color:var(--muted)}
 .built{padding:2px 0 4px}
 .built b{font:600 20px var(--fd)}

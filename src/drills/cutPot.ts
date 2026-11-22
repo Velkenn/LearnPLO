@@ -3,7 +3,6 @@
 // and the rest starts the side pot. The dealer says what the main pot takes from this round.
 import { app, bump, challengeAnswer, logAttempt, recordTime } from '../app.ts';
 import type { Pot } from '../engine/types.ts';
-import { STREETS } from '../config.ts';
 import { active, seatName } from '../engine/hand.ts';
 import { commitCuts, cutSum, potName, roundBets } from '../engine/pots.ts';
 import { capF, fmt, potRef, seatList } from '../util.ts';
@@ -22,8 +21,6 @@ export function askCuts(pots: Pot[]): Promise<void> {
   timerStart('build', () => gradeCut(true));
   return new Promise(res => { S.cutResolve = () => { S.mode = 'running'; S.cq = null; S.peek = false; res(); }; });
 }
-
-const nextCardName = (): string => { const st = app.S!.street; return st < 3 ? `before the ${STREETS[st + 1].toLowerCase()}` : 'before the showdown'; };
 
 /** Where this round starts counting for a player in this pot: the round's start, or the pot below. */
 const from = (pt: Pot, i: number): number => Math.max(pt.prev, app.S!.streetStart[i] ?? 0);
@@ -96,7 +93,7 @@ export function potExplain(pt: Pot): string {
 
 interface Row { i: number; folded: boolean; allin: boolean; amt: number; cap?: boolean }
 const outList = (rows: Row[]): string => rows.map(x =>
-  `<div class="lrow${x.folded ? ' dead' : ''}"><span>Seat ${x.i + 1}${x.folded ? ' (folded, dead)' : x.cap ? ' (all in)' : ''}</span><b class="cash">${fmt(x.amt)}</b></div>`).join('');
+  `<div class="lrow${x.folded ? ' dead' : ''}"><span>Seat ${x.i + 1}${x.folded ? ' · folded, dead' : x.cap ? ' · all in' : ''}</span><b>${fmt(x.amt)}</b></div>`).join('');
 
 export function cutPanel(): string {
   const S = app.S!, cq = S.cq!, pt = cq.pots[cq.j], a = cq.ans[cq.j], first = cq.j === 0;
@@ -106,14 +103,18 @@ export function cutPanel(): string {
   const prevPot = first ? null : cq.pots[cq.j - 1];
   const middle = middleOf(pt), take = capper ? takeFor(pt, capper.i) : 0;
   const into = pt.idx === 0 ? 'the main pot' : potRef(pt);
-  let h = `<h2 id="qtitle">Build the side pot</h2>`;
+  // While asking, keep it to one question, one short note, and the bets: plain numbers, seats dimmed.
+  // The money already in the middle is only mentioned in the note, so nothing in the list tempts you to add it.
   if (!a) {
-    h += `<p class="muted">${capper ? `${seatName(capper)} is all in for ${fmt(take)}${first ? ' this round' : ' more'}. ` : ''}${middle ? `How much do this round's bets add to ${into}? Don't count the ${fmt(middle)} already in the middle.` : `How much of this round's bets goes in ${into}?`} Build it ${nextCardName()}.</p>
-    ${timerHTML('build')}<div class="recap">${middle ? `<div class="lrow mid-row"><span>Already in the middle (${pt.idx === 0 ? 'main pot' : pt.name.toLowerCase()})</span><b class="cash mid">${fmt(middle)}</b></div>` : ''}<div class="lhead">${first ? 'Bets this round' : `Left in front after ${potRef(prevPot!)}`}</div>${outList(rows)}</div>
+    const potName = pt.idx === 0 ? 'the main pot' : pt.name.toLowerCase();
+    let h = `<h2 id="qtitle" class="ask">${capper ? `${seatName(capper)} is all in for ${fmt(take)}${first ? '' : ' more'}. ` : ''}What goes into ${potName}?</h2>
+    <p class="qnote">Just this round's bets.${middle ? ` The ${fmt(middle)} already in the middle stays put.` : ''}</p>
+    ${timerHTML('build')}<div class="recap calm">${first ? '' : `<div class="lhead">Left in front after ${potRef(prevPot!)}</div>`}${outList(rows)}</div>
     <div class="ans"><span class="cur">$</span><input id="bp" inputmode="numeric" pattern="[0-9]*" autocomplete="off" placeholder="Into ${pt.idx === 0 ? 'main pot' : pt.name.toLowerCase()}" aria-label="Amount from this round into ${into}"><button class="btn" id="checkPots">Build it</button></div>
     <button class="peek" id="peek">Look at the table</button>`;
     return h;
   }
+  let h = `<h2 id="qtitle">Build the side pot</h2>`;
   const round = roundOf(pt);
   h += a.ok ? `<div class="verdict good">Right. ${fmt(round)} goes in ${into}.</div>`
     : `<div class="verdict bad">${a.timeout ? 'Time. ' : ''}${fmt(round)} goes in ${into}.${a.timeout ? '' : `<span>You had ${fmt(a.v)}. ${a.diag}</span>`}</div>`;
